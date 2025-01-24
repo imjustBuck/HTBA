@@ -1,1 +1,160 @@
+## Nmap Cheat Sheet: 
 
+The cheat sheet is a useful command reference for this module.
+
+
+10.10.10.0/24	: Target network range.
+-sn	Disables port scanning.
+-Pn	Disables ICMP Echo Requests
+-n	Disables DNS Resolution.
+-PE	Performs the ping scan by using ICMP Echo Requests against the target.
+--packet-trace	Shows all packets sent and received.
+--reason	Displays the reason for a specific result.
+--disable-arp-ping	Disables ARP Ping Requests.
+--top-ports=<num>	Scans the specified top ports that have been defined as most frequent.
+-p-	Scan all ports.
+-p22-110	Scan all ports between 22 and 110.
+-p22,25	Scans only the specified ports 22 and 25.
+-F	Scans top 100 ports.
+-sS	Performs an TCP SYN-Scan.
+-sA	Performs an TCP ACK-Scan.
+-sU	Performs an UDP Scan.
+-sV	Scans the discovered services for their versions.
+-sC	Perform a Script Scan with scripts that are categorized as "default".
+--script <script>	Performs a Script Scan by using the specified scripts.
+-O	Performs an OS Detection Scan to determine the OS of the target.
+-A	Performs OS Detection, Service Detection, and traceroute scans.
+-D RND:5	Sets the number of random Decoys that will be used to scan the target.
+-e	Specifies the network interface that is used for the scan.
+-S 10.10.10.200	Specifies the source IP address for the scan.
+-g	Specifies the source port for the scan.
+--dns-server <ns>	DNS resolution is performed by using a specified name server.
+Output Options
+Nmap Option	Description
+-oA filename	Stores the results in all available formats starting with the name of "filename".
+-oN filename	Stores the results in normal format with the name "filename".
+-oG filename	Stores the results in "grepable" format with the name of "filename".
+-oX filename	Stores the results in XML format with the name of "filename".
+Performance Options
+Nmap Option	Description
+--max-retries <num>	Sets the number of retries for scans of specific ports.
+--stats-every=5s	Displays scan's status every 5 seconds.
+-v/-vv	Displays verbose output during the scan.
+--initial-rtt-timeout 50ms	Sets the specified time value as initial RTT timeout.
+--max-rtt-timeout 100ms	Sets the specified time value as maximum RTT timeout.
+--min-rate 300	Sets the number of packets that will be sent simultaneously.
+-T <0-5>	Specifies the specific timing template.
+
+
+
+NMAP can help with all of the following use cases: 
+
+
+Audit the security aspects of networks
+Simulate penetration tests
+Check firewall and IDS settings and configurations
+Types of possible connections
+Network mapping
+Response analysis
+Identify open ports
+Vulnerability assessment as well.
+
+Nmap can be divided into the following scanning techniques:
+
+Host discovery
+Port scanning
+Service enumeration and detection
+OS detection
+Scriptable interaction with the target service (Nmap Scripting Engine)
+
+
+NMAP syntax: MJBUCKNER@htb[/htb]$ nmap <scan types> <options> <target>
+
+## Host Discovery 
+
+Scanning Netowrk Ranges 
+
+Syntax: MJBUCKNER@htb[/htb]$ sudo nmap 10.129.2.0/24 -sn -oA tnet | grep for | cut -d" " -f5 
+
+
+Scanning Options	Description
+10.129.2.0/24	    Target network range.
+-sn	              Disables port scanning.
+-oA tnet	        Stores the results in all formats starting with the name 'tnet'.
+
+
+Scan Single IP
+Before we scan a single host for open ports and its services, we first have to determine if it is alive or not. For this, we can use the same method as before.
+
+  Host Discovery
+Syntax: MJBUCKNER@htb[/htb]$ sudo nmap 10.129.2.18 -sn -oA host 
+
+Starting Nmap 7.80 ( https://nmap.org ) at 2020-06-14 23:59 CEST
+Nmap scan report for 10.129.2.18
+Host is up (0.087s latency).
+MAC Address: DE:AD:00:00:BE:EF
+Nmap done: 1 IP address (1 host up) scanned in 0.11 seconds
+Scanning Options	Description
+10.129.2.18	      Performs defined scans against the target.
+-sn	              Disables port scanning.
+-oA host	        Stores the results in all formats starting with the name 'host'.
+
+If we disable port scan (-sn), Nmap automatically ping scan with ICMP Echo Requests (-PE). Once such a request is sent, we usually expect an ICMP reply if the pinging host is alive. The more interesting fact is that our previous scans did not do that because before Nmap could send an ICMP echo request, it would send an ARP ping resulting in an ARP reply. We can confirm this with the "--packet-trace" option. To ensure that ICMP echo requests are sent, we also define the option (-PE) for this.
+
+  Host Discovery
+Syntax: MJBUCKNER@htb[/htb]$ sudo nmap 10.129.2.18 -sn -oA host -PE --packet-trace 
+
+Starting Nmap 7.80 ( https://nmap.org ) at 2020-06-15 00:08 CEST
+SENT (0.0074s) ARP who-has 10.129.2.18 tell 10.10.14.2
+RCVD (0.0309s) ARP reply 10.129.2.18 is-at DE:AD:00:00:BE:EF
+Nmap scan report for 10.129.2.18
+Host is up (0.023s latency).
+MAC Address: DE:AD:00:00:BE:EF
+Nmap done: 1 IP address (1 host up) scanned in 0.05 seconds
+
+Scanning Options	Description
+10.129.2.18     	Performs defined scans against the target.
+-sn	              Disables port scanning.
+-oA host	        Stores the results in all formats starting with the name 'host'.
+-PE	              Performs the ping scan by using 'ICMP Echo requests' against the target.
+--packet-trace	  Shows all packets sent and received
+
+Another way to determine why Nmap has our target marked as "alive" is with the "--reason" option.
+
+  Host Discovery
+Syntax: MJBUCKNER@htb[/htb]$ sudo nmap 10.129.2.18 -sn -oA host -PE --reason 
+
+Starting Nmap 7.80 ( https://nmap.org ) at 2020-06-15 00:10 CEST
+SENT (0.0074s) ARP who-has 10.129.2.18 tell 10.10.14.2
+RCVD (0.0309s) ARP reply 10.129.2.18 is-at DE:AD:00:00:BE:EF
+Nmap scan report for 10.129.2.18
+Host is up, received arp-response (0.028s latency).
+MAC Address: DE:AD:00:00:BE:EF
+Nmap done: 1 IP address (1 host up) scanned in 0.03 seconds
+Scanning Options	Description
+10.129.2.18	      Performs defined scans against the target.
+-sn	              Disables port scanning.
+-oA host	        Stores the results in all formats starting with the name 'host'.
+-PE	              Performs the ping scan by using 'ICMP Echo requests' against the target.
+--reason	        Displays the reason for specific result.
+
+
+### HOST AND PORT SCANNING 
+
+Information gathered by these scans: 
+
+Open ports and its services
+Service versions
+Information that the services provided
+Operating system
+
+
+There are a total of 6 different states for a scanned port we can obtain:
+
+State	                    Description
+open	              This indicates that the connection to the scanned port has been established. These connections can be TCP connections, UDP datagrams as well as SCTP associations.
+closed	            When the port is shown as closed, the TCP protocol indicates that the packet we received back contains an RST flag. This scanning method can also be used to determine if our target is alive or not.
+filtered	          Nmap cannot correctly identify whether the scanned port is open or closed because either no response is returned from the target for the port or we get an error code from the target.
+unfiltered	        This state of a port only occurs during the TCP-ACK scan and means that the port is accessible, but it cannot be determined whether it is open or closed.
+open|filtered	      If we do not get a response for a specific port, Nmap will set it to that state. This indicates that a firewall or packet filter may protect the port.
+closed|filtered	    This state only occurs in the IP ID idle scans and indicates that it was impossible to determine if the scanned port is closed or filtered by a firewall.
