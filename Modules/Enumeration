@@ -189,3 +189,177 @@ Scanning Options	      Description
 -p 445	                Scans only the specified port.
 --reason	              Displays the reason a port is in a particular state.
 -sV	                    Performs a service scan.
+
+
+First Challenge in the nmap module has two questions: 
+
+1  Find all TCP ports on your target. Submit the total number of found TCP ports as the answer. - 7 
+ - From experience im going to start with nmap -sCV -A 10.129.201.105 and see the total we get from that, depending on the output it could also answer number 2. 
+
+It did give us both answers - 7 open ports and hostname of NIX-NMAP-DEFAULT
+
+
+2 Enumerate the hostname of your target and submit it as the answer. (case-sensitive) - NIX-NMAP-DEFAULT 
+
+
+──╼ [★]$ nmap -sCV -A 10.129.201.105
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2025-01-25 11:57 CST
+Nmap scan report for 10.129.201.105
+Host is up (0.0086s latency).
+Not shown: 993 closed tcp ports (reset)
+PORT      STATE SERVICE     VERSION
+22/tcp    open  ssh         OpenSSH 7.6p1 Ubuntu 4ubuntu0.7 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey: 
+|   2048 71:c1:89:90:7f:fd:4f:60:e0:54:f3:85:e6:35:6c:2b (RSA)
+|   256 e1:8e:53:18:42:af:2a:de:c0:12:1e:2e:54:06:4f:70 (ECDSA)
+|_  256 1a:cc:ac:d4:94:5c:d6:1d:71:e7:39:de:14:27:3c:3c (ED25519)
+80/tcp    open  http        Apache httpd 2.4.29 ((Ubuntu))
+|_http-title: Apache2 Ubuntu Default Page: It works
+|_http-server-header: Apache/2.4.29 (Ubuntu)
+110/tcp   open  pop3        Dovecot pop3d
+|_pop3-capabilities: UIDL AUTH-RESP-CODE SASL CAPA PIPELINING TOP RESP-CODES
+139/tcp   open  netbios-ssn Samba smbd 3.X - 4.X (workgroup: WORKGROUP)
+143/tcp   open  imap        Dovecot imapd (Ubuntu)
+|_imap-capabilities: Pre-login ENABLE IDLE LOGIN-REFERRALS IMAP4rev1 OK have post-login listed capabilities more LOGINDISABLEDA0001 SASL-IR ID LITERAL+
+445/tcp   open  netbios-ssn Samba smbd 4.7.6-Ubuntu (workgroup: WORKGROUP)
+31337/tcp open  ftp         ProFTPD
+No exact OS matches for host (If you know what OS is running on it, see https://nmap.org/submit/ ).
+TCP/IP fingerprint:
+OS:SCAN(V=7.94SVN%E=4%D=1/25%OT=22%CT=1%CU=39020%PV=Y%DS=2%DC=T%G=Y%TM=6795
+OS:2665%P=x86_64-pc-linux-gnu)SEQ(SP=FF%GCD=1%ISR=10B%TI=Z%CI=Z%TS=1)SEQ(SP
+OS:=FF%GCD=1%ISR=10B%TI=Z%CI=Z%II=I%TS=A)OPS(O1=M53CST11NW7%O2=M53CST11NW7%
+OS:O3=M53CNNT11NW7%O4=M53CST11NW7%O5=M53CST11NW7%O6=M53CST11)WIN(W1=FE88%W2
+OS:=FE88%W3=FE88%W4=FE88%W5=FE88%W6=FE88)ECN(R=Y%DF=Y%T=40%W=FAF0%O=M53CNNS
+OS:NW7%CC=Y%Q=)T1(R=Y%DF=Y%T=40%S=O%A=S+%F=AS%RD=0%Q=)T2(R=N)T3(R=N)T4(R=Y%
+OS:DF=Y%T=40%W=0%S=A%A=Z%F=R%O=%RD=0%Q=)T5(R=Y%DF=Y%T=40%W=0%S=Z%A=S+%F=AR%
+OS:O=%RD=0%Q=)T6(R=Y%DF=Y%T=40%W=0%S=A%A=Z%F=R%O=%RD=0%Q=)T7(R=Y%DF=Y%T=40%
+OS:W=0%S=Z%A=S+%F=AR%O=%RD=0%Q=)U1(R=Y%DF=N%T=40%IPL=164%UN=0%RIPL=G%RID=G%
+OS:RIPCK=G%RUCK=G%RUD=G)IE(R=Y%DFI=N%T=40%CD=S)
+
+Network Distance: 2 hops
+Service Info: Host: NIX-NMAP-DEFAULT; OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+Host script results:
+|_clock-skew: mean: -20m00s, deviation: 34m38s, median: 0s
+| smb2-time: 
+|   date: 2025-01-25T17:58:24
+|_  start_date: N/A
+| smb-os-discovery: 
+|   OS: Windows 6.1 (Samba 4.7.6-Ubuntu)
+|   Computer name: nix-nmap-default
+|   NetBIOS computer name: NIX-NMAP-DEFAULT\x00
+|   Domain name: \x00
+|   FQDN: nix-nmap-default
+|_  System time: 2025-01-25T18:58:24+01:00
+| smb-security-mode: 
+|   account_used: guest
+|   authentication_level: user
+|   challenge_response: supported
+|_  message_signing: disabled (dangerous, but default)
+|_nbstat: NetBIOS name: NIX-NMAP-DEFAUL, NetBIOS user: <unknown>, NetBIOS MAC: <unknown> (unknown)
+| smb2-security-mode: 
+|   3:1:1: 
+|_    Message signing enabled but not required
+
+TRACEROUTE (using port 1720/tcp)
+HOP RTT     ADDRESS
+1   8.47 ms 10.10.14.1
+2   8.97 ms 10.129.201.105
+
+OS and Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 107.50 seconds
+
+
+#### Saving nmap results 
+
+While we run various scans, we should always save the results. We can use these later to examine the differences between the different scanning methods we have used. Nmap can save the results in 3 different formats.
+
+Normal output (-oN) with the .nmap file extension
+Grepable output (-oG) with the .gnmap file extension
+XML output (-oX) with the .xml file extension
+We can also specify the option (-oA) to save the results in all formats. The command could look like this:
+
+Syntax: MJBUCKNER@htb[/htb]$ sudo nmap 10.129.2.28 -p- -oA target
+
+Scanning Options	    Description
+10.129.2.28	          Scans the specified target.
+-p-	                  Scans all ports.
+-oA target	          Saves the results in all formats, starting the name of each file with 'target'.
+
+## Perform a full TCP port scan on your target and create an HTML report. Submit the number of the highest port as the answer.
+- the Challenge for this one is a bit redundant since the highest number port comes up when we just simply run the command : 
+
+nmap 10.129.201.105 -p- -oA target
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2025-01-25 12:04 CST
+Nmap scan report for 10.129.201.105
+Host is up (0.0086s latency).
+Not shown: 65528 closed tcp ports (reset)
+PORT      STATE SERVICE
+22/tcp    open  ssh
+80/tcp    open  http
+110/tcp   open  pop3
+139/tcp   open  netbios-ssn
+143/tcp   open  imap
+445/tcp   open  microsoft-ds
+31337/tcp open  Elite
+
+Nmap done: 1 IP address (1 host up) scanned in 6.90 seconds
+
+
+you would then just this command with a tool called xslproc: 
+
+Syntax: MJBUCKNER@htb[/htb]$ xsltproc target.xml -o target.html 
+
+then open the html in a browser and you have your results. 
+
+
+### Service Version
+
+Service Version Detection
+It is recommended to perform a quick port scan first, which gives us a small overview of the available ports. This causes significantly less traffic, which is advantageous for us because otherwise we can be discovered and blocked by the security mechanisms. We can deal with these first and run a port scan in the background, which shows all open ports (-p-). We can use the version scan to scan the specific ports for services and their versions (-sV).
+
+A full port scan takes quite a long time. To view the scan status, we can press the [Space Bar] during the scan, which will cause Nmap to show us the scan status.
+
+Syntax: MJBUCKNER@htb[/htb]$ sudo nmap 10.129.2.28 -p- -sV
+
+Scanning Options	    Description
+10.129.2.28	          Scans the specified target.
+-p-	                  Scans all ports.
+-sV	                  Performs service version detection on specified ports.
+
+
+they kinda talk dribble in the middle of this section so we will skip to the challenge: 
+
+ Enumerate all ports and their services. One of the services contains the flag you have to submit as the answer. - HTB{pr0F7pDv3r510nb4nn3r} 
+
+starting with - nmap -p- -sCV -A 10.129.201.105 -> this is my goto nmap scan... i realize it wont always work esepcially with firewall and AV rules in place but its a good start. 
+
+and long and behold: 
+
+nmap -p- -sCV -A 10.129.201.105
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2025-01-25 12:21 CST
+Nmap scan report for 10.129.201.105
+Host is up (0.0083s latency).
+Not shown: 65528 closed tcp ports (reset)
+PORT      STATE SERVICE     VERSION
+22/tcp    open  ssh         OpenSSH 7.6p1 Ubuntu 4ubuntu0.7 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey: 
+|   2048 71:c1:89:90:7f:fd:4f:60:e0:54:f3:85:e6:35:6c:2b (RSA)
+|   256 e1:8e:53:18:42:af:2a:de:c0:12:1e:2e:54:06:4f:70 (ECDSA)
+|_  256 1a:cc:ac:d4:94:5c:d6:1d:71:e7:39:de:14:27:3c:3c (ED25519)
+80/tcp    open  http        Apache httpd 2.4.29 ((Ubuntu))
+|_http-server-header: Apache/2.4.29 (Ubuntu)
+|_http-title: Apache2 Ubuntu Default Page: It works
+110/tcp   open  pop3        Dovecot pop3d
+|_pop3-capabilities: UIDL SASL AUTH-RESP-CODE CAPA PIPELINING TOP RESP-CODES
+139/tcp   open  netbios-ssn Samba smbd 3.X - 4.X (workgroup: WORKGROUP)
+143/tcp   open  imap        Dovecot imapd (Ubuntu)
+|_imap-capabilities: ENABLE LOGIN-REFERRALS ID more have LOGINDISABLEDA0001 OK post-login listed capabilities IMAP4rev1 Pre-login SASL-IR IDLE LITERAL+
+445/tcp   open  netbios-ssn Samba smbd 4.7.6-Ubuntu (workgroup: WORKGROUP)
+31337/tcp open  Elite?
+| fingerprint-strings: 
+|   GetRequest: 
+|_    220 HTB{pr0F7pDv3r510nb4nn3r}
+
+I try to do things in a very simple manner... doesnt always work but doesnt hurt to try. 
+
