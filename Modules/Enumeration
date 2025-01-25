@@ -363,3 +363,44 @@ PORT      STATE SERVICE     VERSION
 
 I try to do things in a very simple manner... doesnt always work but doesnt hurt to try. 
 
+
+## NSE AKA nmap scripting engine 
+
+
+Nmap Scripting Engine (NSE) is another handy feature of Nmap. It provides us with the possibility to create scripts in Lua for interaction with certain services. There are a total of 14 categories into which these scripts can be divided:
+
+Category	              Description
+auth	                  Determination of authentication credentials.
+broadcast	              Scripts, which are used for host discovery by broadcasting and the discovered hosts, can be automatically added to the remaining scans.
+brute	                  Executes scripts that try to log in to the respective service by brute-forcing with credentials.
+default	                Default scripts executed by using the -sC option.
+discovery	              Evaluation of accessible services.
+dos	                    These scripts are used to check services for denial of service vulnerabilities and are used less as it harms the services.
+exploit	                This category of scripts tries to exploit known vulnerabilities for the scanned port.
+external	              Scripts that use external services for further processing.
+fuzzer	                This uses scripts to identify vulnerabilities and unexpected packet handling by sending different fields, which can take much time.
+intrusive	              Intrusive scripts that could negatively affect the target system.
+malware	                Checks if some malware infects the target system.
+safe	                  Defensive scripts that do not perform intrusive and destructive access.
+version	                Extension for service detection.
+vuln	                  Identification of specific vulnerabilities.
+
+
+We have several ways to define the desired scripts in Nmap.
+
+Default Scripts
+
+Syntax: MJBUCKNER@htb[/htb]$ sudo nmap <target> -sC
+
+Specific Scripts Category
+
+Syntax: MJBUCKNER@htb[/htb]$ sudo nmap <target> --script <category>
+
+Defined Scripts
+
+Syntax: MJBUCKNER@htb[/htb]$ sudo nmap <target> --script <script-name>,<script-name>,...
+
+
+## Challenge - Use NSE and its scripts to find the flag that one of the services contain and submit it as the answer. - HTB{873nniuc71bu6usbs1i96as6dsv26}
+
+this is actually a horrible question and after running a lot of NSE scripts... its just on http://10.129.201.105/robots.txt -> HTB{873nniuc71bu6usbs1i96as6dsv26}
