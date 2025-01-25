@@ -159,6 +159,33 @@ unfiltered	        This state of a port only occurs during the TCP-ACK scan and 
 open|filtered	      If we do not get a response for a specific port, Nmap will set it to that state. This indicates that a firewall or packet filter may protect the port.
 closed|filtered	    This state only occurs in the IP ID idle scans and indicates that it was impossible to determine if the scanned port is closed or filtered by a firewall.
 
+Discovering Open UDP Ports
+Some system administrators sometimes forget to filter the UDP ports in addition to the TCP ones. Since UDP is a stateless protocol and does not require a three-way handshake like TCP. We do not receive any acknowledgment. Consequently, the timeout is much longer, making the whole UDP scan (-sU) much slower than the TCP scan (-sS).
+
+Let's look at an example of what a UDP scan (-sU) can look like and what results it gives us.
 
 
+Syntax: MJBUCKNER@htb[/htb]$ sudo nmap 10.129.2.28 -F -sU
 
+
+Scanning Options	    Description
+10.129.2.28	          Scans the specified target.
+-F	                  Scans top 100 ports.
+-sU	                  Performs a UDP scan.
+
+If we get an ICMP response with error code 3 (port unreachable), we know that the port is indeed closed.
+
+
+Version Scan 
+
+Syntax: MJBUCKNER@htb[/htb]$ sudo nmap 10.129.2.28 -Pn -n --disable-arp-ping --packet-trace -p 445 --reason  -sV
+
+Scanning Options	      Description
+10.129.2.28	            Scans the specified target.
+-Pn	                    Disables ICMP Echo requests.
+-n	                    Disables DNS resolution.
+--disable-arp-ping	    Disables ARP ping.
+--packet-trace	        Shows all packets sent and received.
+-p 445	                Scans only the specified port.
+--reason	              Displays the reason a port is in a particular state.
+-sV	                    Performs a service scan.
