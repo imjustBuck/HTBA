@@ -551,15 +551,16 @@ PORT   STATE      SERVICE
 MAC Address: DE:AD:00:00:BE:EF (Intel Corporate)
 
 Nmap done: 1 IP address (1 host up) scanned in 0.15 seconds
-Scanning Options	Description
-10.129.2.28	Scans the specified target.
--p 21,22,25	Scans only the specified ports.
--sS	Performs SYN scan on specified ports.
--sA	Performs ACK scan on specified ports.
--Pn	Disables ICMP Echo requests.
--n	Disables DNS resolution.
---disable-arp-ping	Disables ARP ping.
---packet-trace	Shows all packets sent and received.
+Scanning Options	                  Description
+10.129.2.28	                        Scans the specified target.
+-p 21,22,25	                        Scans only the specified ports.
+-sS	                                Performs SYN scan on specified ports.
+-sA	                                Performs ACK scan on specified ports.
+-Pn	                                Disables ICMP Echo requests.
+-n	                                Disables DNS resolution.
+--disable-arp-ping	                Disables ARP ping.
+--packet-trace	                    Shows all packets sent and received.
+
 Please pay attention to the RCVD packets and its set flag we receive from our target. With the SYN scan (-sS) our target tries to establish the TCP connection by sending a packet back with the SYN-ACK (SA) flags set and with the ACK scan (-sA) we get the RST flag because TCP port 22 is open. For the TCP port 25, we do not receive any packets back, which indicates that the packets will be dropped.
 
 Detect IDS/IPS
@@ -598,15 +599,16 @@ PORT   STATE SERVICE
 MAC Address: DE:AD:00:00:BE:EF (Intel Corporate)
 
 Nmap done: 1 IP address (1 host up) scanned in 0.15 seconds
-Scanning Options	Description
-10.129.2.28	Scans the specified target.
--p 80	Scans only the specified ports.
--sS	Performs SYN scan on specified ports.
--Pn	Disables ICMP Echo requests.
--n	Disables DNS resolution.
---disable-arp-ping	Disables ARP ping.
---packet-trace	Shows all packets sent and received.
--D RND:5	Generates five random IP addresses that indicates the source IP the connection comes from.
+Scanning Options	            Description
+10.129.2.28	                  Scans the specified target.
+-p 80	                        Scans only the specified ports.
+-sS	                          Performs SYN scan on specified ports.
+-Pn	                          Disables ICMP Echo requests.
+-n	                          Disables DNS resolution.
+--disable-arp-ping	          Disables ARP ping.
+--packet-trace	              Shows all packets sent and received.
+-D RND:5	                    Generates five random IP addresses that indicates the source IP the connection comes from.
+
 The spoofed packets are often filtered out by ISPs and routers, even though they come from the same network range. Therefore, we can also specify our VPS servers' IP addresses and use them in combination with "IP ID" manipulation in the IP headers to scan the target.
 
 Another scenario would be that only individual subnets would not have access to the server's specific services. So we can also manually specify the source IP address (-S) to test if we get better results with this one. Decoys can be used for SYN, ACK, ICMP scans, and OS detection scans. So let us look at such an example and determine which operating system it is most likely to be.
@@ -645,15 +647,15 @@ Network Distance: 1 hop
 
 OS detection performed. Please report any incorrect results at https://nmap.org/submit/ .
 Nmap done: 1 IP address (1 host up) scanned in 4.11 seconds
-Scanning Options	Description
-10.129.2.28	Scans the specified target.
--n	Disables DNS resolution.
--Pn	Disables ICMP Echo requests.
--p 445	Scans only the specified ports.
--O	Performs operation system detection scan.
--S	Scans the target by using different source IP address.
-10.129.2.200	Specifies the source IP address.
--e tun0	Sends all requests through the specified interface.
+Scanning Options	          Description
+10.129.2.28	                Scans the specified target.
+-n	                        Disables DNS resolution.
+-Pn	                        Disables ICMP Echo requests.
+-p 445	                    Scans only the specified ports.
+-O	                        Performs operation system detection scan.
+-S	                        Scans the target by using different source IP address.
+10.129.2.200	              Specifies the source IP address.
+-e tun0	                    Sends all requests through the specified interface.
 DNS Proxying
 By default, Nmap performs a reverse DNS resolution unless otherwise specified to find more important information about our target. These DNS queries are also passed in most cases because the given web server is supposed to be found and visited. The DNS queries are made over the UDP port 53. The TCP port 53 was previously only used for the so-called "Zone transfers" between the DNS servers or data transfer larger than 512 bytes. More and more, this is changing due to IPv6 and DNSSEC expansions. These changes cause many DNS requests to be made via TCP port 53.
 
@@ -686,16 +688,16 @@ PORT      STATE SERVICE
 50000/tcp open  ibm-db2
 MAC Address: DE:AD:00:00:BE:EF (Intel Corporate)
 
-Nmap done: 1 IP address (1 host up) scanned in 0.08 seconds
-Scanning Options	Description
-10.129.2.28	Scans the specified target.
--p 50000	Scans only the specified ports.
--sS	Performs SYN scan on specified ports.
--Pn	Disables ICMP Echo requests.
--n	Disables DNS resolution.
---disable-arp-ping	Disables ARP ping.
---packet-trace	Shows all packets sent and received.
---source-port 53	Performs the scans from specified source port.
+Nmap done: 1 IP ad dress (1 host up) scanned in 0.08 seconds
+Scanning Options	    Description
+10.129.2.28	          Scans the specified target.
+-p 50000	            Scans only the specified ports.
+-sS	                  Performs SYN scan on specified ports.
+-Pn	                  Disables ICMP Echo requests.
+-n	                  Disables DNS resolution.
+--disable-arp-ping	  Disables ARP ping.
+--packet-trace	      Shows all packets sent and received.
+--source-port 53	    Performs the scans from specified source port.
 Now that we have found out that the firewall accepts TCP port 53, it is very likely that IDS/IPS filters might also be configured much weaker than others. We can test this by trying to connect to this port by using Netcat.
 
 Connect To The Filtered Port
@@ -705,3 +707,9 @@ Syntax: MJBUCKNER@htb[/htb]$ ncat -nv --source-port 53 10.129.2.28 50000
 Ncat: Version 7.80 ( https://nmap.org/ncat )
 Ncat: Connected to 10.129.2.28:50000.
 220 ProFTPd
+
+
+
+Challenge 1 - nmap -sV -A 10.129.19.197 - ubuntu 
+challenge 2 - nmap -T4 -p53 -A -v 10.129.2.48 -D RND:5 --stats-every=5s nmap -Pn -T4 -v -sV 10.129.2.48 -p 53 -D RND:5 --stats-every=5s - nmap 10.129.2.48 -p53 -sU -sV -Pn -n -v --disable-arp-ping --packet-trace --script banner  -> HTB{GoTtgUnyze9Psw4vGjcuMpHRp}
+Challenge 3 - sudo nc -nv -p 53 10.129.2.47 50000 - HTB{kjnsdf2n982n1827eh76238s98di1w6}
