@@ -400,7 +400,89 @@ Defined Scripts
 
 Syntax: MJBUCKNER@htb[/htb]$ sudo nmap <target> --script <script-name>,<script-name>,...
 
-
 ## Challenge - Use NSE and its scripts to find the flag that one of the services contain and submit it as the answer. - HTB{873nniuc71bu6usbs1i96as6dsv26}
 
-this is actually a horrible question and after running a lot of NSE scripts... its just on http://10.129.201.105/robots.txt -> HTB{873nniuc71bu6usbs1i96as6dsv26}
+this is actually a horrible worded question and after running a lot of NSE scripts... its just on http://10.129.201.105/robots.txt -> HTB{873nniuc71bu6usbs1i96as6dsv26}
+
+
+#### Performance 
+
+
+Optimized RTT
+ 
+Syntax: MJBUCKNER@htb[/htb]$ sudo nmap 10.129.2.0/24 -F --initial-rtt-timeout 50ms --max-rtt-timeout 100ms
+
+<SNIP>
+Nmap done: 256 IP addresses (8 hosts up) scanned in 12.29 seconds
+
+Scanning Options	            Description
+10.129.2.0/24	                Scans the specified target network.
+-F	                          Scans top 100 ports.
+--initial-rtt-timeout 50ms	  Sets the specified time value as initial RTT timeout.
+--max-rtt-timeout 100ms	      Sets the specified time value as maximum RTT timeout.
+
+
+Default Scan
+
+Syntax: MJBUCKNER@htb[/htb]$ sudo nmap 10.129.2.0/24 -F -oN tnet.default
+
+<SNIP>
+Nmap done: 256 IP addresses (10 hosts up) scanned in 29.83 seconds
+
+Optimized Scan
+
+Syntax: MJBUCKNER@htb[/htb]$ sudo nmap 10.129.2.0/24 -F -oN tnet.minrate300 --min-rate 300
+
+<SNIP>
+Nmap done: 256 IP addresses (10 hosts up) scanned in 8.67 seconds
+
+
+Scanning Options	              Description
+10.129.2.0/24	                  Scans the specified target network.
+-F	                            Scans top 100 ports.
+-oN tnet.minrate300	            Saves the results in normal formats, starting the specified file name.
+--min-rate 300	                Sets the minimum number of packets to be sent per second.
+
+Default Scan - Found Open Ports
+
+Syntax: MJBUCKNER@htb[/htb]$ cat tnet.default | grep "/tcp" | wc -l
+
+23
+
+Optimized Scan - Found Open Ports
+
+Syntax: MJBUCKNER@htb[/htb]$ cat tnet.minrate300 | grep "/tcp" | wc -l
+
+23
+
+Timing
+
+Because such settings cannot always be optimized manually, as in a black-box penetration test, Nmap offers six different timing templates (-T <0-5>) for us to use. These values (0-5) determine the aggressiveness of our scans. This can also have negative effects if the scan is too aggressive, and security systems may block us due to the produced network traffic. The default timing template used when we have defined nothing else is the normal (-T 3).
+
+-T 0 / -T paranoid
+-T 1 / -T sneaky
+-T 2 / -T polite
+-T 3 / -T normal
+-T 4 / -T aggressive
+-T 5 / -T insane
+These templates contain options that we can also set manually, and have seen some of them already. The developers determined the values set for these templates according to their best results, making it easier for us to adapt our scans to the corresponding network environment. The exact used options with their values we can find here: https://nmap.org/book/performance-timing-templates.html
+
+Default Scan
+
+Syntax: MJBUCKNER@htb[/htb]$ sudo nmap 10.129.2.0/24 -F -oN tnet.default 
+
+<SNIP>
+Nmap done: 256 IP addresses (10 hosts up) scanned in 32.44 seconds
+
+Insane Scan
+
+Syntax: MJBUCKNER@htb[/htb]$ sudo nmap 10.129.2.0/24 -F -oN tnet.T5 -T 5
+
+<SNIP>
+Nmap done: 256 IP addresses (10 hosts up) scanned in 18.07 seconds
+Scanning Options	Description
+10.129.2.0/24	Scans the specified target network.
+-F	Scans top 100 ports.
+-oN tnet.T5	Saves the results in normal formats, starting the specified file name.
+-T 5	Specifies the insane timing template.
+
