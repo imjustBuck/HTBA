@@ -97,3 +97,30 @@ OSINT is an independent procedure and should be performed separately from enumer
 
 Enumeration is a loop in which we repeatedly gather information based on what data we have or have already discovered.
 
+Once we have identified targets in our client's infrastructure, we need to examine the individual services and protocols. 
+In most cases, these are services that enable communication between customers, the infrastructure, the administration, and the employees.
+
+!*!*!*!**!*! Our goal is not to get at the systems but to find all the ways to get there. !*!*!*!*!*!*!*
+
+We wouldnt start hunting for treasure by just picking a shovel up and digging in a random spot, we would prepare for it. Gather materials, read maps, pack gear, learn the terrain. map it out and carefully plan out the "hunt" 
+
+Things to think about beyond the actual information provided or gathered: 
+
+What can we see?
+What reasons can we have for seeing it?
+What image does what we see create for us?
+What do we gain from it?
+How can we use it?
+What can we not see?
+What reasons can there be that we do not see?
+What image results for us from what we do not see?
+
+An important aspect that must not be confused here is that there are always exceptions to the rules. The principles, however, do not change. 
+Another advantage of these principles is that we can see from the practical tasks that we do not lack penetration testing abilities but technical understanding when we suddenly do not know how to proceed because our core task is not to exploit the machines but to find how they can be exploited.
+
+Principles: 
+
+No.	Principle
+1.	There is more than meets the eye. Consider all points of view.
+2.	Distinguish between what we see and what we do not see.
+3.	There are always ways to gain more information. Understand the target.
