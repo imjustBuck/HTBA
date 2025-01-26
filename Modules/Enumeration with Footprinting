@@ -174,3 +174,46 @@ Layer No.6: OS Setup
 Here we collect information about the actual operating system and its setup using internal access. This gives us a good overview of the internal security of the systems and reflects the skills and capabilities of the company's administrative teams.
 
 *************The goal here is to see how the administrators manage the systems and what sensitive internal information we can glean from them.
+
+
+### DOMAIN INFORMATION 
+
+This type of information is gathered passively without direct and active scans. 
+In other words, we remain hidden and navigate as "customers" or "visitors" to avoid direct connections to the company that could expose us. 
+
+when passively gathering information, we can use third-party services to understand the company better. 
+However, the first thing we should do is scrutinize the company's main website. Then, we should read through the texts, keeping in mind what technologies and structures are needed for these services..
+
+Things beyond jsut hte main site we can research:
+
+Certificates 
+DNS records 
+
+Cert Syntax: 
+
+MJBUCKNER@htb[/htb]$ curl -s https://crt.sh/\?q\=<URL>\&output\=json | jq .
+
+
+Sorting Syntax: 
+
+MJBUCKNER@htb[/htb]$ curl -s https://crt.sh/\?q\=inlanefreight.com\&output\=json | jq . | grep name | cut -d":" -f2 | grep -v "CN=" | cut -d'"' -f2 | awk '{gsub(/\\n/,"\n");}1;' | sort -u
+
+
+Once we see which hosts can be investigated further, we can generate a list of IP addresses with a minor adjustment to the cut command and run them through Shodan.
+
+Shodan can be used to find devices and systems permanently connected to the Internet like Internet of Things (IoT). 
+It searches the Internet for open TCP/IP ports and filters the systems according to specific terms and criteria. 
+For example, open HTTP or HTTPS ports and other server ports for FTP, SSH, SNMP, Telnet, RTSP, or SIP are searched. 
+As a result, we can find devices and systems, such as surveillance cameras, servers, smart home systems, industrial controllers, traffic lights and traffic controllers, and various network components.
+
+
+SHODAN IP SYNTAX
+
+Syntax: MJBUCKNER@htb[/htb]$ for i in $(cat subdomainlist);do host $i | grep "has address" | grep inlanefreight.com | cut -d" " -f4 >> ip-addresses.txt;done
+        MJBUCKNER@htb[/htb]$ for i in $(cat ip-addresses.txt);do shodan host $i;done
+
+
+
+### DNS RECORDS 
+
+Syntax - MJBUCKNER@htb[/htb]$ dig any url.com -> we can change out any for literally "any" of the DNS record types -> MX / A / AAAA / CAA 
