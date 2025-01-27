@@ -1002,16 +1002,37 @@ Try to use two tools for enumeration incase the programming of the tools tell us
 
 ## SMB Challenge 
 
-Question 1 - What version of the SMB server is running on the target system? Submit the entire banner as the answer.
+Question 1 - What version of the SMB server is running on the target system? Submit the entire banner as the answer. - Samba smbd 4.6.2 
 
-Question 2 - What is the name of the accessible share on the target?
+- probably two ways to go about it. i logged in via rpcclient and then ran the command 'netshareenumall' and recieved the answer. im running an nmap command to see if it will also tell us. - nmap -scV -A -p139,445 <IP> also told us. 
 
-Question 3 -  Connect to the discovered share and find the flag.txt file. Submit the contents as the answer.
+Question 2 - What is the name of the accessible share on the target? - sambashare 
 
-Question 4 - Find out which domain the server belongs to.
+- rpcclient + netshareenumall gave us this as well - sambashare 
 
-Question 5 - Find additional information about the specific share we found previously and submit the customized version of that specific share as the answer. 
+Question 3 -  Connect to the discovered share and find the flag.txt file. Submit the contents as the answer. - HTB{o873nz4xdo873n4zo873zn4fksuhldsf}
+A) smbclient //10.129.203.220/sambashare
+B) smb: \> cd contents
+smb: \contents\> ls
+  .                                   D        0  Mon Nov  8 07:43:45 2021
+  ..                                  D        0  Mon Nov  8 07:43:14 2021
+  flag.txt                            N       38  Mon Nov  8 07:43:45 2021
+C) smb: \contents\> get flag.txt
+getting file \contents\flag.txt of size 38 as flag.txt (1.0 KiloBytes/sec) (average 1.0 KiloBytes/sec)
+D) cat flag.txt on host machine. 
 
-Question 6 - What is the full system path of that specific share? (format: "/directory/names")
+
+Question 4 - Find out which domain the server belongs to. - DevOps
+
+Rpcclient -> enumdomains -> devops 
+
+Question 5 - Find additional information about the specific share we found previously and submit the customized version of that specific share as the answer. - InFreight SMB v3.1
+
+rpcclient -> netshareenumall -> remark: InFreight SMB v3.1 + path: C:\home\sambauser\
+
+Question 6 - What is the full system path of that specific share? (format: "/directory/names") - C:\home\sambauser\
+
+rpcclient -> netshareenumall -> remark: InFreight SMB v3.1 + path: C:\home\sambauser\
 
 
+## be back tomorrow with NFS ( gross) and DNS and maybe SMTP too 
