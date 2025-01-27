@@ -221,4 +221,31 @@ Syntax - MJBUCKNER@htb[/htb]$ dig any url.com -> we can change out any for liter
 
 ####### HOST BASED ENUMERATION ########## 
 
+### FTP 
+
+File transfer protocol is one of hte oldest protocols and its jsut that. a protocol to transfer files.  it runs on the application layer of TCP/IP stack. so same layer as HTTP or P0P
+
+## TFTP 
+Trivial File Transfer Protocol (TFTP) is simpler than FTP and performs file transfers between client and server processes. However, it does not provide user authentication and other valuable features supported by FTP. 
+In addition, while FTP uses TCP, TFTP uses UDP, making it an unreliable protocol and causing it to use UDP-assisted application layer recovery.
+
+Commands	                        Description
+connect	                                Sets the remote host, and optionally the port, for file transfers.
+get	                                Transfers a file or set of files from the remote host to the local host.
+put	                                Transfers a file or set of files from the local host onto the remote host.
+quit	                                Exits tftp.
+status	                                Shows the current status of tftp, including the current transfer mode (ascii or binary), connection status, time-out value, and so on.
+verbose	                                Turns verbose mode, which displays additional information during file transfer, on or off.
+
+Unlike the FTP client, TFTP does not have directory listing functionality.
+
+## Dangerous Settings        
+
+Setting	                                        Description
+anonymous_enable=YES	                        Allowing anonymous login?
+anon_upload_enable=YES	                        Allowing anonymous to upload files?
+anon_mkdir_write_enable=YES	                Allowing anonymous to create new directories?
+no_anon_password=YES	                        Do not ask anonymous for password?
+anon_root=/home/username/ftp	                Directory for anonymous.
+write_enable=YES	                        Allow the usage of FTP commands: STOR, DELE, RNFR, RNTO, MKD, RMD, APPE, and SITE?
 
