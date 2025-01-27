@@ -497,3 +497,56 @@ Question 1 - Which version of the FTP server is running on the target system? Su
 
 Question 2 - Enumerate the FTP server and find the flag.txt file. Submit the contents of it as the answer. -> before trying im assuming im going to connect to ftp via anonymous then use the get command on flag.txt and then read it off host machine -> HTB{b7skjr4c76zhsds7fzhd4k3ujg7nhdjre}
 
+
+## SMB FOOTPRINTING!!! 
+
+After my first time through i know SMB comes up a lot in the AD portion of the learning path. 
+
+SMB is a client-server protocol that regulates access to files and entire directories and other network resources such as printers, routers, or interfaces released for the network. 
+
+In IP networks, SMB uses TCP protocol for this purpose, which provides for a three-way handshake between client and server before a connection is finally established. 
+The specifications of the TCP protocol also govern the subsequent transport of data. ## so connections / authentications play a big role im what wwe can get out of SMB Sahres 
+
+An SMB server can provide arbitrary parts of its local file system as shares. 
+Therefore the hierarchy visible to a client is partially independent of the structure on the server. 
+Access rights are defined by Access Control Lists (ACL). They can be controlled in a fine-grained manner based on attributes such as execute, read, and full access for individual users or user groups. 
+The ACLs are defined based on the shares and therefore do not correspond to the rights assigned locally on the server.
+
+
+We see global settings and two shares that are intended for printers. 
+The global settings are the configuration of the available SMB server that is used for all shares. 
+In the individual shares, however, the global settings can be overwritten, which can be configured with high probability even incorrectly. 
+Let us look at some of the settings to understand how the shares are configured in Samba.
+
+Setting	                                                Description
+[sharename]	                                        The name of the network share.
+workgroup = WORKGROUP/DOMAIN	                        Workgroup that will appear when clients query.
+path = /path/here/	                                The directory to which user is to be given access.
+server string = STRING	                                The string that will show up when a connection is initiated.
+unix password sync = yes	                        Synchronize the UNIX password with the SMB password?
+usershare allow guests = yes	                        Allow non-authenticated users to access defined share?
+map to guest = bad user	                                What to do when a user login request doesn't match a valid UNIX user?
+browseable = yes	                                Should this share be shown in the list of available shares?
+guest ok = yes	                                        Allow connecting to the service without using a password?
+read only = yes	                                        Allow users to read files only?
+create mask = 0700	                                What permissions need to be set for newly created files?
+
+Dangerous Settings
+Some of the above settings already bring some sensitive options. 
+However, suppose we question the settings listed below and ask ourselves what the employees could gain from them, as well as attackers. 
+In that case, we will see what advantages and disadvantages the settings bring with them. Let us take the setting browseable = yes as an example. 
+If we as administrators adopt this setting, the company's employees will have the comfort of being able to look at the individual folders with the contents. 
+Many folders are eventually used for better organization and structure. 
+If the employee can browse through the shares, the attacker will also be able to do so after successful access.
+
+Setting	                                                        Description
+browseable = yes	                                        Allow listing available shares in the current share?
+read only = no	                                                Forbid the creation and modification of files?
+writable = yes	                                                Allow users to create and modify files?
+guest ok = yes	                                                Allow connecting to the service without using a password?
+enable privileges = yes	                                        Honor privileges assigned to specific SID?
+create mask = 0777	                                        What permissions must be assigned to the newly created files?
+directory mask = 0777	                                        What permissions must be assigned to the newly created directories?
+logon script = script.sh	                                What script needs to be executed on the user's login?
+magic script = script.sh	                                Which script should be executed when the script gets closed?
+magic output = script.out	                                Where the output of the magic script needs to be stored?
