@@ -1565,6 +1565,27 @@ Read data files from: /usr/bin/../share/nmap
 Nmap done: 1 IP address (1 host up) scanned in 0.48 seconds
            Raw packets sent: 2 (72B) | Rcvd: 2 (72B)
 
+## SMTP Challenge 
 
+Question 1 -  Enumerate the SMTP service and submit the banner, including its version as the answer. - sudo nmap -sCV -A -p25 <ip> -> maybe the --script smtp-open-relay -v or --script banner lets see -> InFreight ESMTP v2.11
+
+voila - sudo nmap -sCV -A -p25 10.129.179.58
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2025-01-29 10:59 CST
+Nmap scan report for 10.129.179.58
+Host is up (0.068s latency).
+
+PORT   STATE SERVICE VERSION
+25/tcp open  smtp
+| fingerprint-strings: 
+|   Hello: 
+|     220 InFreight ESMTP v2.11
+|_    Syntax: EHLO hostname
+
+
+
+Question 2 - Enumerate the SMTP service even further and find the username that exists on the system. Submit it as the answer. -> smtp-user-enum -M VRFY -U users.txt -t 10.0.0.1
+ but use the list HTB provides and use -w to change the maximum number of seconds for reply. -> answer is robin 
+
+####### IMAP/POP3 
 
 
