@@ -1835,16 +1835,37 @@ Question 2 -  What is the FQDN that the IMAP and POP3 servers are assigned to? -
 
 
 
-Question 3 - Enumerate the IMAP service and submit the flag as the answer. (Format: HTB{...})
+Question 3 - Enumerate the IMAP service and submit the flag as the answer. (Format: HTB{...}) -> trying this curl -k 'imaps://10.129.179.58' --user robin:robin -v -> yupp -> HTB{roncfbw7iszerd7shni7jr2343zhrj}
 
 
 
-Question 4 - What is the customized version of the POP3 server?
+Question 4 - What is the customized version of the POP3 server? -> maybe? openssl s_client -connect 10.129.179.58:pop3s -> yeah -> InFreight POP3 v9.188
 
 
 
-Question 5 - What is the admin email address?
+Question 5 - What is the admin email address? -> i wish i could just copy and paste a picture in here but ill just do the commands step by step below: 
+1) openssl s_client -connect 10.129.179.58:imaps
+2) 1 LOGIN robin robin
+3) 1 LIST "" *
+4) 1 SELECT DEV.DEPARTMENT.INT
+5) 1 fetch 1 all 
+6) the output of the above command: "Flag" (("CTO" NIL "devadmin" "inlanefreight.htb")) (("CTO" NIL "devadmin" "inlanefreight.htb")) (("CTO" NIL "devadmin" "inlanefreight.htb")) (("Robin" NIL "robin" "inlanefreight.htb")) NIL NIL NIL NIL))
+7) we cna put together the answer is: devadmin@inlanefreight.htb 
 
 
 
 Question 6 -  Try to access the emails on the IMAP server and submit the flag as the answer. (Format: HTB{...})
+1) openssl s_client -connect 10.129.179.58:imaps
+2) 1 LOGIN robin robin
+3) 1 LIST "" *
+4) 1 SELECT DEV.DEPARTMENT.INT
+5) 1 fetch 1 all 
+6) 1 fetch 1 BODY[TEXT] 
+7) HTB{983uzn8jmfgpd8jmof8c34n7zio} 
+
+I do nto enjoy these commands but uhhhhhhhh yeah, anyway moving onward : ] 
+
+##### FOOTPRINTING SNMP 
+
+
+
