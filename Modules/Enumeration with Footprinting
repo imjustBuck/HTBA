@@ -1868,4 +1868,63 @@ I do nto enjoy these commands but uhhhhhhhh yeah, anyway moving onward : ]
 ##### FOOTPRINTING SNMP 
 
 
+Simple Network Management Protocol (SNMP) was created to monitor network devices. In addition, this protocol can also be used to handle configuration tasks and change settings remotely. SNMP-enabled hardware includes routers, switches, servers, IoT devices, and many other devices that can also be queried and controlled using this standard protocol. Thus, it is a protocol for monitoring and managing network devices. In addition, configuration tasks can be handled, and settings can be made remotely using this standard. The current version is SNMPv3, which increases the security of SNMP in particular, but also the complexity of using this protocol.
 
+In addition to the pure exchange of information, SNMP also transmits control commands using agents over UDP port 161. The client can set specific values in the device and change options and settings with these commands. While in classical communication, it is always the client who actively requests information from the server, SNMP also enables the use of so-called traps over UDP port 162. These are data packets sent from the SNMP server to the client without being explicitly requested. If a device is configured accordingly, an SNMP trap is sent to the client once a specific event occurs on the server-side.
+
+For the SNMP client and server to exchange the respective values, the available SNMP objects must have unique addresses known on both sides. This addressing mechanism is an absolute prerequisite for successfully transmitting data and network monitoring using SNMP.
+
+
+SNMPv1
+SNMP version 1 (SNMPv1) is used for network management and monitoring. SNMPv1 is the first version of the protocol and is still in use in many small networks. It supports the retrieval of information from network devices, allows for the configuration of devices, and provides traps, which are notifications of events. However, SNMPv1 has no built-in authentication mechanism, meaning anyone accessing the network can read and modify network data. Another main flaw of SNMPv1 is that it does not support encryption, meaning that all data is sent in plain text and can be easily intercepted.
+
+SNMPv2
+SNMPv2 existed in different versions. The version still exists today is v2c, and the extension c means community-based SNMP. Regarding security, SNMPv2 is on par with SNMPv1 and has been extended with additional functions from the party-based SNMP no longer in use. However, a significant problem with the initial execution of the SNMP protocol is that the community string that provides security is only transmitted in plain text, meaning it has no built-in encryption.
+
+SNMPv3
+The security has been increased enormously for SNMPv3 by security features such as authentication using username and password and transmission encryption (via pre-shared key) of the data. However, the complexity also increases to the same extent, with significantly more configuration options than v2c.
+
+Footprinting the Service
+For footprinting SNMP, we can use tools like snmpwalk, onesixtyone, and braa. Snmpwalk is used to query the OIDs with their information. Onesixtyone can be used to brute-force the names of the community strings since they can be named arbitrarily by the administrator. Since these community strings can be bound to any source, identifying the existing community strings can take quite some time.
+
+## Footprinting the SNMP Service
+
+SNMPwalk
+  SNMP
+Syntax: MJBUCKNER@htb[/htb]$ snmpwalk -v2c -c public 10.129.14.128
+
+iso.3.6.1.2.1.1.1.0 = STRING: "Linux htb 5.11.0-34-generic #36~20.04.1-Ubuntu SMP Fri Aug 27 08:06:32 UTC 2021 x86_64"
+iso.3.6.1.2.1.1.2.0 = OID: iso.3.6.1.4.1.8072.3.2.10
+iso.3.6.1.2.1.1.3.0 = Timeticks: (5134) 0:00:51.34
+iso.3.6.1.2.1.1.4.0 = STRING: "mrb3n@inlanefreight.htb"
+iso.3.6.1.2.1.1.5.0 = STRING: "htb"
+iso.3.6.1.2.1.1.6.0 = STRING: "Sitting on the Dock of the Bay"
+iso.3.6.1.2.1.1.7.0 = INTEGER: 72
+
+Here we recognize some Python packages that have been installed on the system. If we do not know the community string, we can use onesixtyone and SecLists wordlists to identify these community strings.
+
+OneSixtyOne
+  SNMP
+
+Syntax: MJBUCKNER@htb[/htb]$ sudo apt install onesixtyone
+Syntax: MJBUCKNER@htb[/htb]$ onesixtyone -c /opt/useful/seclists/Discovery/SNMP/snmp.txt 10.129.14.128
+
+Scanning 1 hosts, 3220 communities
+10.129.14.128 [public] Linux htb 5.11.0-37-generic #41~20.04.2-Ubuntu SMP Fri Sep 24 09:06:38 UTC 2021 x86_64
+
+
+##3 SNMP Challenge  
+
+Question 1 -  Enumerate the SNMP service and obtain the email address of the admin. Submit it as the answer. -> lets try this to start since they dont even mention nmap in this module -> snmpwalk -v2c -c public 10.129.179.58
+
+hella output but we do get 1 and 2 - devadmin <devadmin@inlanefreight.htb> 
+
+
+Question 2 - What is the customized version of the SNMP server? - InFreight SNMP v0.91
+
+
+Question 3 - Enumerate the custom script that is running on the system and submit its output as the answer. - HTB{5nMp_fl4g_uidhfljnsldiuhbfsdij44738b2u763g} 
+
+so all three were answered with - snmpwalk -v2c -c public 10.129.179.58 -> just have to go tyhrough the output 
+
+##### Footprinting MySQL but ima get some workdone real quick and hop back into this 
