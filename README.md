@@ -1,0 +1,1 @@
+Going over HTB CPTS once again and taking much more detailed notes on all my steps through modules and skill challenges as well as making note of all scripts outside of the modules i may use so i can have when i take the exam. 
