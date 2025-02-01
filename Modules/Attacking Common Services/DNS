@@ -1,1 +1,141 @@
+Again a lot of this info is covered i nthe footprinting section and i f i remember correctly dig axfer is a big command to know. 
+
+Enumeration Syntax: 
+
+MJBUCKNER@htb[/htb]# nmap -p53 -Pn -sV -sC 10.10.110.213
+
+Starting Nmap 7.80 ( https://nmap.org ) at 2020-10-29 03:47 EDT
+Nmap scan report for 10.10.110.213
+Host is up (0.017s latency).
+
+PORT    STATE  SERVICE     VERSION
+53/tcp  open   domain      ISC BIND 9.11.3-1ubuntu1.2 (Ubuntu Linux)
+
+
+DIG - AXFR Zone Transfer
+  Attacking DNS
+
+
+Syntax: MJBUCKNER@htb[/htb]# dig AXFR @ns1.inlanefreight.htb inlanefreight.htb
+
+; <<>> DiG 9.11.5-P1-1-Debian <<>> axfr inlanefrieght.htb @10.129.110.213
+;; global options: +cmd
+inlanefrieght.htb.         604800  IN      SOA     localhost. root.localhost. 2 604800 86400 2419200 604800
+inlanefrieght.htb.         604800  IN      AAAA    ::1
+inlanefrieght.htb.         604800  IN      NS      localhost.
+inlanefrieght.htb.         604800  IN      A       10.129.110.22
+admin.inlanefrieght.htb.   604800  IN      A       10.129.110.21
+hr.inlanefrieght.htb.      604800  IN      A       10.129.110.25
+support.inlanefrieght.htb. 604800  IN      A       10.129.110.28
+inlanefrieght.htb.         604800  IN      SOA     localhost. root.localhost. 2 604800 86400 2419200 604800
+;; Query time: 28 msec
+;; SERVER: 10.129.110.213#53(10.129.110.213)
+;; WHEN: Mon Oct 11 17:20:13 EDT 2020
+;; XFR size: 8 records (messages 1, bytes 289) 
+
+
+
+Subdomain Enumeration
+Before performing a subdomain takeover, we should enumerate subdomains for a target domain using tools like Subfinder. This tool can scrape subdomains from open sources like DNSdumpster. Other tools like Sublist3r can also be used to brute-force subdomains by supplying a pre-generated wordlist:
+
+  Attacking DNS
+MJBUCKNER@htb[/htb]# ./subfinder -d inlanefreight.com -v       
+                                                                       
+        _     __ _         _                                           
+____  _| |__ / _(_)_ _  __| |___ _ _          
+(_-< || | '_ \  _| | ' \/ _  / -_) '_|                 
+/__/\_,_|_.__/_| |_|_||_\__,_\___|_| v2.4.5                                                                                                                                                                                                                                                 
+                projectdiscovery.io                    
+                                                                       
+[WRN] Use with caution. You are responsible for your actions
+[WRN] Developers assume no liability and are not responsible for any misuse or damage.
+[WRN] By using subfinder, you also agree to the terms of the APIs used. 
+                                   
+[INF] Enumerating subdomains for inlanefreight.com
+[alienvault] www.inlanefreight.com
+[dnsdumpster] ns1.inlanefreight.com
+[dnsdumpster] ns2.inlanefreight.com
+...snip...
+[bufferover] Source took 2.193235338s for enumeration
+ns2.inlanefreight.com
+www.inlanefreight.com
+ns1.inlanefreight.com
+support.inlanefreight.com
+[INF] Found 4 subdomains for inlanefreight.com in 20 seconds 11 milliseconds
+
+
+
+Subbrute
+  Attacking DNS
+MJBUCKNER@htb[/htb]$ git clone https://github.com/TheRook/subbrute.git >> /dev/null 2>&1
+MJBUCKNER@htb[/htb]$ cd subbrute
+MJBUCKNER@htb[/htb]$ echo "ns1.inlanefreight.com" > ./resolvers.txt
+MJBUCKNER@htb[/htb]$ ./subbrute inlanefreight.com -s ./names.txt -r ./resolvers.txt
+
+Warning: Fewer than 16 resolvers per process, consider adding more nameservers to resolvers.txt.
+inlanefreight.com
+ns2.inlanefreight.com
+www.inlanefreight.com
+ms1.inlanefreight.com
+support.inlanefreight.com
+
+<SNIP>
+
+
+
+DNS Spoofing
+DNS spoofing is also referred to as DNS Cache Poisoning. This attack involves altering legitimate DNS records with false information so that they can be used to redirect online traffic to a fraudulent website. Example attack paths for the DNS Cache Poisoning are as follows:
+
+An attacker could intercept the communication between a user and a DNS server to route the user to a fraudulent destination instead of a legitimate one by performing a Man-in-the-Middle (MITM) attack.
+
+Exploiting a vulnerability found in a DNS server could yield control over the server by an attacker to modify the DNS records.
+
+Local DNS Cache Poisoning
+From a local network perspective, an attacker can also perform DNS Cache Poisoning using MITM tools like Ettercap or Bettercap.
+
+To exploit the DNS cache poisoning via Ettercap, we should first edit the /etc/ettercap/etter.dns file to map the target domain name (e.g., inlanefreight.com) that they want to spoof and the attacker's IP address (e.g., 192.168.225.110) that they want to redirect a user to:
+
+  Attacking DNS
+MJBUCKNER@htb[/htb]# cat /etc/ettercap/etter.dns
+
+inlanefreight.com      A   192.168.225.110
+*.inlanefreight.com    A   192.168.225.110
+Next, start the Ettercap tool and scan for live hosts within the network by navigating to Hosts > Scan for Hosts. Once completed, add the target IP address (e.g., 192.168.152.129) to Target1 and add a default gateway IP (e.g., 192.168.152.2) to Target2.
+
+
+Activate dns_spoof attack by navigating to Plugins > Manage Plugins. This sends the target machine with fake DNS responses that will resolve inlanefreight.com to IP address 192.168.225.110:
+
+
+After a successful DNS spoof attack, if a victim user coming from the target machine 192.168.152.129 visits the inlanefreight.com domain on a web browser, they will be redirected to a Fake page that is hosted on IP address 192.168.225.110:
+
+
+In addition, a ping coming from the target IP address 192.168.152.129 to inlanefreight.com should be resolved to 192.168.225.110 as well:
+
+  Attacking DNS
+C:\>ping inlanefreight.com
+
+Pinging inlanefreight.com [192.168.225.110] with 32 bytes of data:
+Reply from 192.168.225.110: bytes=32 time<1ms TTL=64
+Reply from 192.168.225.110: bytes=32 time<1ms TTL=64
+Reply from 192.168.225.110: bytes=32 time<1ms TTL=64
+Reply from 192.168.225.110: bytes=32 time<1ms TTL=64
+
+Ping statistics for 192.168.225.110:
+    Packets: Sent = 4, Received = 4, Lost = 0 (0% loss),
+Approximate round trip times in milli-seconds:
+    Minimum = 0ms, Maximum = 0ms, Average = 0ms
+
+
+
+
+Challenge: 
+
+
+Question 1 Find all available DNS records for the "inlanefreight.htb" domain on the target name server and submit the flag found as a DNS record as the answer. - Hint: We highly recommend to use the tool called "subbrute" for this. This tool can be found on Github.
+
+1)  find subdomains -> 
+2) find hr subdomain -> dig AXFR hr.inlanefreight.htb @10.129.19.206
+3) HTB{LUIHNFAS2871SJK1259991}
+
+
 
