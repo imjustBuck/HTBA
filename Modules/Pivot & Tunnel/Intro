@@ -6,3 +6,80 @@ In such cases, we may need to use a pivot host that we have already compromised 
 Pivoting is essentially the idea of moving to other networks through a compromised host to find more targets on different network segments.
 
 
+Primary use of pivoting is to defeat segmentation of all types to access isolated networks. 
+Tunneling however is a subset of pivoting. Tunneling encapsulates network traffic into another protocol and routes traffic THROUGH it. 
+
+Typical applications like VPNs or specialized browsers are just another form of tunneling network traffic.
+
+
+We will inevitably come across several different terms used to describe the same thing in IT & the Infosec industry. With pivoting, we will notice that this is often referred to as Lateral Movement.
+
+Isn't it the same thing as pivoting?
+
+The answer to that is not exactly. 
+Let's take a second to compare and contrast Lateral Movement with Pivoting and Tunneling, as there can be some confusion as to why some consider them different concepts.
+
+Lateral Movement VS Pivoting Vs Tunneling: 
+
+
+ Lateral Movement
+
+Lateral movement can be described as a technique used to further our access to additional hosts, applications, and services within a network environment. 
+Lateral movement can also help us gain access to specific domain resources we may need to elevate our privileges.
+Lateral Movement often enables privilege escalation across hosts.
+
+Pivoting
+Utilizing multiple hosts to cross network boundaries you would not usually have access to. This is more of a targeted objective. The goal here is to allow us to move deeper into a network by compromising targeted hosts or infrastructure.
+
+Tunneling
+We often find ourselves using various protocols to shuttle traffic in/out of a network where there is a chance of our traffic being detected. For example, using HTTP to mask our Command & Control traffic from a server we own to the victim host. 
+The key here is obfuscation of our actions to avoid detection for as long as possible. We utilize protocols with enhanced security measures such as HTTPS over TLS or SSH over other transport protocols. 
+These types of actions also enable tactics like the exfiltration of data out of a target network or the delivery of more payloads and instructions into the network.
+
+Here is Chat Summary of the 3 as well: 
+
+
+1. Lateral Movement
+
+- Definition: Expanding access within the same network by targeting additional hosts, applications, or services.
+
+- Purpose: To gather more access or escalate privileges within the network.
+
+- Key Feature: Moving sideways within the network.
+
+Examples:
+1) Using compromised credentials to log into another server.
+2) Exploiting a shared service like SMB to gain access to other systems.
+3) Deploying tools like PsExec or WMI to execute commands on additional machines.
+
+2. Pivoting
+
+- Definition: Using a compromised host to bridge access into other network segments that would otherwise be unreachable.
+
+- Purpose: To target deeper or more protected parts of the network by using the compromised host as a "pivot point."
+
+- Key Feature: Crossing network boundaries.
+
+Examples:
+1)Compromising a workstation in a DMZ to reach the internal network.
+2)Setting up an SSH tunnel on a compromised host to forward traffic to an internal database.
+3)Using tools like Metasploit's autoroute or ProxyChains to route traffic through the compromised host.
+
+3. Tunneling
+
+- Definition: Encapsulating or disguising traffic using various protocols to avoid detection and maintain stealth.
+
+- Purpose: To hide malicious activity (e.g., exfiltration, C2 communications) or bypass monitoring.
+
+- Key Feature: Obfuscation of traffic.
+
+Examples:
+1) Sending Command and Control (C2) traffic over HTTPS to blend with legitimate web traffic.
+2) Using SSH tunneling to securely send payloads or extract data.
+3) Leveraging DNS tunneling to exfiltrate data in environments with strict web filtering.
+
+Key Differences:
+Aspect	    Lateral Movement	                              Pivoting	                                          Tunneling
+Scope	      Expanding access within a network.	            Accessing different network segments.	              Hiding or disguising malicious traffic.
+Goal	      Privilege escalation or broader access.	        Crossing boundaries into restricted zones.	        Avoiding detection while transferring data.
+Tools	      PsExec, WMI	                                    Metasploit's autoroute, SSH tunnels	                HTTPS, SSH, DNS tunneling
