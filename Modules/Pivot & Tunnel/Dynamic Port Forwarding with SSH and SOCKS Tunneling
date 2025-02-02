@@ -256,3 +256,58 @@ The workflow is:
 You SSH into the victim machine (192.168.1.10).
 Set up a SOCKS proxy on your host machine.
 Use proxychains to scan 172.16.5.0/23 through the victim machine.
+
+
+### Enabling Dynamic Port Forwarding with SSH: 
+
+1. Set Up the SOCKS Proxy via SSH
+
+Command: ssh -D 9050 ubuntu@10.129.202.64
+
+* What this does:
+* The -D 9050 flag sets up a SOCKS proxy on port 9050 on your host machine.
+* This proxy forwards any traffic received on port 9050 through the SSH connection to the remote machine (10.129.202.64).
+* This step enables you to use the victim machine as a gateway to reach other networks (e.g., 172.16.5.0/23).
+
+2. Configure Proxychains
+Edit the Configuration File:
+
+Syntax: sudo nano /etc/proxychains.conf
+1) Add the Proxy:
+* Ensure the last line reads: bsocks4 127.0.0.1 9050
+* This tells Proxychains to route traffic through the SOCKS proxy listening on 127.0.0.1:9050.
+
+3. Verify the Proxychains Configuration
+Command to check: tail -4 /etc/proxychains.conf
+Expected Output:
+# meanwile
+# defaults set to "tor"
+socks4 127.0.0.1 9050
+
+4. Run Scans Through Proxychains
+* Command for Network Scanning: proxychains nmap -v -sn 172.16.5.1-200
+* What this does: proxychains routes the traffic from nmap through the SOCKS proxy (port 9050) to the target network (172.16.5.1-200).
+* The -sn flag performs a ping scan to check which hosts are alive on the target network.
+
+5. Perform Full Scans Through Proxychains
+* Command for Detailed Scan: proxychains nmap -v -Pn -sT 172.16.5.19
+* What this does: The -Pn flag disables host discovery (useful if ICMP is blocked, as is often the case with Windows targets).
+* The -sT flag performs a full TCP connect scan, which Proxychains supports.
+
+6. Analyze Results
+
+*What You’re Looking For:
+*Open ports in the target network.
+*In the example, ports like 445, 135, 3389, and 139 are discovered on 172.16.5.19.
+
+
+7. Key Points to Remember:
+* Why Use Proxychains?
+
+* Proxychains allows you to route traffic through the SOCKS proxy set up on your host machine, effectively tunneling through the victim machine.
+* It hides your host machine’s IP address, making the victim machine appear as the source of the traffic.
+
+Why Use Full TCP Scans?
+
+* Proxychains doesn’t support partial scans (e.g., SYN scans) because it can’t interpret partial packets. Use -sT for compatibility.
+* Why Disable Ping (-Pn)? -> Many environments block ICMP (ping) requests, especially Windows hosts with default firewall settings. Disabling ping ensures you still scan the host.
