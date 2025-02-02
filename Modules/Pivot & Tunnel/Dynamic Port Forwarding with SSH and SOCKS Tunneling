@@ -301,13 +301,30 @@ socks4 127.0.0.1 9050
 *In the example, ports like 445, 135, 3389, and 139 are discovered on 172.16.5.19.
 
 
-7. Key Points to Remember:
-* Why Use Proxychains?
+*  Key Points to Remember:
+1. Why Use Proxychains?
 
 * Proxychains allows you to route traffic through the SOCKS proxy set up on your host machine, effectively tunneling through the victim machine.
 * It hides your host machine’s IP address, making the victim machine appear as the source of the traffic.
 
-Why Use Full TCP Scans?
+2. Why Use Full TCP Scans?
 
 * Proxychains doesn’t support partial scans (e.g., SYN scans) because it can’t interpret partial packets. Use -sT for compatibility.
-* Why Disable Ping (-Pn)? -> Many environments block ICMP (ping) requests, especially Windows hosts with default firewall settings. Disabling ping ensures you still scan the host.
+
+3. Why Disable Ping (-Pn)?
+
+* Many environments block ICMP (ping) requests, especially Windows hosts with default firewall settings. Disabling ping ensures you still scan the host.
+
+Challege:  SSH to 10.129.56.248 (ACADEMY-PIVOTING-LINUXPIV) with user "ubuntu" and password "HTB_@cademy_stdnt!"
+
+Question 1 - You have successfully captured credentials to an external facing Web Server. Connect to the target and list the network interfaces. How many network interfaces does the target web server have? (Including the loopback interface) - 3 
+
+1) ssh ubuntu@10.129.56.248
+2) ifconfig - count network interfaces -> 3 
+
+Question 2 -  Apply the concepts taught in this section to pivot to the internal network and use RDP (credentials: victor:pass@123) to take control of the Windows target on 172.16.5.19. Submit the contents of Flag.txt located on the Desktop.
+
+1) ssh -D 9050 ubuntu@10.129.56.248
+2) ensure proxychains.conf is set up correctly -> at bottom it should read -> socks4 127.0.0.1 9050
+3) proxychains xfreerdp /u:victor /p:pass@123 /v:172.16.5.19
+4) click on flag.txt ->  N1c3Piv0t
