@@ -4,3 +4,255 @@ Port forwarding uses TCP as the primary communication layer to provide interacti
 However, different application layer protocols such as SSH or even SOCKS (non-application layer) can be used to encapsulate the forwarded traffic. 
 This can be effective in bypassing firewalls and using existing services on your compromised host to pivot to other networks.
 
+Scanning the Pivot: 
+
+Syntax: MJBUCKNER@htb[/htb]$ nmap -sT -p22,3306 10.129.202.64
+
+Starting Nmap 7.92 ( https://nmap.org ) at 2022-02-24 12:12 EST
+Nmap scan report for 10.129.202.64
+Host is up (0.12s latency).
+
+PORT     STATE  SERVICE
+22/tcp   open   ssh
+3306/tcp closed mysql
+
+Nmap done: 1 IP address (1 host up) scanned in 0.68 seconds
+
+The Nmap output shows that the SSH port is open. 
+To access the MySQL service, we can either SSH into the server and access MySQL from inside the Ubuntu server, or we can port forward it to our localhost on port 1234 and access it locally. 
+A benefit of accessing it locally is if we want to execute a remote exploit on the MySQL service, we won't be able to do it without port forwarding.
+This is due to MySQL being hosted locally on the Ubuntu server on port 3306. 
+So, we will use the below command to forward our local port (1234) over SSH to the Ubuntu serve
+
+Executing the Local Port Forward
+
+Syntax: MJBUCKNER@htb[/htb]$ ssh -L 1234:localhost:3306 ubuntu@10.129.202.64
+
+ubuntu@10.129.202.64's password: 
+Welcome to Ubuntu 20.04.3 LTS (GNU/Linux 5.4.0-91-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/advantage
+
+  System information as of Thu 24 Feb 2022 05:23:20 PM UTC
+
+  System load:             0.0
+  Usage of /:              28.4% of 13.72GB
+  Memory usage:            34%
+  Swap usage:              0%
+  Processes:               175
+  Users logged in:         1
+  IPv4 address for ens192: 10.129.202.64
+  IPv6 address for ens192: dead:beef::250:56ff:feb9:52eb
+  IPv4 address for ens224: 172.16.5.129
+
+ * Super-optimized for small spaces - read how we shrank the memory
+   footprint of MicroK8s to make it the smallest full K8s around.
+
+   https://ubuntu.com/blog/microk8s-memory-optimisation
+
+66 updates can be applied immediately.
+45 of these updates are standard security updates.
+To see these additional updates run: apt list --upgradable
+
+
+************ The -L command tells the SSH client to request the SSH server to forward all the data we send via the port 1234 to localhost:3306 on the Ubuntu server.
+By doing this, we should be able to access the MySQL service locally on port 1234. 
+We can use Netstat or Nmap to query our local host on 1234 port to verify whether the MySQL service was forwarded.
+
+Confirming Port Forward w/ Netstat: 
+
+Syntax: MJBUCKNER@htb[/htb]$ netstat -antp | grep 1234
+
+(Not all processes could be identified, non-owned process info
+ will not be shown, you would have to be root to see it all.)
+tcp        0      0 127.0.0.1:1234          0.0.0.0:*               LISTEN      4034/ssh            
+tcp6       0      0 ::1:1234                :::*                    LISTEN      4034/ssh     
+
+
+Confirming Port Forward w/ Nmap:
+
+Syntax: MJBUCKNER@htb[/htb]$ nmap -v -sV -p1234 localhost
+
+Starting Nmap 7.92 ( https://nmap.org ) at 2022-02-24 12:18 EST
+NSE: Loaded 45 scripts for scanning.
+Initiating Ping Scan at 12:18
+Scanning localhost (127.0.0.1) [2 ports]
+Completed Ping Scan at 12:18, 0.01s elapsed (1 total hosts)
+Initiating Connect Scan at 12:18
+Scanning localhost (127.0.0.1) [1 port]
+Discovered open port 1234/tcp on 127.0.0.1
+Completed Connect Scan at 12:18, 0.01s elapsed (1 total ports)
+Initiating Service scan at 12:18
+Scanning 1 service on localhost (127.0.0.1)
+Completed Service scan at 12:18, 0.12s elapsed (1 service on 1 host)
+NSE: Script scanning 127.0.0.1.
+Initiating NSE at 12:18
+Completed NSE at 12:18, 0.01s elapsed
+Initiating NSE at 12:18
+Completed NSE at 12:18, 0.00s elapsed
+Nmap scan report for localhost (127.0.0.1)
+Host is up (0.0080s latency).
+Other addresses for localhost (not scanned): ::1
+
+PORT     STATE SERVICE VERSION
+1234/tcp open  mysql   MySQL 8.0.28-0ubuntu0.20.04.3
+
+Read data files from: /usr/bin/../share/nmap
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 1.18 seconds
+
+Similarly, if we want to forward multiple ports from the Ubuntu server to your localhost, you can do so by including the local port:server:port argument to your ssh command
+For example, the below command forwards the apache web server's port 80 to your attack host's local port on 8080.
+
+Syntax: MJBUCKNER@htb[/htb]$ ssh -L 1234:localhost:3306 -L 8080:localhost:80 ubuntu@10.129.202.64
+
+
+OKAY so this is the part where i get super confused but i also just like skipped most of this reading cause im an silyl goose sometimes : ] 
+Looking for Opportunities to Pivot using ifconfig
+
+Syntax from Ubuntui (victim) server: ubuntu@WEB01:~$ ifconfig 
+
+ens192: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 10.129.202.64  netmask 255.255.0.0  broadcast 10.129.255.255
+        inet6 dead:beef::250:56ff:feb9:52eb  prefixlen 64  scopeid 0x0<global>
+        inet6 fe80::250:56ff:feb9:52eb  prefixlen 64  scopeid 0x20<link>
+        ether 00:50:56:b9:52:eb  txqueuelen 1000  (Ethernet)
+        RX packets 35571  bytes 177919049 (177.9 MB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 10452  bytes 1474767 (1.4 MB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+ens224: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 172.16.5.129  netmask 255.255.254.0  broadcast 172.16.5.255
+        inet6 fe80::250:56ff:feb9:a9aa  prefixlen 64  scopeid 0x20<link>
+        ether 00:50:56:b9:a9:aa  txqueuelen 1000  (Ethernet)
+        RX packets 8251  bytes 1125190 (1.1 MB)
+        RX errors 0  dropped 40  overruns 0  frame 0
+        TX packets 1538  bytes 123584 (123.5 KB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
+        inet 127.0.0.1  netmask 255.0.0.0
+        inet6 ::1  prefixlen 128  scopeid 0x10<host>
+        loop  txqueuelen 1000  (Local Loopback)
+        RX packets 270  bytes 22432 (22.4 KB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 270  bytes 22432 (22.4 KB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+Unlike the previous scenario where we knew which port to access, in our current scenario, we don't know which services lie on the other side of the network. So, we can scan smaller ranges of IPs on the network (172.16.5.1-200) network or the entire subnet (172.16.5.0/23). We cannot perform this scan directly from our attack host because it does not have routes to the 172.16.5.0/23 network. To do this, we will have to perform dynamic port forwarding and pivot our network packets via the Ubuntu server. We can do this by starting a SOCKS listener on our local host (personal attack host or Pwnbox) and then configure SSH to forward that traffic via SSH to the network (172.16.5.0/23) after connecting to the target host.
+
+
+So we have to set up a SOCKS Listener first on our LOCAL / HOST machine then configure SSH to forward that traffic VIA ssh to the victim network AFTER connecting to target host. 
+
+  Scenario Overview
+We need to scan a network (172.16.5.0/23) that our attack host cannot directly access. To do so, we use SSH tunneling over a SOCKS proxy via a compromised Ubuntu server. This process allows us to "pivot" traffic through the Ubuntu server to reach the restricted network.
+
+Steps to Accomplish This
+1. Setup a SOCKS Proxy on Your Local Machine
+
+- Goal: Create a listener that forwards traffic from your attack machine to the restricted network.
+- How: Use SSH to set up dynamic port forwarding.
+
+Example command:
+
+Syntax: ssh -D 1080 -f -N user@ubuntu-target  -> ON HOST MACHINE 
+
+Explanation:
+-D 1080: Sets up a SOCKS proxy on port 1080 of your attack host.
+-f: Runs the SSH process in the background.
+-N: No remote command execution; just tunneling.
+user@ubuntu-target: SSH into the Ubuntu server (pivot point).
++
+2. Configure Your Tools to Use the SOCKS Proxy
+
+-Goal: Route your scanning or enumeration tools' traffic through the SOCKS proxy.
+-How: Use tools like proxychains or set up a browser/tool to use the SOCKS proxy (e.g., localhost:1080).
+
+Example proxychains usage:
+Syntax: proxychains nmap -sT -Pn -p 22,80,443 172.16.5.0/23 -> ON HOST MACHINE 
+Explanation:
+- proxychains: Ensures traffic is routed through the SOCKS proxy.
+- nmap: Scans the restricted network via the SOCKS proxy.
+
+3. Perform Enumeration/Scanning on the Target Network
+
+- Goal: Scan or access services on the restricted network (172.16.5.0/23).
+- How: Once the SOCKS proxy is set, you can enumerate the network using your scanning tools or even browse web servers behind the NAT.
+
+Why This Works:
+The SOCKS proxy routes your traffic from your attack host -> Ubuntu server -> restricted network.
+
+- Key Concepts Explained
+  SOCKS Proxy:
+- Acts as a middleman to route your traffic through an intermediary host.
+- Useful when firewalls or NAT restrict direct access.
+- Dynamic Port Forwarding:
+
+The SSH command sets up a tunnel to the target network and forwards any traffic (via the SOCKS proxy) to it.
+Benefits:
+
+Bypass firewalls or NAT restrictions.
+Conduct scans and enumeration on networks otherwise unreachable.
+
+
+What You Need:
+
+1) Access to the Victim Machine (Pivot Point):
+
+* You need valid credentials (username/password or private key) to SSH into the victim machine (e.g., the Ubuntu server).
+* This machine has access to the restricted network (e.g., 172.16.5.0/23).
+
+2) The Restricted Network’s IP Range:
+
+* This is the target subnet you want to scan or interact with (e.g., 172.16.5.0/23).
+
+3) Your Host Machine (Attack Machine):
+
+* This is where you set up the SOCKS proxy (ssh -D) and run tools like nmap through proxychains.
+
+Key Points to Avoid Confusion:
+
+* The SOCKS Proxy is Local: The SOCKS proxy (ssh -D 1080) runs on your host machine. You don’t need to install or configure anything on the victim machine for this.
+* The Victim Machine is a Middleman: The victim machine (Ubuntu server) simply forwards the traffic from your host machine to the restricted network.
+
+Why You Only Need the Victim’s Network IP Range:
+
+* Your tools (e.g., nmap, curl, etc.) will generate traffic from your host machine.
+* The SOCKS proxy ensures that traffic is tunneled through the victim machine and forwarded to the target network.
+* As long as the victim machine has access to the target network, and you know the IP range, your host machine can interact with it via the SOCKS proxy.
+
+Steps Recap:
+
+1) Set Up the SOCKS Proxy (on Host Machine):
+
+Syntax: ssh -D 1080 -f -N user@ubuntu-target
+
+* This forwards all traffic from your host machine through the victim machine.
+
+2) Configure Proxychains (on Host Machine):
+
+Edit /etc/proxychains.conf and ensure the last line points to the SOCKS proxy:
+Syntax for /etc/proxchains.conf: socks5 127.0.0.1 1080
+
+3) Run Tools Through Proxychains (on Host Machine):
+
+Syntax: proxychains nmap -sT -Pn -p 22,80,443 172.16.5.0/23
+
+*This command scans the restricted network from your host machine via the victim machine.
+
+Why This Works:
+
+* The victim machine acts as a gateway to the restricted network. Your host machine doesn't need direct access to the restricted network—it just needs the victim machine to forward its traffic.
+
+Example Scenario:
+Your host machine: 10.10.14.20
+Victim machine (Ubuntu server): 192.168.1.10
+Target network (restricted): 172.16.5.0/23
+The workflow is:
+
+You SSH into the victim machine (192.168.1.10).
+Set up a SOCKS proxy on your host machine.
+Use proxychains to scan 172.16.5.0/23 through the victim machine.
