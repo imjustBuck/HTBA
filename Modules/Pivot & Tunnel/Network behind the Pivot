@@ -75,3 +75,26 @@ It is common to think of a network appliance that connects us to the Internet wh
 Some of the challenges we will face in this module require us to make a pivot host route traffic to another network. 
 One way we will see this is through the use of AutoRoute, which allows our attack box to have routes to target networks that are reachable through a pivot host. 
 One key defining characteristic of a router is that it has a routing table that it uses to forward traffic based on the destination IP address. 
+
+
+Example and Syntax: 
+
+Syntax: MJBUCKNER@htb[/htb]$ netstat -r
+
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags   MSS Window  irtt Iface
+default         178.62.64.1     0.0.0.0         UG        0 0          0 eth0
+10.10.10.0      10.10.14.1      255.255.254.0   UG        0 0          0 tun0
+10.10.14.0      0.0.0.0         255.255.254.0   U         0 0          0 tun0
+10.106.0.0      0.0.0.0         255.255.240.0   U         0 0          0 eth1
+10.129.0.0      10.10.14.1      255.255.0.0     UG        0 0          0 tun0
+178.62.64.0     0.0.0.0         255.255.192.0   U         0 0          0 eth0
+
+
+
+Protocols, Services & Ports
+Protocols are the rules that govern network communications. Many protocols and services have corresponding ports that act as identifiers. 
+Logical ports aren't physical things we can touch or plug anything into. They are in software assigned to applications.
+When we see an IP address, we know it identifies a computer that may be reachable over a network. When we see an open port bound to that IP address, we know that it identifies an application we may be able to connect to. 
+Connecting to specific ports that a device is listening on can often allow us to use ports & protocols that are permitted in the firewall to gain a foothold on the network.
+
