@@ -1,0 +1,77 @@
+Being able to grasp the concept of pivoting well enough to succeed at it on an engagement requires a solid fundamental understanding of some key networking concepts. 
+This section will be a quick refresher on essential foundational networking concepts to understand pivoting.
+
+IP Addressing & NICs
+Every computer that is communicating on a network needs an IP address. If it doesn't have one, it is not on a network. 
+The IP address is assigned in software and usually obtained automatically from a DHCP server. 
+It is also common to see computers with statically assigned IP addresses. Static IP assignment is common with:
+
+* Servers
+* Routers
+* Switch virtual interfaces
+* Printers
+  And any devices that are providing critical services to the network
+
+Whether assigned dynamically or statically, the IP address is assigned to a Network Interface Controller (NIC).
+Commonly, the NIC is referred to as a Network Interface Card or Network Adapter. A computer can have multiple NICs (physical and virtual), meaning it can have multiple IP addresses assigned, allowing it to communicate on various networks. 
+
+
+Windows = ipconfig 
+linux = ifconfig 
+
+Syntax and output of ifconfig - 
+
+Syntax: MJBUCKNER@htb[/htb]$ ifconfig
+
+eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 134.122.100.200  netmask 255.255.240.0  broadcast 134.122.111.255
+        inet6 fe80::e973:b08d:7bdf:dc67  prefixlen 64  scopeid 0x20<link>
+        ether 12:ed:13:35:68:f5  txqueuelen 1000  (Ethernet)
+        RX packets 8844  bytes 803773 (784.9 KiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 5698  bytes 9713896 (9.2 MiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+eth1: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
+        inet 10.106.0.172  netmask 255.255.240.0  broadcast 10.106.15.255
+        inet6 fe80::a5bf:1cd4:9bca:b3ae  prefixlen 64  scopeid 0x20<link>
+        ether 4e:c7:60:b0:01:8d  txqueuelen 1000  (Ethernet)
+        RX packets 15  bytes 1620 (1.5 KiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 18  bytes 1858 (1.8 KiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+lo: flags=73<UP,LOOPBACK,RUNNING>  mtu 65536
+        inet 127.0.0.1  netmask 255.0.0.0
+        inet6 ::1  prefixlen 128  scopeid 0x10<host>
+        loop  txqueuelen 1000  (Local Loopback)
+        RX packets 19787  bytes 10346966 (9.8 MiB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 19787  bytes 10346966 (9.8 MiB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+tun0: flags=4305<UP,POINTOPOINT,RUNNING,NOARP,MULTICAST>  mtu 1500
+        inet 10.10.15.54  netmask 255.255.254.0  destination 10.10.15.54
+        inet6 fe80::c85a:5717:5e3a:38de  prefixlen 64  scopeid 0x20<link>
+        inet6 dead:beef:2::1034  prefixlen 64  scopeid 0x0<global>
+        unspec 00-00-00-00-00-00-00-00-00-00-00-00-00-00-00-00  txqueuelen 500  (UNSPEC)
+        RX packets 0  bytes 0 (0.0 B)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 7  bytes 336 (336.0 B)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+
+
+In the output above, each NIC has an identifier (eth0, eth1, lo, tun0) followed by addressing information and traffic statistics. 
+The tunnel interface (tun0) indicates a VPN connection is active.
+
+
+so for example. HTB or THM hosts the labs. these labs would not be reachable without having a tunnel established through the VPN. 
+The VPN encrypts traffic and also establishes a tunnel over a public network (often the Internet), through NAT on a public-facing network appliance, and into the internal/private network.
+
+
+Routing
+
+It is common to think of a network appliance that connects us to the Internet when thinking about a router, but technically any computer can become a router and participate in routing. 
+Some of the challenges we will face in this module require us to make a pivot host route traffic to another network. 
+One way we will see this is through the use of AutoRoute, which allows our attack box to have routes to target networks that are reachable through a pivot host. 
+One key defining characteristic of a router is that it has a routing table that it uses to forward traffic based on the destination IP address. 
