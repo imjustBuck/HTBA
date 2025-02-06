@@ -257,8 +257,14 @@ By gaining SYSTEM-level access on a domain-joined host, you will be able to perf
 
 CHALLENGE - SSH to 10.129.136.222 (ACADEMY-EA-ATTACK01) with user "htb-student" and password "HTB_@cademy_stdnt!"
 
-Question 1 - From your scans, what is the "commonName" of host 172.16.5.5 ?
+Question 1 - From your scans, what is the "commonName" of host 172.16.5.5 ? - ACADEMY-EA-DC01.INLANEFREIGHT.LOCAL
+1) there are easier ways to do this but since i was trying to just use things taught in this section here we go ->
+2) ssh in - ssh htb-student@10.129.136.222
+3) ifconfig -a -> get the ens224 network 
+4) fping -asgq 172.16.5.0/24 -> get 172.16.5.5 & 172.16.5.130 and 172.16.5.225
+5) nano ilhost.txt -> copy those three in there and save 
+6) sudo nmap -v -A -iL ilhost.txt
+7) read output - ACADEMY-EA-DC01.INLANEFREIGHT.LOCAL
 
-
-
-Question 2 - What host is running "Microsoft SQL Server 2019 15.00.2000.00"? (IP address, not Resolved name) 
+Question 2 - What host is running "Microsoft SQL Server 2019 15.00.2000.00"? (IP address, not Resolved name) - 172.16.5.130 
+1) from same steps above - read output from nmap -> 172.16.5.130
