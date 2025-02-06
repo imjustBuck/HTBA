@@ -1,0 +1,40 @@
+Setting Up
+
+For this first portion of the test, we are starting on an attack host placed inside the network for us. This is one common way that a client might select for us to perform an internal penetration test. A list of the types of setups a client may choose for testing includes:
+
+- A penetration testing distro (typically Linux) as a virtual machine in their internal infrastructure that calls back to a jump host we control over VPN, and we can SSH into.
+- A physical device plugged into an ethernet port that calls back to us over VPN, and we can SSH into.
+- A physical presence at their office with our laptop plugged into an ethernet port.
+- A Linux VM in either Azure or AWS with access to the internal network that we can SSH into using public key authentication and our public IP address whitelisted.
+- VPN access into their internal network (a bit limiting because we will not be able to perform certain attacks such as LLMNR/NBT-NS Poisoning).
+- From a corporate laptop connected to the client's VPN.
+- On a managed workstation (typically Windows), physically sitting in their office with limited or no internet access or ability to pull in tools. They may also elect this option but give you full internet access, local admin, and put endpoint protection into monitor mode so you can pull in tools at will.
+- On a VDI (virtual desktop) accessed using Citrix or the like, with one of the configurations described for the managed workstation typically accessible over VPN either remotely or from a corporate laptop.
+
+We were given more of a "Grey-Box" set up for our test 
+
+- A custom pentest VM within their internal network that calls back to our jump host, and we can SSH into it to perform testing.
+- They've also given us a Windows host that we can load tools onto if need be.
+- They've asked us to start from an unauthenticated standpoint but have also given us a standard domain user account (htb-student) which can be used to access the Windows attack host.
+- "Grey box" testing. They have given us the network range 172.16.5.0/23 and no other information about the network.
+- Non-evasive testing.
+
+Key Data Points we are looking for: 
+
+Data Point	                          Description
+AD Users	                            We are trying to enumerate valid user accounts we can target for password spraying.
+AD Joined Computers	                  Key Computers include Domain Controllers, file servers, SQL servers, web servers, Exchange mail servers, database servers, etc.
+Key Services	                        Kerberos, NetBIOS, LDAP, DNS
+Vulnerable Hosts and Services	        Anything that can be a quick win. ( a.k.a an easy host to exploit and gain a foothold)
+
+
+Start with Identifying Hosts: 
+
+
+We can start wireshark or tcpdump to "listen" to the network and see what types of hosts / network traffic we can capture. 
+
+** While looking through Wireshark we can search 'arp' and look ast all the ARP packets that will make us aware of hosts: from the module the hosts are = 
+** 172.16.5.5, 172.16.5.25 172.16.5.50, 172.16.5.100, and 172.16.5.125
+** MDNS makes us aware of the ACADEMY-EA-WEB01 host
+
+
