@@ -168,7 +168,53 @@ wmic qfe get Caption,Description,HotFixID,InstalledOn	                          
 wmic computersystem get Name,Domain,Manufacturer,Model,Username,Roles /format:List	      Displays basic host information to include any attributes within the list
 wmic process list /format:list	                                                          A listing of all processes on host
 wmic ntdomain list /format:list	                                                          Displays information about the Domain and Domain Controllers
-wmic useraccount list /format:list	                                                      Displays information about all local accounts and any domain accounts that have logged into the device
+wmic useraccount list /format:list	                                                  Displays information about all local accounts and any domain accounts that have logged into the device
 wmic group list /format:list	                                                            Information about all local groups
 wmic sysaccount list /format:list	                                                        Dumps information about any system accounts that are being used as service accounts.
 
+
+Table of Useful Net Commands
+Command	                                                                                            Description
+net accounts	                                                                                Information about password requirements
+net accounts /domain	                                                                        Password and lockout policy
+net group /domain	                                                                        Information about domain groups
+net group "Domain Admins" /domain	                                                        List users with domain admin privileges
+net group "domain computers" /domain	                                                        List of PCs connected to the domain
+net group "Domain Controllers" /domain	                                                        List PC accounts of domains controllers
+net group <domain_group_name> /domain	                                                        User that belongs to the group
+net groups /domain	                                                                        List of domain groups
+net localgroup	                                                                                All available groups
+net localgroup administrators /domain	                                                        List users that belong to the administrators group inside the domain (the group Domain Admins is included here by default)
+net localgroup Administrators	                                                                Information about a group (admins)
+net localgroup administrators [username] /add	                                                Add user to administrators
+net share	                                                                                Check current shares
+net user <ACCOUNT_NAME> /domain	                                                                Get information about a user within the domain
+net user /domain	                                                                        List all users of the domain
+net user %username%	                                                                        Information about the current user
+net use x: \computer\share	                                                                Mount the share locally
+net view	                                                                                Get a list of computers
+net view /all /domain[:domainname]	                                                        Shares on the domains
+net view \computer /ALL	                                                                        List shares of a computer
+net view /domain	                                                                        List of PCs of the domain
+
+
+
+CHALLENGE: RDP to 10.129.230.228 (ACADEMY-EA-MS01) with user "htb-student" and password "Academy_student_AD!"
+
+Question 1 - Enumerate the host's security configuration information and provide its AMProductVersion. - 4.18.2109.6 
+1) xfreerdp /v:10.129.230.228 /u:htb-student /p:Academy_student_AD!
+2) Pwoershell as admin
+3) Get-MpComputerStatus 
+4) Output: AMProductVersion                : 4.18.2109.6
+
+
+Question 2 -  What domain user is explicitly listed as a member of the local Administrators group on the target host?
+1) in PS Admin session 
+2) net localgroup Administrators
+3) output: INLANEFREIGHT\adunn
+
+Question 3 - Utilizing techniques learned in this section, find the flag hidden in the description field of a disabled account with administrative privileges. Submit the flag as the answer. -> HTB{LD@P_I$_W1ld}
+1)dsquery * -filter "(&(objectCategory=person)(objectClass=user)(userAccountControl:1.2.840.113556.1.4.803:=32))"
+2) re read module, replace the 32 for 2 for disabled accounts -> dsquery * -filter "(&(objectCategory=person)(objectClass=user)(userAccountControl:1.2.840.113556.1.4.803:=2))"
+3) from output we see -> "CN=Betty Ross,OU=IT Admins,OU=IT,OU=HQ-NYC,OU=Employees,OU=Corp,DC=INLANEFREIGHT,DC=LOCAL"
+3) net user bross /domain -> Comment                      HTB{LD@P_I$_W1ld}
