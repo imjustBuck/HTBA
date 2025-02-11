@@ -2,3 +2,39 @@ Scenario
 Our client Inlanefreight has contracted us again to perform a full-scope internal penetration test. The client is looking to find and remediate as many flaws as possible before going through a merger & acquisition process. The new CISO is particularly worried about more nuanced AD security flaws that may have gone unnoticed during previous penetration tests. The client is not concerned about stealth/evasive tactics and has also provided us with a Parrot Linux VM within the internal network to get the best possible coverage of all angles of the network and the Active Directory environment. Connect to the internal attack host via SSH (you can also connect to it using xfreerdp as shown in the beginning of this module) and begin looking for a foothold into the domain. Once you have a foothold, enumerate the domain and look for flaws that can be utilized to move laterally, escalate privileges, and achieve domain compromise.
 
 Apply what you learned in this module to compromise the domain and answer the questions below to complete part II of the skills assessment.
+
+
+
+xfreerdp /v:10.129.2.44 /u:htb-student /p:HTB_@cademy_stdnt! /drive:shared,/home/htb-ac-1235531/Desktop
+
+
+Question 1 - 
+
+
+
+Question 2 - 
+
+
+
+
+Question 3 - 
+
+
+
+Question 4 - 
+
+
+
+Question 5 - 
+
+
+
+Question 6 - 
+
+
+
+Question 7 - 
+
+
+
+Question 8 - 
