@@ -52,4 +52,4 @@ Question 10 -  Crack this user's password hash and submit the cleartext password
 Question 11 -  Submit the contents of the flag.txt file on the Administrator desktop on the DC01 host.
 
 
-Question 12 - 
+Question 12 -  Submit the NTLM hash for the KRBTGT account for the target domain after achieving domain compromise.
