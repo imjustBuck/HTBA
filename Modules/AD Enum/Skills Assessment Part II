@@ -9,6 +9,15 @@ xfreerdp /v:10.129.2.44 /u:htb-student /p:HTB_@cademy_stdnt! /drive:shared,/home
 SSH to 10.129.32.184 (ACADEMY-EA-PAR01-SA2) with user "htb-student" and password "HTB_@cademy_stdnt!"
 
 Question 1 - Obtain a password hash for a domain user account that can be leveraged to gain a foothold in the domain. What is the account name?
+1) ssh htb-student@10.129.32.184
+2) ifconfig -a 
+3) from output we know our network is 172.16.7.0/23
+4) nmap -T5 -A 172.6.17.0/23 -> find 4 hosts -> inlanefreight.local (172.16.7.3) + 172.16.7.50 (MS01.INLANEFREIGHT.LOCAL) + 172.16.7.60 ( SQL01.INLANEFREIGHT.LOCAL) + 172.16.7.240 ( no DNS name, maybe web server? ) 
+5) lets set up proxychains early for this one lol -> log out of ssh and re-login with ssh -D 9050 htb-student@10.129.32.184
+6) good to go with proxychains. 
+7) inside of the SSH session run -> sudo responder -I ens224 and wait for some hashes 
+
+
 
 
 
