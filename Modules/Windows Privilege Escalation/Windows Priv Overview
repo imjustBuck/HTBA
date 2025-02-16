@@ -1,1 +1,9 @@
 
+Privileges are different from access rights, which a system uses to grant or deny access to securable objects. User and group privileges are stored in a database and granted via an access token when a user logs on to a system. 
+
+***!!!An account can have local privileges on a specific computer and different privileges on different systems if the account belongs to an Active Directory domain.***!!!
+
+Most privileges are disabled by default. Some can be enabled by opening an administrative cmd.exe or PowerShell console, while others can be enabled manually.
+
+The goal of an assessment is often to gain administrative access to a system or multiple systems. Suppose we can log in to a system as a user with a specific set of privileges. In that case, we may be able to leverage this built-in functionality to escalate privileges directly or use the target account's assigned privileges to further our access in pursuit of our ultimate goal.
+
