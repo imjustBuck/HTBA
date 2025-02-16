@@ -1,1 +1,79 @@
+During an assessment, we may gain a low-privileged shell on a Windows host (domain-joined or not) and need to perform privilege escalation to further our access. Fully compromising the host may gain us access to sensitive files/file shares, grant us the ability to capture traffic to obtain more credentials, or obtain credentials that can help further our access or even escalate directly to Domain Admin in an Active Directory environment. We can escalate privileges to one of the following depending on the system configuration and what type of data we encounter:
+
+
+The highly privileged NT AUTHORITY\SYSTEM account, or LocalSystem account which is a highly privileged account with more privileges than a local administrator account and is used to run most Windows services.
+The built-in local administrator account. Some organizations disable this account, but many do not. It is not uncommon to see this account reused across multiple systems in a client environment.
+Another local account that is a member of the local Administrators group. Any account in this group will have the same privileges as the built-in administrator account.
+A standard (non-privileged) domain user who is part of the local Administrators group.
+A domain admin (highly privileged in the Active Directory environment) that is part of the local Administrators group.
+
+Enumeration is the key to privilege escalation. When we gain initial shell access to the host, it is vital to gain situational awareness and uncover details relating to the OS version, patch level, installed software, current privileges, group memberships, and more. 
+
+Key Data Points
+OS name: Knowing the type of Windows OS (workstation or server) and level (Windows 7 or 10, Server 2008, 2012, 2016, 2019, etc.) will give us an idea of the types of tools that may be available (such as the PowerShell version), or lack thereof on legacy systems. This would also identify the operating system version for which there may be public exploits available.
+
+Version: As with the OS version, there may be public exploits that target a vulnerability in a specific version of Windows. Windows system exploits can cause system instability or even a complete crash. Be careful running these against any production system, and make sure you fully understand the exploit and possible ramifications before running one.
+
+Running Services: Knowing what services are running on the host is important, especially those running as NT AUTHORITY\SYSTEM or an administrator-level account. A misconfigured or vulnerable service running in the context of a privileged account can be an easy win for privilege escalation.
+
+Let's take a more in-depth look.
+
+System Information
+Looking at the system itself will give us a better idea of the exact operating system version, hardware in use, installed programs, and security updates. This will help us narrow down our hunt for any missing patches and associated CVEs that we may be able to leverage to escalate privileges. Using the tasklist command to look at running processes will give us a better idea of what applications are currently running on the system.
+
+Tasklist Syntax 
+
+PS SYNTAX: C:\htb> tasklist /svc
+
+Image Name                     PID Services
+========================= ======== ============================================
+System Idle Process              0 N/A
+System                           4 N/A
+smss.exe                       316 N/A
+csrss.exe                      424 N/A
+wininit.exe                    528 N/A
+csrss.exe                      540 N/A
+winlogon.exe                   612 N/A
+services.exe                   664 N/A
+lsass.exe                      672 KeyIso, SamSs, VaultSvc
+svchost.exe                    776 BrokerInfrastructure, DcomLaunch, LSM,
+                                   PlugPlay, Power, SystemEventsBroker
+svchost.exe                    836 RpcEptMapper, RpcSs
+LogonUI.exe                    952 N/A
+dwm.exe                        964 N/A
+svchost.exe                    972 TermService
+svchost.exe                   1008 Dhcp, EventLog, lmhosts, TimeBrokerSvc
+svchost.exe                    364 NcbService, PcaSvc, ScDeviceEnum, TrkWks,
+                                   UALSVC, UmRdpService
+<...SNIP...>
+
+svchost.exe                   1468 Wcmsvc
+svchost.exe                   1804 PolicyAgent
+spoolsv.exe                   1884 Spooler
+svchost.exe                   1988 W3SVC, WAS
+svchost.exe                   1996 ftpsvc
+svchost.exe                   2004 AppHostSvc
+FileZilla Server.exe          1140 FileZilla Server
+inetinfo.exe                  1164 IISADMIN
+svchost.exe                   1736 DiagTrack
+svchost.exe                   2084 StateRepository, tiledatamodelsvc
+VGAuthService.exe             2100 VGAuthService
+vmtoolsd.exe                  2112 VMTools
+MsMpEng.exe                   2136 WinDefend
+
+<...SNIP...>
+
+FileZilla Server Interfac     5628 N/A
+jusched.exe                   5796 N/A
+cmd.exe                       4132 N/A
+conhost.exe                   4136 N/A
+TrustedInstaller.exe          1120 TrustedInstaller
+TiWorker.exe                  1816 N/A
+WmiApSrv.exe                  2428 wmiApSrv
+tasklist.exe                  3596 N/A
+
+
+It is essential to become familiar with standard Windows processes such as Session Manager Subsystem (smss.exe), Client Server Runtime Subsystem (csrss.exe), WinLogon (winlogon.exe), Local Security Authority Subsystem Service (LSASS), and Service Host (svchost.exe), among others and the services associated with them.Being able to spot standard processes/services quickly will help speed up our enumeration and enable us to hone in on non-standard processes/services, which may open up a privilege escalation path. In the example above, we would be most interested in the FileZilla FTP server running and would attempt to enumerate the version to look for public vulnerabilities or misconfigurations such as FTP anonymous access, which could lead to sensitive data exposure or more.
+
+
 
