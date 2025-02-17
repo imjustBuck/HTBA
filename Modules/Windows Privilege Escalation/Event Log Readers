@@ -1,1 +1,31 @@
 
+Suppose auditing of process creation events and corresponding command line values is enabled. In that case, this information is saved to the Windows security event log as event ID 4688: A new process has been created. Organizations may enable logging of process command lines to help defenders monitor and identify possibly malicious behavior and identify binaries that should not be present on a system. This data can be shipped to a SIEM tool or ingested into a search tool, such as ElasticSearch, to give defenders visibility into what binaries are being run on systems in the network. The tools would then flag any potentially malicious activity, such as the whoami, netstat, and tasklist commands being run from a marketing executive's workstation.
+
+Searching Security Logs Using wevtutil
+
+PS SYNTAX: PS C:\htb> wevtutil qe Security /rd:true /f:text | Select-String "/user"
+
+        Process Command Line:   net use T: \\fs01\backups /user:tim MyStr0ngP@ssword
+
+Passing Creds to wevtutil
+
+CMD SYNTAX: C:\htb> wevtutil qe Security /rd:true /f:text /r:share01 /u:julie.clay /p:Welcome1 | findstr "/user"
+
+Searching Security Logs Using Get-WinEvent
+
+
+PS SYNTAX: PS C:\htb> Get-WinEvent -LogName security | where { $_.ID -eq 4688 -and $_.Properties[8].Value -like '*/user*'} | Select-Object @{name='CommandLine';expression={ $_.Properties[8].Value }}
+
+CommandLine
+-----------
+net use T: \\fs01\backups /user:tim MyStr0ngP@ssword
+
+
+
+Challenge: RDP to 10.129.69.30 (ACADEMY-WINLPE-SRV01) with user "logger" and password "HTB_@cademy_stdnt!"
+
+Question 1 - Using the methods demonstrated in this section find the password for the user mary.
+1) xfreerdp in 
+2) normal powershell 
+3) wevtutil qe Security /rd:true /f:text |  Select-String "/user"
+4) output -> Process Command Line:   net  use Z: \\DB01\scripts /user:mary W1ntergreen_gum_2021!
