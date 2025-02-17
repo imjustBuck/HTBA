@@ -1,6 +1,8 @@
 
 
 ** ima restart on this one tomorrow.... i ahd trouble the first two times with this one specifically. i follow the steps and get added to "Domain Admins" but never can access the flag..**** 
+I think its cause the module just uses a boof ass .dll and not reverse shell so ima try the steps again tomorrow with a reverse shell and see if that helps. 
+
 
 xfreerdp /v:10.129.80.73 /u:netadm /p:HTB_@cademy_stdnt! /drive:shared,/home/htb-ac-1235531/Desktop
 
