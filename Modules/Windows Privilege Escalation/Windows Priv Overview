@@ -26,3 +26,7 @@ Group	                                                                          
 * Group Policy Creator Owners	                                                             Members can create new GPOs but would need to be delegated additional permissions to link GPOs to a container such as a domain or OU.
 * Schema Admins	                                                                           Members can modify the Active Directory schema structure and backdoor any to-be-created Group/GPO by adding a compromised account to the default object ACL.
 * DNS Admins	                                                                              Members can load a DLL on a DC, but do not have the necessary permissions to restart the DNS server. They can load a malicious DLL and wait for a reboot as a persistence mechanism. Loading a DLL will often result in the service crashing. A more reliable way to exploit this group is to create a WPAD record.
+
+
+
+
