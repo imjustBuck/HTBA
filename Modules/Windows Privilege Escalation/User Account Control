@@ -1,1 +1,51 @@
 
+User Account Control (UAC) is a feature that enables a consent prompt for elevated activities. Applications have different integrity levels, and a program with a high level can perform tasks that could potentially compromise the system. When UAC is enabled, applications and tasks always run under the security context of a non-administrator account unless an administrator explicitly authorizes these applications/tasks to have administrator-level access to the system to run. It is a convenience feature that protects administrators from unintended changes but is not considered a security boundary.
+
+When UAC is in place, a user can log into their system with their standard user account. When processes are launched using a standard user token, they can perform tasks using the rights granted to a standard user. Some applications require additional permissions to run, and UAC can provide additional access rights to the token for them to run correctly.
+
+
+The default RID 500 administrator account always operates at the high mandatory level. With Admin Approval Mode (AAM) enabled, any new admin accounts we create will operate at the medium mandatory level by default and be assigned two separate access tokens upon logging in. In the example below, the user account sarah is in the administrators group, but cmd.exe is currently running in the context of their unprivileged access token.
+
+
+Checking Current User
+
+CMD SYNTAX : C:\htb> whoami /user
+
+USER INFORMATION
+----------------
+
+User Name         SID
+================= ==============================================
+winlpe-ws03\sarah S-1-5-21-3159276091-2191180989-3781274054-1002
+
+Confirming Admin Group Membership
+
+CMD SYNTAX: C:\htb> net localgroup administrators
+
+Alias name     administrators
+Comment        Administrators have complete and unrestricted access to the computer/domain
+
+Members
+
+-------------------------------------------------------------------------------
+Administrator
+mrb3n
+sarah
+The command completed successfully.
+
+Reviewing Users Privs 
+
+CMD SYNTAX: C:\htb> whoami /priv
+
+PRIVILEGES INFORMATION
+----------------------
+
+Privilege Name                Description                          State
+============================= ==================================== ========
+SeShutdownPrivilege           Shut down the system                 Disabled
+SeChangeNotifyPrivilege       Bypass traverse checking             Enabled
+SeUndockPrivilege             Remove computer from docking station Disabled
+SeIncreaseWorkingSetPrivilege Increase a process working set       Disabled
+SeTimeZonePrivilege           Change the time zone                 Disabled
+
+
