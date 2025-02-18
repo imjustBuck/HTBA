@@ -1,1 +1,13 @@
+Target File
+An example of this is Firefox, which installs the Mozilla Maintenance Service. We can update this exploit (a proof-of-concept for NT hard link) to grant our current user full permissions on the file below:
 
+C:\Program Files (x86)\Mozilla Maintenance Service\maintenanceservice.exe
+Taking Ownership of the File
+After running the PowerShell script, we should have full control of this file and can take ownership of it.
+
+C:\htb> takeown /F C:\Program Files (x86)\Mozilla Maintenance Service\maintenanceservice.exe
+Starting the Mozilla Maintenance Service
+Next, we can replace this file with a malicious maintenanceservice.exe, start the maintenance service, and get command execution as SYSTEM.
+
+C:\htb> sc.exe start MozillaMaintenance
+Note: This vector has been mitigated by the March 2020 Windows security updates, which changed behavior relating to hard links. 
