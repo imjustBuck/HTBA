@@ -1,1 +1,3 @@
 
+jsut following along in this section we can find the answer to the question... all we need is to RDP in -> open regular powershell -> run: Get-LocalUser -> Output: sccm_svc        True
+secsvc          True    Network scanner - do not change password: !QAZXSW@3edc
