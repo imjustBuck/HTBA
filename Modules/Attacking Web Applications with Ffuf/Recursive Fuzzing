@@ -1,1 +1,20 @@
+In ffuf, we can enable recursive scanning with the -recursion flag, and we can specify the depth with the -recursion-depth flag. If we specify -recursion-depth 1, it will only fuzz the main directories and their direct sub-directories. If any sub-sub-directories are identified (like /login/user, it will not fuzz them for pages). When using recursion in ffuf, we can specify our extension with -e .php
 
+Note: we can still use `.php` as our page extension, as these extensions are usually site-wide.
+
+Finally, we will also add the flag -v to output the full URLs. Otherwise, it may be difficult to tell which .php file lies under which directory.
+
+
+SYNTAX: MJBUCKNER@htb[/htb]$ ffuf -w /opt/useful/seclists/Discovery/Web-Content/directory-list-2.3-small.txt:FUZZ -u http://83.136.249.104:47483/FUZZ -recursion -recursion-depth 1 -e .php -v
+
+key is the recursion depth... do we want to look back 1 pages , or 3 
+
+CHALLENGE: 
+
+Question 1 - Try to repeat what you learned so far to find more files/directories. One of them should give you a flag. What is the content of the flag?
+
+1) ffuf -w /opt/useful/seclists/Discovery/Web-Content/directory-list-2.3-small.txt:FUZZ -u http://83.136.249.104:47483/FUZZ -recursion -recursion-depth 2 -e .php -v
+2) ffuf -w /opt/useful/seclists/Discovery/Web-Content/directory-list-2.3-small.txt:FUZZ -u http://83.136.249.104:47483/forum/FUZZ -recursion -recursion-depth 1 -e .php -v
+Status: 200, Size: 21, Words: 1, Lines: 1, Duration: 78ms]
+| URL | http://83.136.249.104:47483/forum/flag.php
+    * FUZZ: flag.php
