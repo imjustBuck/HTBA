@@ -32,3 +32,12 @@ blog                    [Status: 301, Size: 326, Words: 20, Lines: 10]
 :: Progress: [87651/87651] :: Job [1/1] :: 9739 req/sec :: Duration: [0:00:09] :: Errors: 0 ::
 
 
+We can even make it go faster if we are in a hurry by increasing the number of threads to 200, for example, with -t 200, but this is not recommended, especially when used on a remote site, as it may disrupt it, and cause a Denial of Service, or bring down your internet connection in severe cases. We do get a couple of hits, and we can visit one of them to verify that it exists:
+
+
+CHALLENGE: 
+
+Question 1 -   In addition to the directory we found above, there is another directory that can be found. What is it? - forum 
+1) ffuf -w /opt/useful/seclists/Discovery/Web-Content/directory-list-2.3-small.txt:FUZZ -u http://83.136.249.104:47483/FUZZ -fs 986 
+2) output: forum 
+
