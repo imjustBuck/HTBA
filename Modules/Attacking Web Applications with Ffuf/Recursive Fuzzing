@@ -11,10 +11,11 @@ key is the recursion depth... do we want to look back 1 pages , or 3
 
 CHALLENGE: 
 
-Question 1 - Try to repeat what you learned so far to find more files/directories. One of them should give you a flag. What is the content of the flag?
+Question 1 - Try to repeat what you learned so far to find more files/directories. One of them should give you a flag. What is the content of the flag? - HTB{fuzz1n6_7h3_w3b!} 
 
 1) ffuf -w /opt/useful/seclists/Discovery/Web-Content/directory-list-2.3-small.txt:FUZZ -u http://83.136.249.104:47483/FUZZ -recursion -recursion-depth 2 -e .php -v
 2) ffuf -w /opt/useful/seclists/Discovery/Web-Content/directory-list-2.3-small.txt:FUZZ -u http://83.136.249.104:47483/forum/FUZZ -recursion -recursion-depth 1 -e .php -v
 Status: 200, Size: 21, Words: 1, Lines: 1, Duration: 78ms]
 | URL | http://83.136.249.104:47483/forum/flag.php
     * FUZZ: flag.php
+HTB{fuzz1n6_7h3_w3b!}
