@@ -1,1 +1,4 @@
 
+this jsut tells us we can add our ips to the /etc/hosts file and instead of typing ip we can type the 'hostname' we give it 
+
+SYNTAX: MJBUCKNER@htb[/htb]$ sudo sh -c 'echo "SERVER_IP  academy.htb" >> /etc/hosts'
