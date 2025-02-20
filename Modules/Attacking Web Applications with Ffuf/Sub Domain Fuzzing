@@ -1,1 +1,63 @@
 
+n this section, we will learn how to use ffuf to identify sub-domains (i.e., *.website.com) for any website.
+
+Sub-domains
+A sub-domain is any website underlying another domain. For example, https://photos.google.com is the photos sub-domain of google.com.
+
+In this case, we are simply checking different websites to see if they exist by checking if they have a public DNS record that would redirect us to a working server IP. So, let's run a scan and see if we get any hits. Before we can start our scan, we need two things:
+
+A wordlist
+A target
+Luckily for us, in the SecLists repo, there is a specific section for sub-domain wordlists, consisting of common words usually used for sub-domains. We can find it in /opt/useful/seclists/Discovery/DNS/. In our case, we would be using a shorter wordlist, which is subdomains-top1million-5000.txt. If we want to extend our scan, we can pick a larger list.
+
+As for our target, we will use inlanefreight.com as our target and run our scan on it. Let us use ffuf and place the FUZZ keyword in the place of sub-domains, and see if we get any hits:
+
+
+SYNTAX: MJBUCKNER@htb[/htb]$ ffuf -w /opt/useful/seclists/Discovery/DNS/subdomains-top1million-5000.txt:FUZZ -u https://FUZZ.inlanefreight.com/
+
+
+        /'___\  /'___\           /'___\
+       /\ \__/ /\ \__/  __  __  /\ \__/
+       \ \ ,__\\ \ ,__\/\ \/\ \ \ \ ,__\
+        \ \ \_/ \ \ \_/\ \ \_\ \ \ \ \_/
+         \ \_\   \ \_\  \ \____/  \ \_\
+          \/_/    \/_/   \/___/    \/_/
+
+       v1.1.0-git
+________________________________________________
+
+ :: Method           : GET
+ :: URL              : https://FUZZ.inlanefreight.com/
+ :: Wordlist         : FUZZ: /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt
+ :: Follow redirects : false
+ :: Calibration      : false
+ :: Timeout          : 10
+ :: Threads          : 40
+ :: Matcher          : Response status: 200,204,301,302,307,401,403,405,500
+________________________________________________
+
+[Status: 301, Size: 0, Words: 1, Lines: 1, Duration: 381ms]
+    * FUZZ: support
+
+[Status: 301, Size: 0, Words: 1, Lines: 1, Duration: 385ms]
+    * FUZZ: ns3
+
+[Status: 301, Size: 0, Words: 1, Lines: 1, Duration: 402ms]
+    * FUZZ: blog
+
+[Status: 301, Size: 0, Words: 1, Lines: 1, Duration: 180ms]
+    * FUZZ: my
+
+[Status: 200, Size: 22266, Words: 2903, Lines: 316, Duration: 589ms]
+    * FUZZ: www
+
+<...SNIP...>
+
+CHALLENGE: 
+
+
+QUESTION 1 -  Try running a sub-domain fuzzing test on 'inlanefreight.com' to find a customer sub-domain portal. What is the full domain of it? - customer.inlanefreight.com
+
+1) ffuf -w /opt/useful/seclists/Discovery/DNS/subdomains-top1million-5000.txt:FUZZ -u https://FUZZ.inlanefreight.com/
+Output: customer                [Status: 301, Size: 0, Words: 1, Lines: 1, Duration: 127ms]
+ 
