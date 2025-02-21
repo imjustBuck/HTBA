@@ -18,10 +18,25 @@ ffuf -w /usr/share/seclists/Discovery/Web-Content/web-extensions.txt:FUZZ -u htt
 on faculty we get all 3 -> .php,.php7,.phps 
 
 Question 3 - One of the pages you will identify should say 'You don't have access!'. What is the full page URL?
-1)
+1) we are probably going to have to use the recursive search on this one.... since the extensions were found with faculty lets start there -> and we have to run one per extension i think? or ill try all three at once 
+2) ffuf -w /usr/sahre/seclists/Discovery/Web-Content/directory-list-2.3-small.txt:FUZZ -u http://faculty.academy.htb:45812/FUZZ -recursion -recursion-depth 1 -e .php7 -v -t 80
+
+first  it finds: | http://faculty.academy.htb:45812/courses
+| --> | http://faculty.academy.htb:45812/courses/
+    * FUZZ: courses
+becuase i am impatient i just add /courses/FUZZ to the ffuf search so 
+3) ffuf -w /usr/sahre/seclists/Discovery/Web-Content/directory-list-2.3-small.txt:FUZZ -u http://faculty.academy.htb:45812/courses/FUZZ -recursion -recursion-depth 1 -e .php7 -v -t 80
+
+then we get : URL | http://faculty.academy.htb:45812/courses/linux-security.php7
+    * FUZZ: linux-security.php7
+4) quick curl -> curl http://faculty.academy.htb:45812/courses/linux-security.php7
+  <div class='center'><p>You don't have access!</p></div>
+
 
 Question 4 - In the page from the previous question, you should be able to find multiple parameters that are accepted by the page. What are they?
-
+1) ffuf -w /usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt:FUZZ -u http://faculty.academy.htb:45812/courses/linux-security.php7 -X POST -d 'FUZZ=key' -H 'Content-Type: application/x-www-form-urlencoded'
+2) ffuf -w /usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt:FUZZ -u http://faculty.academy.htb:45812/courses/linux-security.php7 -X POST -d 'FUZZ=key' -H 'Content-Type: application/x-www-form-urlencoded' -fs 778 
+3) output: user & username 
 
 
 Question 5 - Try fuzzing the parameters you identified for working values. One of them should return a flag. What is the content of the flag?
