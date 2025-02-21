@@ -10,10 +10,15 @@ Question 1 -  Run a sub-domain/vhost fuzzing scan on '*.academy.htb' for the IP 
 4) we get test,archive,faculty as outputs -> be sure to put this into the /etc/hosts file as well . 
 
 Question 2 - Before you run your page fuzzing scan, you should first run an extension fuzzing scan. What are the different extensions accepted by the domains?
+1) after adding all 3 subdomains into /etc/hosts 
+2) run this on all three subdomains ffuf -w /usr/share/seclists/Discovery/Web-Content/web-extensions.txt:FUZZ -u http://test.academy.htb:45812/indexFUZZ
+ffuf -w /usr/share/seclists/Discovery/Web-Content/web-extensions.txt:FUZZ -u http://archive.academy.htb:45812/indexFUZZ
+ffuf -w /usr/share/seclists/Discovery/Web-Content/web-extensions.txt:FUZZ -u http://faculty.academy.htb:45812/indexFUZZ
 
+on faculty we get all 3 -> .php,.php7,.phps 
 
 Question 3 - One of the pages you will identify should say 'You don't have access!'. What is the full page URL?
-
+1)
 
 Question 4 - In the page from the previous question, you should be able to find multiple parameters that are accepted by the page. What are they?
 
