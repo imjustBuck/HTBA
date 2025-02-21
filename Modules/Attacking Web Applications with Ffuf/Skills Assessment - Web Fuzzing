@@ -4,7 +4,8 @@ Finally, you should do some fuzzing on pages you identify to see if any of them 
 
 
 Question 1 -  Run a sub-domain/vhost fuzzing scan on '*.academy.htb' for the IP shown above. What are all the sub-domains you can identify? (Only write the sub-domain name)
-
+1) so add 83.136.255.243 to /etc/hosts ->   83.136.255.243   academy.htb 
+2) ffuf -w /opt/useful/seclists/Discovery/DNS/subdomains-top1million-5000.txt:FUZZ -u http://FUZZ.83.136.255.243:58731/
 
 Question 2 - Before you run your page fuzzing scan, you should first run an extension fuzzing scan. What are the different extensions accepted by the domains?
 
