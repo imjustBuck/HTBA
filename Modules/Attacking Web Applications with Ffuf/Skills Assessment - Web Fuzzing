@@ -7,7 +7,7 @@ Question 1 -  Run a sub-domain/vhost fuzzing scan on '*.academy.htb' for the IP 
 1) so add 83.136.255.243 to /etc/hosts ->   83.136.255.243   academy.htb 
 2) ffuf -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt:FUZZ -u http://academy.htb:45812/ -H 'Host: FUZZ.academy.htb'
 3) declutter it with -> ffuf -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt:FUZZ -u http://academy.htb:45812/ -H 'Host: FUZZ.academy.htb' -fs 985 
-4) we get test,archive,facilities as outputs -> be sure to put this into the /etc/hosts file as well . 
+4) we get test,archive,faculty as outputs -> be sure to put this into the /etc/hosts file as well . 
 
 Question 2 - Before you run your page fuzzing scan, you should first run an extension fuzzing scan. What are the different extensions accepted by the domains?
 
