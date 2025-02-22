@@ -1,1 +1,26 @@
+So this is kinda just putting everything together we learned into larger sections themeselves so were going to just start at challenges ( unless theres new information that presents itself ) and work from there 
 
+
+
+CHALLENGE:
+
+vHosts needed for these questions:
+inlanefreight.local
+
+Question 1 -  Perform a banner grab of the services listening on the target host and find a non-standard service banner. Submit the name as your answer (format: word_word_word)
+
+
+
+
+
+
+Question 2 -  Perform a DNS Zone Transfer against the target and find a flag. Submit the flag value as your answer (flag format: HTB{ }).
+
+
+
+
+Question 3 -   What is the FQDN of the associated subdomain?
+
+
+
+Question 4 - Perform vhost discovery. What additional vhost exists? (one word)
