@@ -7,20 +7,41 @@ CHALLENGE:
 vHosts needed for these questions:
 inlanefreight.local
 
-Question 1 -  Perform a banner grab of the services listening on the target host and find a non-standard service banner. Submit the name as your answer (format: word_word_word)
+Question 1 -  Perform a banner grab of the services listening on the target host and find a non-standard service banner. Submit the name as your answer (format: word_word_word) - 1337_HTB_DNS 
+1) nano scope -> put Target IP in ther efor us it was 10.129.229.147
+2) sudo nmap --open -p- -A -oA inlanefreight_ept_tcp_all_svc -iL scope
+3) output : 53/tcp   open  domain   (unknown banner: 1337_HTB_DNS)
+4) we can also ftp in anonmoymous and theres a flag.txt i see so lets just get it real quick. 
+5) ftp 10.129.229.147 -> anonymous -> get flag.txt -> exit
+6) cat flag.txt -> HTB{0eb0ab788df18c3115ac43b1c06ae6c4}
+
+
+Question 2 -  Perform a DNS Zone Transfer against the target and find a flag. Submit the flag value as your answer (flag format: HTB{ }). - HTB{DNs_ZOn3_Tr@nsf3r}
+1) dig axfr inlanefreight.local @10.129.229.147 
+2) output : inlanefreight.local.	86400	IN	SOA	ns1.inlanfreight.local. dnsadmin.inlanefreight.local. 21 604800 86400 2419200 86400
+inlanefreight.local.	86400	IN	NS	inlanefreight.local.
+inlanefreight.local.	86400	IN	A	127.0.0.1
+blog.inlanefreight.local. 86400	IN	A	127.0.0.1
+careers.inlanefreight.local. 86400 IN	A	127.0.0.1
+dev.inlanefreight.local. 86400	IN	A	127.0.0.1
+flag.inlanefreight.local. 86400	IN	TXT	"HTB{DNs_ZOn3_Tr@nsf3r}"
+gitlab.inlanefreight.local. 86400 IN	A	127.0.0.1
+ir.inlanefreight.local.	86400	IN	A	127.0.0.1
+status.inlanefreight.local. 86400 IN	A	127.0.0.1
+support.inlanefreight.local. 86400 IN	A	127.0.0.1
+tracking.inlanefreight.local. 86400 IN	A	127.0.0.1
+vpn.inlanefreight.local. 86400	IN	A	127.0.0.1
+inlanefreight.local.	86400	IN	SOA	ns1.inlanfreight.local. dnsadmin.inlanefreight.local. 21 604800 86400 2419200 86400
+
+3) so yes we have our flag but its also a good idea to add all these subdoamins into our /etc/hosts file. 
 
 
 
+Question 3 -   What is the FQDN of the associated subdomain? - 
+1) from above output we see FQDN is - flag.inlanefreight.local 
 
 
-
-Question 2 -  Perform a DNS Zone Transfer against the target and find a flag. Submit the flag value as your answer (flag format: HTB{ }).
-
-
-
-
-Question 3 -   What is the FQDN of the associated subdomain?
-
-
-
-Question 4 - Perform vhost discovery. What additional vhost exists? (one word)
+Question 4 - Perform vhost discovery. What additional vhost exists? (one word) - monitoring
+1) ffuf -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt:FUZZ -u http://10.129.229.147/ -H 'Host: FUZZ.inlanefreight.local'
+2) clear clutter -> ffuf -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt:FUZZ -u http://10.129.229.147/ -H 'Host: FUZZ.inlanefreight.local' -fs 15157
+3) output we see monitoring.inlanefreight.local was the additional one found 
