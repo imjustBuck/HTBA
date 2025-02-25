@@ -207,3 +207,9 @@ WNfJbbEPrmQf0AAAALcm9vdEB1YnVudHU=
 -----END OPENSSH PRIVATE KEY-----
 
 hporter:Gr8hambino!
+
+
+
+
+1 ssh -D 9050 -i rootkey -L 13389:172.16.8.20:3389 root@10.129.229.147
+2) xfreerdp /v:127.0.0.1:13389 /u:hporter /p:Gr8hambino! /drive:shared,/home/htb-ac-1235531/Desktop
