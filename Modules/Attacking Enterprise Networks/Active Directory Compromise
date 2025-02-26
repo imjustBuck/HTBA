@@ -1,1 +1,5 @@
 
+Question 1 -  Set a fake SPN on the ttimmons user. Kerberoast this user and crack the TGS ticket offline to reveal their cleartext password. Submit this password as your answer. 
+1) ssh -D 9050 -i rootkey -L 1337:172.16.8.20:3389 root@10.129.200.168
+2) second ssh 9050 -> ssh -D 9050 -i rootkey root@10.129.200.168.
+3)  xfreerdp /v:127.0.0.1:1337 /u:hporter /p:Gr8hambino! /drive:shared,/home/htb-ac-1235531/Desktop
