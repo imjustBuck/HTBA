@@ -1,1 +1,48 @@
 
+Structured Query Language (SQL)
+SQL syntax can differ from one RDBMS to another. However, they are all required to follow the ISO standard for Structured Query Language. We will be following the MySQL/MariaDB syntax for the examples shown. SQL can be used to perform the following actions:
+
+Retrieve data
+Update data
+Delete data
+Create new tables and databases
+Add / remove users
+Assign permissions to these users
+
+The mysql utility is used to authenticate to and interact with a MySQL/MariaDB database. The -u flag is used to supply the username and the -p flag for the password. The -p flag should be passed empty, so we are prompted to enter the password and do not pass it directly on the command line since it could be stored in cleartext in the bash_history file.
+
+SYNTAX: MJBUCKNER@htb[/htb]$ mysql -u root -p
+
+Enter password: <password>
+...SNIP...
+
+mysql> 
+
+Tip: There shouldn't be any spaces between '-p' and the password.
+
+more syntax: mysql> SHOW DATABASES;
+
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| mysql              |
+| performance_schema |
+| sys                |
+| users              |
++--------------------+
+
+mysql> USE users;
+
+Database changed
+
+
+SQL statements aren't case sensitive, which means 'USE users;' and 'use users;' refer to the same command. However, the database name is case sensitive, so we cannot do 'USE USERS;' instead of 'USE users;'. So, it is a good practice to specify statements in uppercase to avoid confusion.
+
+
+
+Challenge :  Authenticate to 94.237.58.134:55629 with user "root" and password "password"
+
+Question 1 -  Connect to the database using the MySQL client from the command line. Use the 'show databases;' command to list databases in the DBMS. What is the name of the first database?
+1) mysql -h 94.237.58.134 -P 55629 -u root -ppassword
+2) outoput: employees 
