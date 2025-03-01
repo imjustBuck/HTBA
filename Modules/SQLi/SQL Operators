@@ -1,1 +1,74 @@
+can use the AND operator to return true or false based on the two conditions
+
+
+EXAMPLE: condition1 AND condition2
+
+SYNTAX: mysql> SELECT 1 = 1 AND 'test' = 'test';
+
++---------------------------+
+| 1 = 1 AND 'test' = 'test' |
++---------------------------+
+|                         1 |
++---------------------------+
+1 row in set (0.00 sec)
+
+mysql> SELECT 1 = 1 AND 'test' = 'abc';
+
++--------------------------+
+| 1 = 1 AND 'test' = 'abc' |
++--------------------------+
+|                        0 |
++--------------------------+
+1 row in set (0.00 sec)
+
+the OR operator takes two expressiosn and returns true when one s true 
+
+SYNTAX: mysql> SELECT 1 = 1 OR 'test' = 'abc';
+
++-------------------------+
+| 1 = 1 OR 'test' = 'abc' |
++-------------------------+
+|                       1 |
++-------------------------+
+1 row in set (0.00 sec)
+
+mysql> SELECT 1 = 2 OR 'test' = 'abc';
+
++-------------------------+
+| 1 = 2 OR 'test' = 'abc' |
++-------------------------+
+|                       0 |
++-------------------------+
+1 row in set (0.00 sec)
+
+
+Multiple Operator Precedence
+SQL supports various other operations such as addition, division as well as bitwise operations. Thus, a query could have multiple expressions with multiple operations at once. The order of these operations is decided through operator precedence.
+
+Here is a list of common operations and their precedence, as seen in the MariaDB Documentation:
+
+Division (/), Multiplication (*), and Modulus (%)
+Addition (+) and subtraction (-)
+Comparison (=, >, <, <=, >=, !=, LIKE)
+NOT (!)
+AND (&&)
+OR (||)
+Operations at the top are evaluated before the ones at the bottom of the list. Let us look at an exam
+
+
+CHALLENGE:  Authenticate to 94.237.54.116:54634 with user "root" and password "password"
+
+Question 1 -  In the 'titles' table, what is the number of records WHERE the employee number is greater than 10000 OR their title does NOT contain 'engineer'? - 654 
+1) mysql -h 94.237.54.116 -P 54634 -u root -ppassword
+2) USE eployees;
+2.a) DESCRIBE employees;
+3) SELECT COUNT(*) FROM titles WHERE emp_no > 1000 OR TITLE NOT LIKE '%engineer%' -> 
+MariaDB [employees]> SELECT COUNT(*) FROM titles WHERE emp_no > 1000 OR title NOT LIKE '%engineer%';
++----------+
+| COUNT(*) |
++----------+
+|      654 |
++----------+
+
+
 
