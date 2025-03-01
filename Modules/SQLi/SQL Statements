@@ -1,1 +1,49 @@
 
+use INSERT statement to add new data to table. 
+
+EXAMPLE: INSERT INTO table_name VALUES (column1_value, column2_value, column3_value, ...);
+
+SYNTAX: mysql> INSERT INTO logins VALUES(1, 'admin', 'p@ssw0rd', '2020-07-02');
+
+SELECT statements acan retrieve data for us from tables 
+
+EXAMPLE: SELECT * FROM table_name;
+
+SYNTAX: mysql> SELECT * FROM logins;
+
++----+---------------+------------+---------------------+
+| id | username      | password   | date_of_joining     |
++----+---------------+------------+---------------------+
+|  1 | admin         | p@ssw0rd   | 2020-07-02 00:00:00 |
+|  2 | administrator | adm1n_p@ss | 2020-07-02 11:30:50 |
+|  3 | john          | john123!   | 2020-07-02 11:47:16 |
+|  4 | tom           | tom123!    | 2020-07-02 11:47:16 |
++----+---------------+------------+---------------------+
+4 rows in set (0.00 sec)
+
+
+mysql> SELECT username,password FROM logins;
+
++---------------+------------+
+| username      | password   |
++---------------+------------+
+| admin         | p@ssw0rd   |
+| administrator | adm1n_p@ss |
+| john          | john123!   |
+| tom           | tom123!    |
++---------------+------------+
+4 rows in set (0.00 sec)
+
+
+
+
+CHALLENGE:  Authenticate to 94.237.54.116:54634 with user "root" and password "password"
+
+ Question 1 - What is the department number for the 'Development' department?
+1) mysql -h 94.237.54.116 -P 54634 -u root -ppassword
+2) show databases;
+3) use departments; 
+4) DESCRIBE departments; 
+5) SELECT dept_no FROM departments WHERE dept_name="Development";
+6) output: d005 
+7) OR we could have just used -> SELECT * from departments; 
