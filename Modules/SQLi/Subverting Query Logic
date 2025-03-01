@@ -1,1 +1,37 @@
+again, third time thru so jsut lil summary we are basically taking thee info from a web page login form and using its own login against the database. 
 
+SQLi Discovery
+Before we start subverting the web application's logic and attempting to bypass the authentication, we first have to test whether the login form is vulnerable to SQL injection. To do that, we will try to add one of the below payloads after our username and see if it causes any errors or changes how the page behaves:
+
+Payload	URL Encoded
+'	= %27
+"	= %22
+# =	%23
+;	= %3B
+)	= %29
+
+Note: In some cases, we may have to use the URL encoded version of the payload. An example of this is when we put our payload directly in the URL 'i.e. HTTP GET request'.
+
+*** We would need the query always to return true, regardless of the username and password entered, to bypass the authentication. To do this, we can abuse the OR operator in our SQL injection. 
+
+An example of a condition that will always return true is '1'='1'. However, to keep the SQL query working and keep an even number of quotes, instead of using ('1'='1'), we will remove the last quote and use ('1'='1), so the remaining single quote from the original query would be in its place.
+
+EXAMPLE: admin' or '1'='1
+
+SYNTAX: SELECT * FROM logins WHERE username='admin' or '1'='1' AND password = 'something';
+
+This means the following:
+
+* If username is admin
+OR
+* If 1=1 return true 'which always returns true'
+AND
+* If password is something
+
+Note: The payload we used above is one of many auth bypass payloads we can use to subvert the authentication logic. You can find a comprehensive list of SQLi auth bypass payloads in PayloadAllTheThings ( https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/SQL%20Injection#authentication-bypass ) , each of which works on a certain type of SQL queries.
+
+CHALLENGE: 
+
+Quesation 1 - Try to log in as the user 'tom'. What is the flag value shown after you successfully log in? - 202a1d1a8b195d5e9a57e434cc16000c
+1) go to ip:port provided -> http://94.237.54.116:34765
+2) in user form type -> tom'; -- -
