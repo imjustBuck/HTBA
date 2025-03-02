@@ -1,1 +1,34 @@
+we must detect the number of columns by using ORDER BY function. 
+For example, we can start with order by 1, sort by the first column, and succeed, as the table must have at least one column. Then we will do order by 2 and then order by 3 until we reach a number that returns an error, or the page does not show any output, which means that this column number does not exist. The final successful column we successfully sorted by gives us the total number of columns.
 
+If we failed at order by 4, this means the table has three columns, which is the number of columns we were able to sort by successfully. Let us go back to our previous example and attempt the same, with the following payload:
+
+EXAMPLE: ' order by 1-- - 
+* We are adding an extra dash (-) at the end, to show you that there is a space after (--).
+
+
+another way would be to using UNION: 
+
+Using UNION
+The other method is to attempt a Union injection with a different number of columns until we successfully get the results back. The first method always returns the results until we hit an error, while this method always gives an error until we get a success. We can start by injecting a 3 column UNION query:
+
+EXAMPLE: cn' UNION select 1,2,3-- -
+* based on the error / output continue onward 
+
+It is very common that not every column will be displayed back to the user. For example, the ID field is often used to link different tables together, but the user doesn't need to see it. This tells us that columns 2 and 3, and 4 are printed to place our injection in any of them. We cannot place our injection at the beginning, or its output will not be printed.
+
+This is the benefit of using numbers as our junk data, as it makes it easy to track which columns are printed, so we know at which column to place our query. To test that we can get actual data from the database 'rather than just numbers,' we can use the @@version SQL query as a test and place it in the second column instead of the number 2:
+
+
+EXAMPLE: cn' UNION select 1,@@version,3,4-- -
+
+* this output returned the service version of the server that theyre using. 
+
+CHALLENGE: 94.237.54.190:33129
+
+Question 1 - Use a Union injection to get the result of 'user()'
+1) http://94.237.54.190:33129
+2) trial and error the union clauses until -> ' UNION SELECT 1,2,3,4-- - 
+3) at the bottom of page we see the columns labeled 2,3, and 4 
+4) trying what the section said for version but for user -> ' UNION SELECT 1,user(),3,4-- -
+5) output: root@localhost
