@@ -1,1 +1,3 @@
 
+The most basic method of looking for XSS vulnerabilities is manually testing various XSS payloads against an input field in a given web page. We can find huge lists of XSS payloads online, like the one on PayloadAllTheThings ( https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/XSS%20Injection/README.md ) or the one in PayloadBox ( https://github.com/payloadbox/xss-payload-list ) . We can then begin testing these payloads one by one by copying each one and adding it in our form, and seeing whether an alert box pops up.
+
