@@ -1,1 +1,37 @@
 
+The third and final type of XSS is another Non-Persistent type called DOM-based XSS. While reflected XSS sends the input data to the back-end server through HTTP requests, DOM XSS is completely processed on the client-side through JavaScript. DOM XSS occurs when JavaScript is used to change the page source through the Document Object Model (DOM).
+
+To further understand the nature of the DOM-based XSS vulnerability, we must understand the concept of the Source and Sink of the object displayed on the page. The Source is the JavaScript object that takes the user input, and it can be any input parameter like a URL parameter or an input field, as we saw above.
+
+On the other hand, the Sink is the function that writes the user input to a DOM Object on the page. If the Sink function does not properly sanitize the user input, it would be vulnerable to an XSS attack. Some of the commonly used JavaScript functions to write to DOM objects are:
+
+document.write()
+DOM.innerHTML
+DOM.outerHTML
+Furthermore, some of the jQuery library functions that write to DOM objects are:
+
+add()
+after()
+append()
+If a Sink function writes the exact input without any sanitization (like the above functions), and no other means of sanitization were used, then we know that the page should be vulnerable to XSS.
+
+We can look at the source code of the To-Do web application, and check script.js, and we will see that the Source is being taken from the task= parameter:
+
+var pos = document.URL.indexOf("task=");
+var task = document.URL.substring(pos + 5, document.URL.length);
+
+Right below these lines, we see that the page uses the innerHTML function to write the task variable in the todo DOM:
+document.getElementById("todo").innerHTML = "<b>Next Task:</b> " + decodeURIComponent(task);
+
+If we try the XSS payload we have been using previously, we will see that it will not execute. This is because the innerHTML function does not allow the use of the <script> tags within it as a security feature. Still, there are many other XSS payloads we use that do not contain <script> tags, like the following XSS payload:
+
+EXAMPLE: <img src="" onerror=alert(document.cookie)>
+
+
+CHALLENGE: 94.237.54.190:40860
+
+QUESTION 1 - To get the flag, use the same payload we used above, but change its JavaScript code to show the cookie instead of showing the url. - HTB{pur3ly_cl13n7_51d3}
+
+1) http://94.237.54.190:40860
+2) <img src="" onerror=alert(document.cookie)>
+3) output: HTB{pur3ly_cl13n7_51d3}
