@@ -1,1 +1,17 @@
 
+Modern web applications utilize cookies to maintain a user's session throughout different browsing sessions. This enables the user to only log in once and keep their logged-in session alive even if they visit the same website at another time or date. However, if a malicious user obtains the cookie data from the victim's browser, they may be able to gain logged-in access with the victim's user without knowing their credentials.
+
+With the ability to execute JavaScript code on the victim's browser, we may be able to collect their cookies and send them to our server to hijack their logged-in session by performing a Session Hijacking (aka Cookie Stealing) attack.
+
+Blind XSS Detection
+We usually start XSS attacks by trying to discover if and where an XSS vulnerability exists. However, in this exercise, we will be dealing with a Blind XSS vulnerability. A Blind XSS vulnerability occurs when the vulnerability is triggered on a page we don't have access to.
+
+Blind XSS vulnerabilities usually occur with forms only accessible by certain users (e.g., Admins). Some potential examples include:
+
+* Contact Forms
+* Reviews
+* User Details
+* Support Tickets
+* HTTP User-Agent header
+
+Let's run the test on the web application on (/hijacking) in the server at the end of this section. We see a User Registration page with multiple fields, so let's try to submit a test user to see how the form handles the data:
