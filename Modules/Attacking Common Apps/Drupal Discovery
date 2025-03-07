@@ -1,1 +1,19 @@
 
+Discovery/Footprinting
+During an external penetration test, we encounter what appears to be a CMS, but we know from a cursory review that the site is not running WordPress or Joomla. We know that CMS' are often "juicy" targets, so let's dig into this one and see what we can uncover.
+
+A Drupal website can be identified in several ways, including by the header or footer message Powered by Drupal, the standard Drupal logo, the presence of a CHANGELOG.txt file or README.txt file, via the page source, or clues in the robots.txt file such as references to /node.
+
+EXAMPLE: MJBUCKNER@htb[/htb]$ curl -s http://drupal.inlanefreight.local | grep Drupal
+
+<meta name="Generator" content="Drupal 8 (https://www.drupal.org)" />
+      <span>Powered by <a href="https://www.drupal.org">Drupal</a></span>
+
+VERSION SYNTAX: MJBUCKNER@htb[/htb]$ curl -s http://drupal-acc.inlanefreight.local/CHANGELOG.txt | grep -m2 ""
+
+Drupal 7.57, 2018-02-21
+
+Question 1 - Identify the Drupal version number in use on http://drupal-qa.inlanefreight.local 
+
+1) curl -s http://drupal-qa.inlanefreight.local/CHANGELOG.txt | grep -m1 "Drupal"
+2) output: Drupal 7.30, 2014-07-24
