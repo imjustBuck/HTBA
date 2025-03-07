@@ -1,1 +1,6 @@
 
+CHALLENGE:  Authenticate to 10.129.201.58 (ACADEMY-ATCKAPPS-APP02) with user "admin" and password "admin"
+
+Question 1 -  Log in to the Jenkins instance at http://jenkins.inlanefreight.local:8000. Browse around and submit the version number when you are ready to move on.
+1) log in with admin:admin 
+2) bottom right hand corner is version -> 2.303.1 
