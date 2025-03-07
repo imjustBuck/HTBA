@@ -1,1 +1,48 @@
+Discovery/Footprinting
+A quick way to identify a WordPress site is by browsing to the /robots.txt file. A typical robots.txt on a WordPress installation may look like: 
+
+EXAMPLE: 
+User-agent: *
+Disallow: /wp-admin/
+Allow: /wp-admin/admin-ajax.php
+Disallow: /wp-content/uploads/wpforms/
+
+Sitemap: https://inlanefreight.local/wp-sitemap.xml
+
+
+Here the presence of the /wp-admin and /wp-content directories would be a dead giveaway that we are dealing with WordPress. Typically attempting to browse to the wp-admin directory will redirect us to the wp-login.php page. This is the login portal to the WordPress instance's back-end.
+
+there are curl + grep commands we can run to garner further information BUT we can also just use the automated tool of WPscan -> 
+
+SYNTAX 2 DOWNLAOD: MJBUCKNER@htb[/htb]$ sudo gem install wpscan 
+
+WPScan is also able to pull in vulnerability information from external sources. We can obtain an API token from WPVulnDB, which is used by WPScan to scan for PoC and reports. The free plan allows up to 75 requests per day. To use the WPVulnDB database, just create an account and copy the API token from the users page. This token can then be supplied to wpscan using the --api-token parameter.
+
+ENUMERATION EXAMPLE: MJBUCKNER@htb[/htb]$ sudo wpscan --url http://blog.inlanefreight.local --enumerate --api-token dEOFB<SNIP>
+
+<SNIP>
+
+CHALLENGE: 10.129.173.29
+vHosts needed for these questions:
+blog.inlanefreight.local
+
+
+QUESTION 1 - Enumerate the host and find a flag.txt flag in an accessible directory. - 0ptions_ind3xeS_ftw!
+1) sudo nano /etc/hosts -> 10.129.173.29     blog.inlanefreight.local 
+2) wpscan --url http://blog.inlanefreight.local --enumerate 
+3) output: Upload directory has listing enabled: http://blog.inlanefreight.local/wp-content/uploads/
+4)go to https://academy.hackthebox.com/preview/certifications and click through subdirectories before finding -> /wp-content/uploads/2021/08 and flag.txt is in there 
+5) output: 0ptions_ind3xeS_ftw!
+
+QUESTION 2 -  Perform manual enumeration to discover another installed plugin. Submit the plugin name as the answer (3 words). - WP Sitemap Page
+1) go to http://blog.inlanefreight.local
+2) click on recent posts -> 
+3) at bottom we see the its "powered by 'WP Sitemap Page'" 
+
+
+QUESTION 3 -  Find the version number of this plugin. (i.e., 4.5.2) - 1.6.2
+1) since we know the plugin lets go to the read me page 
+2) http://blog.inlanefreight.local/wp-content/plugins/wp-sitemap-page/readme.txt
+3) Stable tag: 1.6.4
+
 
