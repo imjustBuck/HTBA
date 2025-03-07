@@ -1,1 +1,12 @@
 
+ 
+Question 1 - What version of Tomcat is running on the application located at web01.inlanefreight.local:8180?  - 10.0.10
+
+1) go to http://web01.inlanefreight.local
+2) click on documentation 
+3) Apache Tomcat 10
+Version 10.0.10, Jul 30 2021
+
+
+Question 2 - What role does the admin user have in the configuration example? - admin-gui 
+1) rom the section's reading we know that the role of the admin user is admin-gui
