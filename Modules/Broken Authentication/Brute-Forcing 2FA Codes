@@ -1,1 +1,11 @@
+Attacking Two-Factor Authentication (2FA)
+One of the most common 2FA implementations relies on the user's password and a time-based one-time password (TOTP) provided to the user's smartphone by an authenticator app or via SMS. These TOTPs typically consist only of digits, making them potentially guessable if the length is insufficient and the web application does not implement measures against successive submission of incorrect TOTPs. For our lab, we will assume that we obtained valid credentials in a prior phishing attack: admin:admin. However, the web application is secured with 2FA, as we can see after logging in with the obtained credentials:
 
+he message in the web application shows that the TOTP is a 4-digit code. Since there are only 10,000 possible variations, we can easily try all possible codes. To achieve this, let us first take a look at the corresponding request to prepare our parameters for ffuf:
+
+
+ffuf -w tokens.txt -u http://83.136.249.46:36128/2fa.php -X POST -H "Content-Type: application/x-www-form-urlencoded" -b "PHPSESSID=fpfcm5b8dh1ibfa7idg0he7l93" -d "otp=FUZZ" -fr "Invalid 2FA Code"
+
+*** be sure to change cookie value in the ffuf above. *** 
+
+oputput : 4723 OTP ->  HTB{9837b33a1ef678c380addf7ef8a517de}
