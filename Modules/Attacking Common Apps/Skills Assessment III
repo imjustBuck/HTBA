@@ -1,1 +1,13 @@
+During our penetration test our team found a Windows host running on the network and the corresponding credentials for the Administrator. It is required that we connect to the host and find the hardcoded password for the MSSQL service.
 
+
+Challenge: RDP to 10.129.215.4 with user "Administrator" and password "xcyj8izxNVzhf4z"
+
+
+Question 1 - What is the hardcoded password for the database connection in the MultimasterAPI.dll file? 
+1) xfreerdp /v:10.129.215.4 /u:administrator /p:xcyj8izxNVzhf4z /dynamic-resolution
+2) we find the multimasterAPI.dll inside of file explorer at path of -> C:\inetpub\wwwroot\bin 
+3) go to c:\tools and open up dnspy.exe 
+4) enumerate the MultimasterAPI for a while until we find -> multimasterAPI.controllers -> drop down -> on first page of ColleagueController -> 
+
+"server=localhost;database=Hub_DB;uid=finder;password=D3veL0pM3nT!;
