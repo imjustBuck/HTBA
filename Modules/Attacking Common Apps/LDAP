@@ -1,0 +1,46 @@
+LDAP requests are messages that clients send to servers to perform operations on data stored in a directory service. An LDAP request is comprised of several components:
+
+Session connection: The client connects to the server via an LDAP port (usually 389 or 636).
+Request type: The client specifies the operation it wants to perform, such as bind, search, etc.
+Request parameters: The client provides additional information for the request, such as the distinguished name (DN) of the entry to be accessed or modified, the scope and filter of the search query, the attributes and values to be added or changed, etc.
+Request ID: The client assigns a unique identifier for each request to match it with the corresponding response from the server.
+Once the server receives the request, it processes it and sends back a response message that includes several components:
+
+Response type: The server indicates the operation that was performed in response to the request.
+Result code: The server indicates whether or not the operation was successful and why.
+Matched DN: If applicable, the server returns the DN of the closest existing entry that matches the request.
+Referral: The server returns a URL of another server that may have more information about the request, if applicable.
+Response data: The server returns any additional data related to the response, such as the attributes and values of an entry that was searched or modified.
+After receiving and processing the response, the client disconnects from the LDAP port.
+
+ldapsearch
+For example, ldapsearch is a command-line utility used to search for information stored in a directory using the LDAP protocol. It is commonly used to query and retrieve data from an LDAP directory service.
+
+EXAMPLE: MJBUCKNER@htb[/htb]$ ldapsearch -H ldap://ldap.example.com:389 -D "cn=admin,dc=example,dc=com" -w secret123 -b "ou=people,dc=example,dc=com" "(mail=john.doe@example.com)"
+
+* Connect to the server ldap.example.com on port 389.
+* Bind (authenticate) as cn=admin,dc=example,dc=com with password secret123.
+* Search under the base DN ou=people,dc=example,dc=com.
+* Use the filter (mail=john.doe@example.com) to find entries that have this email address.
+
+
+LDAP Injection
+LDAP injection is an attack that exploits web applications that use LDAP (Lightweight Directory Access Protocol) for authentication or storing user information. The attacker can inject malicious code or characters into LDAP queries to alter the application's behaviour, bypass security measures, and access sensitive data stored in the LDAP directory.
+
+To test for LDAP injection, you can use input values that contain special characters or operators that can change the query's meaning:
+
+Input	                                Description
+*	                                    An asterisk * can match any number of characters.
+( )	                                  Parentheses ( ) can group expressions.
+|	                                    A vertical bar | can perform logical OR.
+&	                                    An ampersand & can perform logical AND.
+(cn=*)	                              Input values that try to bypass authentication or authorisation checks by injecting conditions that always evaluate to true can be used. For example, (cn=*) or (objectClass=*) can be used as input values for a username or password fields.
+
+
+
+
+Question 1 - After bypassing the login, what is the website "Powered by"?
+1) go to http://10.129.201.58 
+2) enter * in both user and password forms
+3) get bypassed 
+4) we see its powered by w3.css 
