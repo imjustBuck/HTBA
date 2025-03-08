@@ -1,1 +1,12 @@
 
+Question 1 - Enumerate the GitLab instance at gitlab.inlanefreight.local. What is the version number? - 13.10.2
+1) go to -> http://gitlab.inlanefreight.local
+2) register test account 
+3) once logged in we can go to gitlab.inlanefreight.local/help -> this gives us our version -> 13.10.2
+
+
+Question 2 - Find the PostgreSQL database password in the example project. - postgres
+1) still logged into the account we made in step 1, go to projects -> Explore projects 
+2) click on the projects we end up with -> inlanefreight.dev 
+3) enumerate again until landing on file -> phpunit_pgsql.xml
+4) find db password = postgres 
