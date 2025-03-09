@@ -1,1 +1,13 @@
 
+
+
+
+CHALLENGE: 94.237.55.96:43047 
+
+
+Question 1 - Apply what you learned in this section to bypass authentication to obtain the flag. 
+1) open burp 
+2) http://94.237.55.96:43047 
+3) turn burp proxy on in firefox then go to http://94.237.55.96:43047 /admin.php -> catch this GET request in burtp 
+4) send to repeater and then in response tab hit render and maximize screen 
+5) even though its a 302 status we see everything on admin homepage - > HTB{913ab2d84b8db21854c696dee1f1db68} 
