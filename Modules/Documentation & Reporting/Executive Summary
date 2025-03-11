@@ -1,0 +1,11 @@
+Executive Summaries are normally for C-suite positions or the people who are going to budget in our fixes
+
+what theyre looking for more or less is 
+
+* How much is this going to cost 
+* How many people will it take to fix it 
+* Whats the timeline / any down time? 
+* specific metrics. not a "ffew" "numerous" or "multiple" 
+* they dont care about attack paths or the tools we used or how we can reuse a ticket. they just want to know what was exploited, how important it is to fix it, how much and how long. 
+
+if summary is more than 1.5-2 pages long... start over and make it shorter. im sure the c-suites have not a large attention span with everything they have going on. 
