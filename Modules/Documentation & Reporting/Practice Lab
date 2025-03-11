@@ -1,0 +1,38 @@
+You are an assessor for Acme Security, Ltd. Your team has been hired to perform an internal penetration test against one of Inlanefreight's internal networks. The tester assigned to the project had to go out on leave unexpectedly, so you have been tasked by your manager with taking over the assessment. You've had limited communication with the tester, and all of their notes are left on the testing VM configured within the internal network. The scope provided by the client is as follows:
+
+Network range: 172.16.5.0/24
+Domain: INLANEFREIGHT.LOCAL
+Your teammate has already created a directory structure and detailed Obsidian notebook to record their testing activities. They made a list of 13 findings but only recorded evidence for a few of them. Step in as the penetration tester and complete this mock engagement to the best of your abilities. Experiment with the following to refine your skills:
+
+Set up Tmux logging and record all of your evidence using Tmux while getting more comfortable with the tool
+
+Enumerate and exploit all 13 findings listed and gather evidence for the findings that don't have any evidence recorded in the notebook
+
+Keep a detailed log of all activities you perform
+
+Update the payload log as needed
+
+Log all scan and tool output generated while performing enumeration and gathering additional finding evidence
+
+Practice writing up the findings using either WriteHat or the provided reporting template, or practice with both.
+
+Finish the penetration test and complete the questions below to conclude this module.
+
+
+
+
+CHALLENGE: 
+
+
+Question 1 - Once you achieve Domain Admin level access, submit the contents of the flag.txt file on the Administrator Desktop on the DC01 host.
+
+
+Question 2 - After achieving Domain Admin, submit the NTLM hash of the KRBTGT account.
+
+
+Question 3 - Dump the NTDS file and perform offline password cracking. Submit the password of the svc_reporting user as your answer.
+
+
+
+Question 4 -  What powerful local group does this user belong to?
+
