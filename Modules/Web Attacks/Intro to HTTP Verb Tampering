@@ -7,3 +7,16 @@ PUT	                          Writes the request payload to the specified locati
 DELETE	                      Deletes the resource at the specified location
 OPTIONS	                      Shows different options accepted by a web server, like accepted HTTP verbs
 PATCH	                        Apply partial modifications to the resource at the specified location
+
+
+As you can imagine, some of the above methods can perform very sensitive functionalities, like writing (PUT) or deleting (DELETE) files to the webroot directory on the back-end server. As discussed in the Web Requests module, if a web server is not securely configured to manage these methods, we can use them to gain control over the back-end server. However, what makes HTTP Verb Tampering attacks more common (and hence more critical), is that they are caused by a misconfiguration in either the back-end web server or the web application, either of which can cause the vulnerability.
+
+Insecure web server configurations cause the first type of HTTP Verb Tampering vulnerabilities. A web server's authentication configuration may be limited to specific HTTP methods, which would leave some HTTP methods accessible without authentication. For example, a system admin may use the following configuration to require authentication on a particular web page:
+
+EXAMPLE: 
+<Limit GET POST>
+    Require valid-user
+</Limit>
+
+As we can see, even though the configuration specifies both GET and POST requests for the authentication method, an attacker may still use a different HTTP method (like HEAD) to bypass this authentication mechanism altogether, as will see in the next section.
+
