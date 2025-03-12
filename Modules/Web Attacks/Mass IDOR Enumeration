@@ -1,1 +1,18 @@
 
+Insecure Parameters
+Let's start with a basic example that showcases a typical IDOR vulnerability. The exercise below is an Employee Manager web application that hosts employee records:
+
+Our web application assumes that we are logged in as an employee with user id uid=1 to simplify things. This would require us to log in with credentials in a real web application, but the rest of the attack would be the same. Once we click on Documents, we are redirected to
+
+/documents.php:
+
+URL EXAMPLE: http://SERVER_IP:PORT/documents.php?uid=1
+
+When we get to the Documents page, we see several documents that belong to our user. These can be files uploaded by our user or files set for us by another department (e.g., HR Department). Checking the file links, we see that they have individual names:
+
+EXAMPLE: 
+/documents/Invoice_1_09_2021.pdf
+/documents/Report_1_10_2021.pdf
+
+We see that the files have a predictable naming pattern, as the file names appear to be using the user uid and the month/year as part of the file name, which may allow us to fuzz files for other users. This is the most basic type of IDOR vulnerability and is called static file IDOR. However, to successfully fuzz other files, we would assume that they all start with Invoice or Report, which may reveal some files but not all. So, let's look for a more solid IDOR vulnerability.
+
