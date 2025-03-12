@@ -1,1 +1,9 @@
 
+Insecure Direct Object References (IDOR) vulnerabilities are among the most common web vulnerabilities and can significantly impact the vulnerable web application. IDOR vulnerabilities occur when a web application exposes a direct reference to an object, like a file or a database resource, which the end-user can directly control to obtain access to other similar objects. If any user can access any resource due to the lack of a solid access control system, the system is considered to be vulnerable.
+
+Building a solid access control system is very challenging, which is why IDOR vulnerabilities are pervasive. In addition, automating the process of identifying weaknesses in access control systems is also quite difficult, which may lead to these vulnerabilities going unidentified until they reach production.
+
+For example, if users request access to a file they recently uploaded, they may get a link to it such as (download.php?file_id=123). So, as the link directly references the file with (file_id=123), what would happen if we tried to access another file (which may not belong to us) with (download.php?file_id=124)? If the web application does not have a proper access control system on the back-end, we may be able to access any file by sending a request with its file_id. In many cases, we may find that the id is easily guessable, making it possible to retrieve many files or resources that we should not have access to based on our permissions.
+
+The main takeaway is that an IDOR vulnerability mainly exists due to the lack of an access control on the back-end
+
