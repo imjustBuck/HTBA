@@ -1,1 +1,38 @@
+As discussed in the previous section, the other type of file extension validation is by utilizing a whitelist of allowed file extensions. A whitelist is generally more secure than a blacklist. The web server would only allow the specified extensions, and the list would not need to be comprehensive in covering uncommon extensions.
+
+Still, there are different use cases for a blacklist and for a whitelist. A blacklist may be helpful in cases where the upload functionality needs to allow a wide variety of file types (e.g., File Manager), while a whitelist is usually only used with upload functionalities where only a few file types are allowed. Both may also be used in tandem.
+
+Whitelisting Extensions
+Let's start the exercise at the end of this section and attempt to upload an uncommon PHP extension, like .phtml, and see if we are still able to upload it as we did in the previous section:
+
+We see that we get a message saying Only images are allowed, which may be more common in web apps than seeing a blocked extension type. However, error messages do not always reflect which form of validation is being utilized, so let's try to fuzz for allowed extensions as we did in the previous section, using the same wordlist that we used previously:
+
+We can see that all variations of PHP extensions are blocked (e.g. php5, php7, phtml). However, the wordlist we used also contained other 'malicious' extensions that were not blocked and were successfully uploaded. So, let's try to understand how we were able to upload these extensions and in which cases we may be able to utilize them to execute PHP code on the back-end server.
+
+The following is an example of a file extension whitelist test:
+
+Example: 
+$fileName = basename($_FILES["uploadFile"]["name"]);
+
+if (!preg_match('^.*\.(jpg|jpeg|png|gif)', $fileName)) {
+    echo "Only images are allowed";
+    die();
+}
+
+We see that the script uses a Regular Expression (regex) to test whether the filename contains any whitelisted image extensions. The issue here lies within the regex, as it only checks whether the file name contains the extension and not if it actually ends with it. Many developers make such mistakes due to a weak understanding of regex patterns.
+
+So, let's see how we can bypass these tests to upload PHP scripts.
+
+Double Extensions
+The code only tests whether the file name contains an image extension; a straightforward method of passing the regex test is through Double Extensions. For example, if the .jpg extension was allowed, we can add it in our uploaded file name and still end our filename with .php (e.g. shell.jpg.php), in which case we should be able to pass the whitelist test, while still uploading a PHP script that can execute PHP code.
+
+Exercise: Try to fuzz the upload form with This Wordlist to find what extensions are whitelisted by the upload form.
+
+Let's intercept a normal upload request, and modify the file name to (shell.jpg.php), and modify its content to that of a web shell:
+
+Now, if we visit the uploaded file and try to send a command, we can see that it does indeed successfully execute system commands, meaning that the file we uploaded is a fully working PHP script:
+
+However, this may not always work, as some web applications may use a strict regex pattern, as mentioned earlier, like the following:
+
+This pattern should only consider the final file extension, as it uses (^.*\.) to match everything up to the last (.), and then uses ($) at the end to only match extensions that end the file name. So, the above attack would not work. Nevertheless, some exploitation techniques may allow us to bypass this pattern, but most rely on misconfigurations or outdated systems.
 
