@@ -1,1 +1,40 @@
+The most basic type of file upload vulnerability occurs when the web application does not have any form of validation filters on the uploaded files, allowing the upload of any file type by default.
+
+With these types of vulnerable web apps, we may directly upload our web shell or reverse shell script to the web application, and then by just visiting the uploaded script, we can interact with our web shell or send the reverse shell.
+
+Arbitrary File Upload
+Let's start the exercise at the end of this section, and we will see an Employee File Manager web application, which allows us to upload personal files to the web application:
+
+
+The web application does not mention anything about what file types are allowed, and we can drag and drop any file we want, and its name will appear on the upload form, including .php files:
+
+Furthermore, if we click on the form to select a file, the file selector dialog does not specify any file type, as it says All Files for the file type, which may also suggest that no type of restrictions or limitations are specified for the web application:
+
+All of this tells us that the program appears to have no file type restrictions on the front-end, and if no restrictions were specified on the back-end, we might be able to upload arbitrary file types to the back-end server to gain complete control over it.
+
+Identifying Web Framework
+We need to upload a malicious script to test whether we can upload any file type to the back-end server and test whether we can use this to exploit the back-end server. Many kinds of scripts can help us exploit web applications through arbitrary file upload, most commonly a Web Shell script and a Reverse Shell script.
+
+One easy method to determine what language runs the web application is to visit the /index.ext page, where we would swap out ext with various common web extensions, like php, asp, aspx, among others, to see whether any of them exist.
+
+For example, when we visit our exercise below, we see its URL as http://SERVER_IP:PORT/, as the index page is usually hidden by default. But, if we try visiting http://SERVER_IP:PORT/index.php, we would get the same page, which means that this is indeed a PHP web application. We do not need to do this manually, of course, as we can use a tool like Burp Intruder for fuzzing the file extension using a Web Extensions wordlist, as we will see in upcoming sections. This method may not always be accurate, though, as the web application may not utilize index pages or may utilize more than one web extension.
+
+Several other techniques may help identify the technologies running the web application, like using the Wappalyzer extension, which is available for all major browsers. Once added to our browser, we can click its icon to view all technologies running the web application:
+
+Vulnerability Identification
+Now that we have identified the web framework running the web application and its programming language, we can test whether we can upload a file with the same extension. As an initial test to identify whether we can upload arbitrary PHP files, let's create a basic Hello World script to test whether we can execute PHP code with our uploaded file.
+
+To do so, we will write <?php echo "Hello HTB";?> to test.php, and try uploading it to the web application:
+
+The file appears to have successfully been uploaded, as we get a message saying File successfully uploaded, which means that the web application has no file validation whatsoever on the back-end. Now, we can click the Download button, and the web application will take us to our uploaded file:
+
+CHALLENGE: 94.237.63.45:57068
+
+
+Question 1 - Try to upload a PHP script that executes the (hostname) command on the back-end server, and submit the first word of it as the answer. - fileuploadsabsentverification 
+1) nano host.php 
+2) copy this into host.php -> <?php system('hostname'); ?>
+3) upload it to http://94.237.63.45:57068
+4) then navigate to http://94.237.63.45:57068/uploads/host.php 
+5) ng-1235531-fileuploadsabsentverification-05l7n-64d44f85c5-tnjsm
 
