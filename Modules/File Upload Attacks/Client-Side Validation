@@ -1,1 +1,50 @@
 
+Many web applications only rely on front-end JavaScript code to validate the selected file format before it is uploaded and would not upload it if the file is not in the required format (e.g., not an image).
+
+However, as the file format validation is happening on the client-side, we can easily bypass it by directly interacting with the server, skipping the front-end validations altogether. We may also modify the front-end code through our browser's dev tools to disable any validation in place.
+
+
+Client-Side Validation
+The exercise at the end of this section shows a basic Profile Image functionality, frequently seen in web applications that utilize user profile features, like social media web applications:
+
+We may still select the All Files option to select our PHP script anyway, but when we do so, we get an error message saying (Only images are allowed!), and the Upload button gets disabled:
+
+As mentioned earlier, to bypass these protections, we can either modify the upload request to the back-end server, or we can manipulate the front-end code to disable these type validations.
+
+Back-end Request Modification
+Let's start by examining a normal request through Burp. When we select an image, we see that it gets reflected as our profile image, and when we click on Upload, our profile image gets updated and persists through refreshes. This indicates that our image was uploaded to the server, which is now displaying it back to us:
+
+
+If we capture the upload request with Burp, we see the following request being sent by the web application:
+
+The web application appears to be sending a standard HTTP upload request to /upload.php. This way, we can now modify this request to meet our needs without having the front-end type validation restrictions. If the back-end server does not validate the uploaded file type, then we should theoretically be able to send any file type/content, and it would be uploaded to the server.
+
+The two important parts in the request are filename="HTB.png" and the file content at the end of the request. If we modify the filename to shell.php and modify the content to the web shell we used in the previous section; we would be uploading a PHP web shell instead of an image.
+
+So, let's capture another image upload request, and then modify it accordingly:
+
+Note: We may also modify the Content-Type of the uploaded file, though this should not play an important role at this stage, so we'll keep it unmodified.
+
+As we can see, our upload request went through, and we got File successfully uploaded in the response. So, we may now visit our uploaded file and interact with it and gain remote code execution.
+
+Disabling Front-end Validation
+Another method to bypass client-side validations is through manipulating the front-end code. As these functions are being completely processed within our web browser, we have complete control over them. So, we can modify these scripts or disable them entirely. Then, we may use the upload functionality to upload any file type without needing to utilize Burp to capture and modify our requests.
+
+To start, we can click [CTRL+SHIFT+C] to toggle the browser's Page Inspector, and then click on the profile image, which is where we trigger the file selector for the upload form:
+
+This will highlight the following HTML file input on line 18:
+
+Code: html
+<input type="file" name="uploadFile" id="uploadFile" onchange="checkFile(this)" accept=".jpg,.jpeg,.png">
+
+
+
+CHALLENGE: 94.237.59.30:59108
+
+Question 1 -  Try to bypass the client-side file type validations in the above exercise, then upload a web shell to read /flag.txt (try both bypass methods for better practice)
+1) go to http://94.237.59.30:59108
+2) right click the submit button and hti inspect
+3) remove the  accept=".jpg,.jpeg,.png" & change the "onSubmit" to only be "upload()" 
+4) upload shell.php file we made earlier 
+5) navigate to -> http://94.237.59.30:59108/profile_images/shell.php?cmd=cat%20/flag.txt 
+  HTB{cl13n7_51d3_v4l1d4710n_w0n7_570p_m3} 
