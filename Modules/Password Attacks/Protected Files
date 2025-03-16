@@ -1,1 +1,161 @@
 
+The use of file encryption is often still lacking in private and business matters. Even today, emails containing job applications, account statements, or contracts are often sent unencrypted. This is grossly negligent and, in many cases, even punishable by law. For example, GDPR demands the requirement for encrypted storage and transmission of personal data in the European Union. Especially in business cases, this is quite different for emails. Nowadays, it is pretty common to communicate confidential topics or send sensitive data by email. However, emails are not much more secure than postcards, which can be intercepted if the attacker is positioned correctly.
+
+More and more companies are increasing their IT security precautions and infrastructure through training courses and security awareness seminars. As a result, it is becoming increasingly common for company employees to encrypt/encode sensitive files. Nevertheless, even these can be cracked and read with the right choice of lists and tools. In many cases, symmetric encryption like AES-256 is used to securely store individual files or folders. Here, the same key is used to encrypt and decrypt a file.
+
+Therefore, for sending files, asymmetric encryption is used, in which two separate keys are required. The sender encrypts the file with the public key of the recipient. The recipient, in turn, can then decrypt the file using a private key.
+
+Hunting for Encoded Files
+Many different file extensions can identify these types of encrypted/encoded files. For example, a useful list can be found on FileInfo. However, for our example, we will only look at the most common files like the following:
+
+Hunting for Files: 
+
+cry0l1t3@unixclient:~$ for ext in $(echo ".xls .xls* .xltx .csv .od* .doc .doc* .pdf .pot .pot* .pp*");do echo -e "\nFile extension: " $ext; find / -name *$ext 2>/dev/null | grep -v "lib\|fonts\|share\|core" ;done
+
+If we encounter file extensions on the system that we are not familiar with, we can use the search engines that we are familiar with to find out the technology behind them. After all, there are hundreds of different file extensions, and no one is expected to know all of them by heart. First, however, we should know how to find the relevant information that will help us. Again, we can use the steps we already covered in the Credential Hunting sections or repeat them to find SSH keys on the system.
+
+Hunting for SSH Keys
+cry0l1t3@unixclient:~$ grep -rnw "PRIVATE KEY" /* 2>/dev/null | grep ":1"
+
+/home/cry0l1t3/.ssh/internal_db:1:-----BEGIN OPENSSH PRIVATE KEY-----
+/home/cry0l1t3/.ssh/SSH.private:1:-----BEGIN OPENSSH PRIVATE KEY-----
+/home/cry0l1t3/Mgmt/ceil.key:1:-----BEGIN OPENSSH PRIVATE KEY-----
+
+Encrypted SSH Keys
+cry0l1t3@unixclient:~$ cat /home/cry0l1t3/.ssh/SSH.private
+
+-----BEGIN RSA PRIVATE KEY-----
+Proc-Type: 4,ENCRYPTED
+DEK-Info: AES-128-CBC,2109D25CC91F8DBFCEB0F7589066B2CC
+
+8Uboy0afrTahejVGmB7kgvxkqJLOczb1I0/hEzPU1leCqhCKBlxYldM2s65jhflD
+4/OH4ENhU7qpJ62KlrnZhFX8UwYBmebNDvG12oE7i21hB/9UqZmmHktjD3+OYTsD
+...SNIP...
+
+Cracking with John
+John The Ripper has many different scripts to generate hashes from files that we can then use for cracking. We can find these scripts on our system using the following command.
+
+MJBUCKNER@htb[/htb]$ locate *2john*
+
+/usr/bin/bitlocker2john
+/usr/bin/dmg2john
+/usr/bin/gpg2john
+/usr/bin/hccap2john
+/usr/bin/keepass2john
+/usr/bin/putty2john
+/usr/bin/racf2john
+/usr/bin/rar2john
+/usr/bin/uaf2john
+/usr/bin/vncpcap2john
+/usr/bin/wlanhcx2john
+/usr/bin/wpapcap2john
+/usr/bin/zip2john
+/usr/share/john/1password2john.py
+/usr/share/john/7z2john.pl
+/usr/share/john/DPAPImk2john.py
+/usr/share/john/adxcsouf2john.py
+/usr/share/john/aem2john.py
+/usr/share/john/aix2john.pl
+/usr/share/john/aix2john.py
+/usr/share/john/andotp2john.py
+/usr/share/john/androidbackup2john.py
+...SNIP...
+
+We can convert many different formats into single hashes and try to crack the passwords with this. Then, we can open, read, and use the file if we succeed. There is a Python script called ssh2john.py for SSH keys, which generates the corresponding hashes for encrypted SSH keys, which we can then store in files.
+
+MJBUCKNER@htb[/htb]$ ssh2john.py SSH.private > ssh.hash
+MJBUCKNER@htb[/htb]$ cat ssh.hash 
+
+ssh.private:$sshng$0$8$1C258238FD2D6EB0$2352$f7b...SNIP...
+
+Cracking SSH Keys
+MJBUCKNER@htb[/htb]$ john --wordlist=rockyou.txt ssh.hash
+
+Using default input encoding: UTF-8
+Loaded 1 password hash (SSH [RSA/DSA/EC/OPENSSH (SSH private keys) 32/64])
+Cost 1 (KDF/cipher [0=MD5/AES 1=MD5/3DES 2=Bcrypt/AES]) is 0 for all loaded hashes
+Cost 2 (iteration count) is 1 for all loaded hashes
+Will run 2 OpenMP threads
+Note: This format may emit false positives, so it will keep trying even after
+finding a possible candidate.
+Press 'q' or Ctrl-C to abort, almost any other key for status
+1234         (SSH.private)
+1g 0:00:00:00 DONE (2022-02-08 03:03) 16.66g/s 1747Kp/s 1747Kc/s 1747KC/s Knightsing..Babying
+Session completed
+
+Cracking Documents
+In the course of our career, we will come across many different documents, which are also password-protected to prevent access by unauthorized persons. Today, most people use Office and PDF files to exchange business information and data.
+
+Pretty much all reports, documentation, and information sheets can be found in the form of Office DOCs and PDFs. This is because they offer the best visual representation of information. John provides a Python script called office2john.py to extract hashes from all common Office documents that can then be fed into John or Hashcat for offline cracking. The procedure to crack them remains the same.
+Cracking Microsoft Office Documents: 
+MJBUCKNER@htb[/htb]$ office2john.py Protected.docx > protected-docx.hash
+MJBUCKNER@htb[/htb]$ cat protected-docx.hash
+
+Protected.docx:$office$*2007*20*128*16*7240...SNIP...8a69cf1*98242f4da37d916305d8e2821360773b7edc481b
+
+MJBUCKNER@htb[/htb]$ john --wordlist=rockyou.txt protected-docx.hash
+
+Loaded 1 password hash (Office, 2007/2010/2013 [SHA1 256/256 AVX2 8x / SHA512 256/256 AVX2 4x AES])
+Cost 1 (MS Office version) is 2007 for all loaded hashes
+Cost 2 (iteration count) is 50000 for all loaded hashes
+Will run 2 OpenMP threads
+Press 'q' or Ctrl-C to abort, almost any other key for status
+1234             (Protected.docx)
+1g 0:00:00:00 DONE (2022-02-08 01:25) 2.083g/s 2266p/s 2266c/s 2266C/s trisha..heart
+Use the "--show" option to display all of the cracked passwords reliably
+Session completed
+
+MJBUCKNER@htb[/htb]$ john protected-docx.hash --show
+
+Protected.docx:1234
+
+Cracking PDFS
+MJBUCKNER@htb[/htb]$ pdf2john.py PDF.pdf > pdf.hash
+MJBUCKNER@htb[/htb]$ cat pdf.hash 
+
+PDF.pdf:$pdf$2*3*128*-1028*1*16*7e88...SNIP...bd2*32*a72092...SNIP...0000*32*c48f001fdc79a0
+
+MJBUCKNER@htb[/htb]$ john --wordlist=rockyou.txt pdf.hash
+
+Using default input encoding: UTF-8
+Loaded 1 password hash (PDF [MD5 SHA2 RC4/AES 32/64])
+Cost 1 (revision) is 3 for all loaded hashes
+Will run 2 OpenMP threads
+Press 'q' or Ctrl-C to abort, almost any other key for status
+1234             (PDF.pdf)
+1g 0:00:00:00 DONE (2022-02-08 02:16) 25.00g/s 27200p/s 27200c/s 27200C/s bulldogs..heart
+Use the "--show --format=PDF" options to display all of the cracked passwords reliably
+Session completed
+
+CHALLENGE: 10.129.202.64
+
+Question 1 - Use the cracked password of the user Kira and log in to the host and crack the "id_rsa" SSH key. Then, submit the password for the SSH key as the answer. 
+1.  scp with the credentials kira:L0vey0u1! that were previously attained to transfer the id_rsa file from the spawned target to our HOST 
+2. scp kira@10.129.202.84:~/.ssh/id_rsa .
+3.  ensure it copied over with -> head id_rsa 
+-----BEGIN RSA PRIVATE KEY-----
+Proc-Type: 4,ENCRYPTED
+DEK-Info: AES-128-CBC,F1C2E21F3CF7BDF460FB56C7D16911F2
+
+sqXnpt6fN4Ugi545CGyPWgfkaQhkDt5lKU6azI4amQ9mifdUkKzdR46EdrU3Pglh
+xz3sC+Xdm7qkrtLEQ7rpk8w7zANcsxvQznGspuUv+c1hSvJdVgZAqTG84KFmUpXM
+2YW9QdMynHy9PVJP66tKBfuzJ9YZBJISocUjpwtEqrWDnOSBinLsYj6Z+J+yIvLv
+1IaFtgGJbqWovJ+5FP9L8Js/AdWRs0fnGzvHYo8h9rJXgf6Qdf7okSsN+pRTPpBe
+Dc/IUMwcTUdzyRIMdoz5CsZJGe6jaKYoOt66dU92XjKzHG4yhIeord7+wa1W6MRd
+aa2fvvi1SMtaaLFCb6nd8raqoaELPzwcrYQ0cLCwlwggH+GTW/cfVAABnE0kXCgH
+4. locate ssh2john  
+/usr/bin/ssh2john
+/usr/share/john/__pycache__/ssh2john.cpython-311.pyc
+/usr/share/john/ssh2john.py
+5. python3 /usr/share/ssh2john.py id_rsa > id_rsa.hash 
+6. i ensured it was copied correctly with -> head id_rsa.hash 
+id_rsa:$sshng$1$16$F1C2E21F3CF7BDF460FB56C7D16911F2$1776$b2a5e7a6de9f3785208b9e39086c8f5a07e46908640ede65294e9acc8e1a990f6689f75490acdd478e8476b5373e0961c73dec0be5dd9bbaa4aed2c443bae993cc3bcc035cb31bd0ce71aca6e52ff9cd614af25d560640a931bce0a1665295ccd985bd41d3329c7cbd3d524febab4a05fbb327d619049212a1c523a70b44aab5839ce4818a72ec623e99f89fb222f2efd48685b601896ea5a8bc9fb914ff4bf09b3f01d591b347e71b3bc7628f21f6b25781fe9075fee8912b0dfa9
+7. john id_rsa.hash --wordlist=/usr/share/wordlists/rockyou.txt 
+Using default input encoding: UTF-8
+Loaded 1 password hash (SSH, SSH private key [RSA/DSA/EC/OPENSSH 32/64])
+Cost 1 (KDF/cipher [0=MD5/AES 1=MD5/3DES 2=Bcrypt/AES]) is 0 for all loaded hashes
+Cost 2 (iteration count) is 1 for all loaded hashes
+Will run 4 OpenMP threads
+Press 'q' or Ctrl-C to abort, almost any other key for status
+L0veme           (id_rsa)     
+
