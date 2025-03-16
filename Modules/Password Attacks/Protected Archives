@@ -129,5 +129,21 @@ CHALLENGE: 10.129.202.64
 
 Question 1 -  Use the cracked password of the user Kira, log in to the host, and read the Notes.zip file containing the flag. Then, submit the flag as the answer.
 1. scp kira@10.129.202.64:~/Documents/Notes.zip .
-
+2. zip2john Notes.zip > notes.hash
+3. hashcat password.list -r custom.rule --stdout | sort -u > mut_password.list
+4. john notes.hash --wordlist=mut_password.list 
+Using default input encoding: UTF-8
+Loaded 1 password hash (PKZIP [32/64])
+Will run 4 OpenMP threads
+Press 'q' or Ctrl-C to abort, almost any other key for status
+P@ssw0rd3!       (Notes.zip/notes.txt)     
+1g 0:00:00:00 DONE (2025-03-16 12:13) 50.00g/s 3686Kp/s 3686Kc/s 3686KC/s P00hbear2022..R0ckst@r93
+Use the "--show" option to display all of the cracked passwords reliably
+Session completed. 
+5. unzip Notes.zip 
+Archive:  Notes.zip
+[Notes.zip] notes.txt password: 
+ extracting: notes.txt         
+6. cat notes.txt
+HTB{ocnc7r4io8ucsj8eujcm}
 
