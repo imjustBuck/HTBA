@@ -1,1 +1,114 @@
+https://github.com/carlospolop/PEASS-ng/tree/master/linPEAS
 
+https://github.com/rebootuser/LinEnum
+
+
+Enumeration is the key to privilege escalation. Several helper scripts (such as LinPEAS and LinEnum) exist to assist with enumeration. Still, it is also important to understand what pieces of information to look for and to be able to perform your enumeration manually. When you gain initial shell access to the host, it is important to check several key details.
+
+OS Version: Knowing the distribution (Ubuntu, Debian, FreeBSD, Fedora, SUSE, Red Hat, CentOS, etc.) will give you an idea of the types of tools that may be available. This would also identify the operating system version, for which there may be public exploits available.
+
+Kernel Version: As with the OS version, there may be public exploits that target a vulnerability in a specific kernel version. Kernel exploits can cause system instability or even a complete crash. Be careful running these against any production system, and make sure you fully understand the exploit and possible ramifications before running one.
+
+Running Services: Knowing what services are running on the host is important, especially those running as root. A misconfigured or vulnerable service running as root can be an easy win for privilege escalation. Flaws have been discovered in many common services such as Nagios, Exim, Samba, ProFTPd, etc. Public exploit PoCs exist for many of them, such as CVE-2016-9566, a local privilege escalation flaw in Nagios Core < 4.2.4.
+
+
+Typically we'll want to run a few basic commands to orient ourselves:
+
+* whoami - what user are we running as
+* id - what groups does our user belong to?
+* hostname - what is the server named, can we gather anything from the naming convention?
+* ifconfig or ip -a - what subnet did we land in, does the host have additional NICs in other subnets?
+* sudo -l - can our user run anything with sudo (as another user as root) without needing a password? This can sometimes be the easiest win and we can do something like sudo su and drop right into a root shell.
+
+Including screenshots of the above information can be helpful in a client report to provide evidence of a successful Remote Code Execution (RCE) and to clearly identify the affected system. Now let's get into our more detailed, step-by-step, enumeration.
+
+We'll start out by checking out what operating system and version we are dealing with.
+
+SYNTAX: 
+MJBUCKNER@htb[/htb]$ cat /etc/os-release
+
+NAME="Ubuntu"
+VERSION="20.04.4 LTS (Focal Fossa)"
+ID=ubuntu
+ID_LIKE=debian
+PRETTY_NAME="Ubuntu 20.04.4 LTS"
+VERSION_ID="20.04"
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+VERSION_CODENAME=focal
+UBUNTU_CODENAME=focal
+
+Next we'll want to check out our current user's PATH, which is where the Linux system looks every time a command is executed for any executables to match the name of what we type, i.e., id which on this system is located at /usr/bin/id. As we'll see later in this module, if the PATH variable for a target user is misconfigured we may be able to leverage it to escalate privileges. For now we'll note it down and add it to our notetaking tool of choice.
+
+SYNTAX: 
+MJBUCKNER@htb[/htb]$ echo $PATH
+
+/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin
+
+We can also check out all environment variables that are set for our current user, we may get lucky and find something sensitive in there such as a password. We'll note this down and move on.
+SYNTAX: 
+MJBUCKNER@htb[/htb]$ env
+
+SHELL=/bin/bash
+PWD=/home/htb-student
+LOGNAME=htb-student
+XDG_SESSION_TYPE=tty
+MOTD_SHOWN=pam
+HOME=/home/htb-student
+LANG=en_US.UTF-8
+
+<SNIP>
+
+Next let's note down the Kernel version. We can do some searches to see if the target is running a vulnerable Kernel (which we'll get to take advantage of later on in the module) which has some known public exploit PoC. We can do this a few ways, another way would be cat /proc/version but we'll use the uname -a command.
+
+SYNTAX: 
+MJBUCKNER@htb[/htb]$ uname -a
+
+Linux nixlpe02 5.4.0-122-generic #138-Ubuntu SMP Wed Jun 22 15:00:31 UTC 2022 x86_64 x86_64 x86_64 GNU/Linux
+
+We can next gather some additional information about the host itself such as the CPU type/version:
+
+SYNTAX: 
+MJBUCKNER@htb[/htb]$ lscpu 
+
+Architecture:                    x86_64
+CPU op-mode(s):                  32-bit, 64-bit
+Byte Order:                      Little Endian
+Address sizes:                   43 bits physical, 48 bits virtual
+CPU(s):                          2
+On-line CPU(s) list:             0,1
+Thread(s) per core:              1
+Core(s) per socket:              2
+Socket(s):                       1
+NUMA node(s):                    1
+Vendor ID:                       AuthenticAMD
+CPU family:                      23
+Model:                           49
+Model name:                      AMD EPYC 7302P 16-Core Processor
+Stepping:                        0
+CPU MHz:                         2994.375
+BogoMIPS:                        5988.75
+Hypervisor vendor:               VMware
+
+<SNIP>
+
+Hidden Files one liner 
+SYNTAX: 
+find / -type f -name ".*" -exec ls -l {} \; 2>/dev/null | grep htb-student
+
+Hidden Directories One Liner
+SYNTAX: 
+find / -type f -name ".*" -exec ls -l {} \; 2>/dev/null | grep htb-student
+
+
+
+
+CHALLENGE:  SSH to 10.129.205.110 (ACADEMY-LLPE-SUDO) with user "htb-student" and password "HTB_@cademy_stdnt!"
+
+Question 1 -  Enumerate the Linux environment and look for interesting files that might contain sensitive data. Submit the flag as the answer.
+1. ssh htb-student@10.129.205.110 
+2. find / -name *.sh 2>/dev/null | xargs cat | grep "HTB" 
+3. output:
+HTB{1nt3rn4l_5cr1p7_l34k}
