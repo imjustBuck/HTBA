@@ -6,7 +6,7 @@ Technically, robots.txt is a simple text file placed in the root directory of a 
 How robots.txt Works
 The directives in robots.txt typically target specific user-agents, which are identifiers for different types of bots. For example, a directive might look like this:
 
-
+ 
 User-agent: *
 Disallow: /private/
 
