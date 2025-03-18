@@ -1,1 +1,72 @@
+To complete the skills assessment, answer the questions below. You will need to apply a variety of skills learned in this module, including:
+
+Using whois
+Analysing robots.txt
+Performing subdomain bruteforcing
+Crawling and analysing results
+
+Demonstrate your proficiency by effectively utilizing these techniques. Remember to add subdomains to your hosts file as you discover them.
+
+
+CHALLENGE: 83.136.252.205:59800
+
+vHosts needed for these questions:
+inlanefreight.htb
+
+
+Question 1 - What is the IANA ID of the registrar of the inlanefreight.com domain?
+1. whois inlanefreight.com 
+2. Registrar IANA ID: 468 
+
+Question 2 - What http server software is powering the inlanefreight.htb site on the target system? Respond with the name of the software, not the version, e.g., Apache.
+1. curl -I http://inlanefreight.htb:59800
+HTTP/1.1 200 OK
+Server: nginx/1.26.1
+Date: Tue, 18 Mar 2025 19:16:45 GMT
+Content-Type: text/html
+Content-Length: 120
+Last-Modified: Thu, 01 Aug 2024 09:35:23 GMT
+Connection: keep-alive
+ETag: "66ab56db-78"
+Accept-Ranges: bytes
+
+2. final answer: nginx
+
+Question 3 - What is the API key in the hidden admin directory that you have discovered on the target system?
+1. gobuster vhost -u http://inlanefreight.htb:59800 -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-110000.txt -t 60 --append-domain
+Found: web1337.inlanefreight.htb:59800 Status: 200 [Size: 104]
+Progress: 114441 / 114442 (100.00%)
+
+2. add web1337.inlanefreight.htb -> /etc/hosts
+3. curl http://web1337.inlanefreight.htb:59800/robots.txt
+User-agent: *
+Allow: /index.html
+Allow: /index-2.html
+Allow: /index-3.html
+Disallow: /admin_h1dd3n
+4. curl http://web1337.inlanefreight.htb:59800/admin_h1dd3n/    <- be sure to include the trailing / it does make a difference!!!
+!DOCTYPE html><html><head><title>web1337 admin</title></head><body><h1>Welcome to web1337 admin site</h1><h2>The admin panel is currently under maintenance, but the API is still accessible with the key e963d863ee0e82ba7080fbf558ca0d3f</h2></body></html>
+5. Final Answer: e963d863ee0e82ba7080fbf558ca0d3f
+
+Question 4 -  After crawling the inlanefreight.htb domain on the target system, what is the email address you have found? Respond with the full email, e.g., mail@inlanefreight.htb.
+1. gobuster vhost -u http://web1337.inlanefreight.htb:59800 -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-110000.txt -t 60 --append-domain
+Found: dev.web1337.inlanefreight.htb:59800 Status: 200 [Size: 123]
+2. add dev.web1337.inlanefreight.htb > /etc/hosts
+3. pip3 install scrapy --break-system-packages
+
+4. wget https://academy.hackthebox.com/storage/modules/279/ReconSpider.zip ; unzip ReconSpider.zip
+
+5.python3 ReconSpider.py http://dev.web1337.inlanefreight.htb:59800
+6. cat results.json | jq '.emails'
+[
+  "1337testing@inlanefreight.htb"
+]
+
+
+Question 5 - What is the API key the inlanefreight.htb developers will be changing too?
+1. follow same steps as above 
+2. cat results.json | jq '.comments'
+[
+  "<!-- Remember to change the API key to ba988b835be4aa97d068941dc852ff33 -->"
+]
 
