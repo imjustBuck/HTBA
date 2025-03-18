@@ -84,7 +84,7 @@ comments	          Lists HTML comments found in the source code.
 
 CHALLENGE 
 
-Question 1 - After spidering inlanefreight.com, identify the location where future reports will be stored. Respond with the full domain, e.g., files.inlanefreight.com.
+Question 1 - After spidering inlanefreight.com, identify the location where future reports will be stored. Respond with the full domain, e.g., files.inlanefreight.com. - inlanefreight-comp133.s3.amazonaws.htb
 1. pip3 install scrapy --break-system-packages
 2.  download the provided scrapy spider, ReconSpider, and extract it to their current working directory
 wget https://academy.hackthebox.com/storage/modules/279/ReconSpider.zip
