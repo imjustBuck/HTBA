@@ -37,21 +37,45 @@ We can view the first archived version of HackTheBox by entering the page we are
 CHALLENGE
 
 Question 1 - How many Pen Testing Labs did HackTheBox have on the 8th August 2018? Answer with an integer, eg 1234.
-
+1. https://web.archive.org/
+2. search  https://www.hackthebox.eu/en
+3. click 2018 -> august -> first time choice is fine 
+4. scroll down -> 74 vulnerable machines 
 
 Question 2 - How many members did HackTheBox have on the 10th June 2017? Answer with an integer, eg 1234.
-
+1. https://web.archive.org/
+2. search  https://www.hackthebox.eu/en
+3. click 2017 -> june 10th -> 
+4. scroll -> 3054 members 
 
 Question 3 - Going back to March 2002, what website did the facebook.com domain redirect too? Answer with the full domain, eg http://www.facebook.com/
-
+1. https://web.archive.org/
+2. search  https://www.faacebook.com
+3. 2002 -> march 28th 
+3. http://site.aboutface.com/
 
 Questiuon 4 - According to the paypal.com website in October 1999, what could you use to "beam money to anyone"? Answer with the product name, eg My Device, remove the ™ from your answer.
-
+1. https://web.archive.org/
+2. search  https://www.paypal.com
+3. 1999 -> oct 13th 
+4. PayPal™ lets you beam money to anyone with a Palm™ 0rganizer.
 
 Question 5 - Going back to November 1998 on google.com, what address hosted the non-alpha "Google Search Engine Prototype" of Google? Answer with the full address, eg http://google.com
-
+1. https://web.archive.org/
+2. search  https://www.google.com
+3. 1998 -> nov
+4. click on the Google Search Engine Prototype 
+5. redirects to -> http://google.stanford.edu/ 
 
 Question 6 - Going back to March 2000 on www.iana.org, when exacty was the site last updated? Answer with the date in the footer, eg 11-March-99
-
+1. https://web.archive.org/
+2. search  https://www.iana.org
+3. 2000 -> march 3 
+4. bottom of page -> Page Updated 17-December-99. 
 
 Question 7 - According to the wikipedia.com snapshot taken in March 2001, how many pages did they have over? Answer with the number they state without any commas, eg 2000 not 2,000
+1. https://web.archive.org/
+2. search  https://www.wikipedia.com
+3. 2001 -> march 31st 
+4. We've got over 3,000 pages already
+5. final answer: 3000
