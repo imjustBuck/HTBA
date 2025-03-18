@@ -1,1 +1,84 @@
+WHOIS is a widely used query and response protocol designed to access databases that store information about registered internet resources. Primarily associated with domain names, WHOIS can also provide details about IP address blocks and autonomous systems. Think of it as a giant phonebook for the internet, letting you look up who owns or is responsible for various online assets.
 
+SYNTAX: 
+MJBUCKNER@htb[/htb]$ whois inlanefreight.com
+
+[...]
+Domain Name: inlanefreight.com
+Registry Domain ID: 2420436757_DOMAIN_COM-VRSN
+Registrar WHOIS Server: whois.registrar.amazon
+Registrar URL: https://registrar.amazon.com
+Updated Date: 2023-07-03T01:11:15Z
+Creation Date: 2019-08-05T22:43:09Z
+[...]
+
+Each WHOIS record typically contains the following information:
+
+* Domain Name: The domain name itself (e.g., example.com)
+* Registrar: The company where the domain was registered (e.g., GoDaddy, Namecheap)
+* Registrant Contact: The person or organization that registered the domain.
+* Administrative Contact: The person responsible for managing the domain.
+* Technical Contact: The person handling technical issues related to the domain.
+* Creation and Expiration Dates: When the domain was registered and when it's set to expire.
+* Name Servers: Servers that translate the domain name into an IP address.
+
+Why WHOIS Matters for Web Recon
+WHOIS data serves as a treasure trove of information for penetration testers during the reconnaissance phase of an assessment. It offers valuable insights into the target organisation's digital footprint and potential vulnerabilities:
+
+* Identifying Key Personnel: WHOIS records often reveal the names, email addresses, and phone numbers of individuals responsible for managing the domain. This information can be leveraged for social engineering attacks or to identify potential targets for phishing campaigns.
+* Discovering Network Infrastructure: Technical details like name servers and IP addresses provide clues about the target's network infrastructure. This can help penetration testers identify potential entry points or misconfigurations.
+* Historical Data Analysis: Accessing historical WHOIS records through services like WhoisFreaks can reveal changes in ownership, contact information, or technical details over time. This can be useful for tracking the evolution of the target's digital presence.
+
+
+Scenario 1: Phishing Investigation
+An email security gateway flags a suspicious email sent to multiple employees within a company. The email claims to be from the company's bank and urges recipients to click on a link to update their account information. A security analyst investigates the email and begins by performing a WHOIS lookup on the domain linked in the email.
+
+The WHOIS record reveals the following:
+
+Registration Date: The domain was registered just a few days ago.
+Registrant: The registrant's information is hidden behind a privacy service.
+Name Servers: The name servers are associated with a known bulletproof hosting provider often used for malicious activities.
+This combination of factors raises significant red flags for the analyst. The recent registration date, hidden registrant information, and suspicious hosting strongly suggest a phishing campaign. The analyst promptly alerts the company's IT department to block the domain and warns employees about the scam.
+
+Further investigation into the hosting provider and associated IP addresses may uncover additional phishing domains or infrastructure the threat actor uses.
+
+Scenario 2: Malware Analysis
+A security researcher is analysing a new strain of malware that has infected several systems within a network. The malware communicates with a remote server to receive commands and exfiltrate stolen data. To gain insights into the threat actor's infrastructure, the researcher performs a WHOIS lookup on the domain associated with the command-and-control (C2) server.
+
+The WHOIS record reveals:
+
+Registrant: The domain is registered to an individual using a free email service known for anonymity.
+Location: The registrant's address is in a country with a high prevalence of cybercrime.
+Registrar: The domain was registered through a registrar with a history of lax abuse policies.
+Based on this information, the researcher concludes that the C2 server is likely hosted on a compromised or "bulletproof" server. The researcher then uses the WHOIS data to identify the hosting provider and notify them of the malicious activity.
+
+Scenario 3: Threat Intelligence Report
+A cybersecurity firm tracks the activities of a sophisticated threat actor group known for targeting financial institutions. Analysts gather WHOIS data on multiple domains associated with the group's past campaigns to compile a comprehensive threat intelligence report.
+
+By analysing the WHOIS records, analysts uncover the following patterns:
+
+Registration Dates: The domains were registered in clusters, often shortly before major attacks.
+Registrants: The registrants use various aliases and fake identities.
+Name Servers: The domains often share the same name servers, suggesting a common infrastructure.
+Takedown History: Many domains have been taken down after attacks, indicating previous law enforcement or security interventions.
+These insights allow analysts to create a detailed profile of the threat actor's tactics, techniques, and procedures (TTPs). The report includes indicators of compromise (IOCs) based on the WHOIS data, which other organisations can use to detect and block future attacks.
+
+Using WHOIS
+Before using the whois command, you'll need to ensure it's installed on your Linux system. It's a utility available through linux package managers, and if it's not installed, it can be installed simply with
+
+Using WHOIS 
+
+SYNTAX: 
+MJBUCKNER@htb[/htb]$ sudo apt update
+MJBUCKNER@htb[/htb]$ sudo apt install whois -y
+
+
+CHALLENGE: 
+
+Question 1 - Perform a WHOIS lookup against the paypal.com domain. What is the registrar Internet Assigned Numbers Authority (IANA) ID number?
+1. whois paypal.com
+2. Registrar IANA ID: 292
+
+Question 2 - What is the admin email contact for the tesla.com domain (also in-scope for the Tesla bug bounty program)?
+1. whois tesla.com 
+2. Tech Email: admin@dnstinations.com
