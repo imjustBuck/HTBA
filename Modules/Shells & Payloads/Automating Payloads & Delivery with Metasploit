@@ -1,1 +1,101 @@
+Automating Payloads & Delivery with Metasploit
+Metasploit is an automated attack framework developed by Rapid7 that streamlines the process of exploiting vulnerabilities through the use of pre-built modules that contain easy-to-use options to exploit vulnerabilities and deliver payloads to gain a shell on a vulnerable system. It can make exploiting a vulnerable system so easy that some Cybersecurity training vendors limit how many times it can be used on lab exams. Here at Hack The Box, we encourage experimenting with tools in our lab environments until you have a solid foundational understanding. Most organizations will not limit us on which tools we can or cannot use on an engagement. However, they will expect us to know what we are doing. Therefore, it is our responsibility to seek an understanding as we learn. Not understanding the effects of the tools we use can be destructive in a live penetration test or audit. This is one primary reason we should consistently seek a deeper understanding of the tools, techniques, methodologies, and practices we learn.
+
+In this section, we will interact with the community edition of Metasploit on Pwnbox. We will use pre-built modules and craft payloads with MSFVenom. It is important to note that many established cybersecurity firms utilize the paid edition of Metasploit called Metasploit Pro to conduct penetration tests, security audits, and even social engineering campaigns. If you want to explore the differences between the community edition and Metasploit Pro, you can check out this comparison chart.
+
+Practicing with Metasploit
+We could spend the rest of this module covering everything about Metasploit, but we are only going to go so far as to work with the very basics within the context of shells & payloads.
+
+Let's start working hands-on with Metasploit by launching the Metasploit framework console as root (sudo msfconsole)
+
+
+Starting BRRRRRRRRRRRRRRRRRRRRRR 
+SYNTAX: 
+MJBUCKNER@htb[/htb]$ sudo msfconsole 
+                                                  
+IIIIII    dTb.dTb        _.---._
+  II     4'  v  'B   .'"".'/|\`.""'.
+  II     6.     .P  :  .' / | \ `.  :
+  II     'T;. .;P'  '.'  /  |  \  `.'
+  II      'T; ;P'    `. /   |   \ .'
+IIIIII     'YvP'       `-.__|__.-'
+
+I love shells --egypt
+
+
+       =[ metasploit v6.0.44-dev                          ]
++ -- --=[ 2131 exploits - 1139 auxiliary - 363 post       ]
++ -- --=[ 592 payloads - 45 encoders - 10 nops            ]
++ -- --=[ 8 evasion                                       ]
+
+Metasploit tip: Writing a custom module? After editing your 
+module, why not try the reload command
+
+msf6 > 
+
+In this case, we will be using enumeration results from a nmap scan to pick a Metasploit module to use.
+
+NMAP Scan
+SYNTAX: 
+MJBUCKNER@htb[/htb]$ nmap -sC -sV -Pn 10.129.164.25
+
+Host discovery disabled (-Pn). All addresses will be marked 'up' and scan times will be slower.
+Starting Nmap 7.91 ( https://nmap.org ) at 2021-09-09 21:03 UTC
+Nmap scan report for 10.129.164.25
+Host is up (0.020s latency).
+Not shown: 996 closed ports
+PORT     STATE SERVICE       VERSION
+135/tcp  open  msrpc         Microsoft Windows RPC
+139/tcp  open  netbios-ssn   Microsoft Windows netbios-ssn
+445/tcp  open  microsoft-ds  Microsoft Windows 7 - 10 microsoft-ds (workgroup: WORKGROUP)
+Host script results:
+|_nbstat: NetBIOS name: nil, NetBIOS user: <unknown>, NetBIOS MAC: 00:50:56:b9:04:e2 (VMware)
+| smb-security-mode: 
+|   account_used: guest
+|   authentication_level: user
+|   challenge_response: supported
+|_  message_signing: disabled (dangerous, but default)
+| smb2-security-mode: 
+|   2.02: 
+|_    Message signing enabled but not required
+| smb2-time: 
+|   date: 2021-09-09T21:03:31
+|_  start_date: N/A
+In the output, we see several standard ports that are typically open on a Windows system by default. Remember that scanning and enumeration is an excellent way to know what OS (Windows or Linux) our target is running to find an appropriate module to run with Metasploit. Let's go with SMB (listening on 445) as the potential attack vector.
+
+Once we have this information, we can use Metasploit's search functionality to discover modules that are associated with SMB. In the msfconsole, we can issue the command search smb to get a list of modules associated with SMB vulnerabilities:
+
+Searching Within Metasploit
+SYNTAX: 
+msf6 > search smb
+
+Matching Modules
+================
+
+#    Name                                                          Disclosure Date    Rank   Check  Description
+  -       ----                                                     ---------------    ----   -----  ---------- 
+ 41   auxiliary/scanner/smb/smb_ms17_010                                               normal     No     MS17-010 SMB RCE Detection
+ 42   auxiliary/dos/windows/smb/ms05_047_pnp                                           normal     No     Microsoft Plug and Play Service Registry Overflow
+ 43   auxiliary/dos/windows/smb/rras_vls_null_deref                   2006-06-14       normal     No     Microsoft RRAS InterfaceAdjustVLSPointers NULL Dereference
+ 44   auxiliary/admin/mssql/mssql_ntlm_stealer                                         normal     No     Microsoft SQL Server NTLM Stealer
+ 45   auxiliary/admin/mssql/mssql_ntlm_stealer_sqli                                    normal     No     Microsoft SQL Server SQLi NTLM Stealer
+ 46   auxiliary/admin/mssql/mssql_enum_domain_accounts_sqli                            normal     No     Microsoft SQL Server SQLi SUSER_SNAME Windows Domain Account Enumeration
+ 47   auxiliary/admin/mssql/mssql_enum_domain_accounts                                 normal     No     Microsoft SQL Server SUSER_SNAME Windows Domain Account Enumeration
+ 48   auxiliary/dos/windows/smb/ms06_035_mailslot                     2006-07-11       normal     No     Microsoft SRV.SYS Mailslot Write Corruption
+ 49   auxiliary/dos/windows/smb/ms06_063_trans                                         normal     No     Microsoft SRV.SYS Pipe Transaction No Null
+ 50   auxiliary/dos/windows/smb/ms09_001_write                                         normal     No     Microsoft SRV.SYS WriteAndX Invalid DataOffset
+ 51   auxiliary/dos/windows/smb/ms09_050_smb2_negotiate_pidhigh                        normal     No     Microsoft SRV2.SYS SMB Negotiate ProcessID Function Table Dereference
+ 52   auxiliary/dos/windows/smb/ms09_050_smb2_session_logoff                           normal     No     Microsoft SRV2.SYS SMB2 Logoff Remote Kernel NULL Pointer Dereference
+ 53   auxiliary/dos/windows/smb/vista_negotiate_stop                                   normal     No     Microsoft Vista SP0 SMB Negotiate Protocol DoS
+ 54   auxiliary/dos/windows/smb/ms10_006_negotiate_response_loop                       normal     No     Microsoft Windows 7 / Server 2008 R2 SMB Client Infinite Loop
+ 55   auxiliary/scanner/smb/psexec_loggedin_users                                      normal     No     Microsoft Windows Authenticated Logged In Users Enumeration
+ 56   exploit/windows/smb/psexec                                      1999-01-01       manual     No     Microsoft Windows Authenticated User Code Execution
+ 57   auxiliary/dos/windows/smb/ms11_019_electbowser                                   normal     No     Microsoft Windows Browser Pool DoS
+ 58   exploit/windows/smb/smb_rras_erraticgopher                      2017-06-13       average    Yes    Microsoft Windows RRAS Service MIBEntryGet Overflow
+ 59   auxiliary/dos/windows/smb/ms10_054_queryfs_pool_overflow                         normal     No     Microsoft Windows SRV.SYS SrvSmbQueryFsInformation Pool Overflow DoS
+ 60   exploit/windows/smb/ms10_046_shortcut_icon_dllloader            2010-07-16       excellent  No     Microsoft Windows Shell LNK Code Execution
+
+SYNTAX TO USE PAYLOAD: 
+use 56 
+
 
