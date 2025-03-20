@@ -34,3 +34,23 @@ SYNTAX:
 
 21y4d
 
+The important things to remember are that we cannot mix types of quotes and the number of quotes must be even. We can try one of the above in our payload (127.0.0.1%0aw'h'o'am'i) and see if it works:
+
+As we can see, this method indeed works.
+
+Linux Only
+We can insert a few other Linux-only characters in the middle of commands, and the bash shell would ignore them and execute the command. These characters include the backslash \ and the positional parameter character $@. This works exactly as it did with the quotes, but in this case, the number of characters do not have to be even, and we can insert just one of them if we want to:
+
+SYNTAX: 
+who$@ami
+w\ho\am\i
+
+Exercise: Try the above two examples in your payload, and see if they work in bypassing the command filter. If they do not, this may indicate that you may have used a filtered character. Would you be able to bypass that as well, using the techniques we learned in the previous section?
+
+Windows Only
+There are also some Windows-only characters we can insert in the middle of commands that do not affect the outcome, like a caret (^) character, as we can see in the following example:
+
+SYNTAX: 
+C:\htb> who^ami
+
+21y4d
