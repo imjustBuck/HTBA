@@ -1,0 +1,57 @@
+We are performing internal penetration testing for a local company. As you come across their internal web applications, you are presented with different situations where Burp/ZAP may be helpful. Read each of the scenarios in the questions below, and determine the features that would be the most useful for each case. Then, use it to help you in reaching the specified goal.
+
+CHALLENGE: 94.237.63.125:30221
+
+
+Question 1 - The /lucky.php page has a button that appears to be disabled. Try to enable the button, and then click it to get the flag.
+1. go to 94.237.63.125:30221/lucky.php 
+2. open zap 
+3. make new foxyproxy for 8081 and zap 
+4. turn proxy on and intercept the GET request for /lucky.php 
+5. we see in the response it has a disabled button for getflag
+6. send to replacer in zap -> ctrl + r 
+7. set Match Type to Response Body String, Match String to disabled>, Replacement String to >, check Enable, and click on Save
+8.  select the GET request and click on Open/Resend with Request Editor
+9. click on Combined display for header and body, Request shown above Response for the Request tab, and Combined display for header and body for the Response tab
+10. after hitting send we notice that the response body no longer contains disabled
+11.  right-click on the response and choose Open URL in System Browser, to notice that they can click the button as it is not disabled anymore
+12. smack that button a ton until flag pops up 
+13. HTB{d154bl3d_bu770n5_w0n7_570p_m3}
+
+
+Question 2 - The /admin.php page uses a cookie that has been encoded multiple times. Try to decode the cookie until you get a value with 31-characters. Submit the value as the answer.
+1. intercept a GET request 
+2. highlight cookie hash -> encode/decode/hash 
+3. decode -> copy the ASCII Hex Decode and then paste that into the text to be decoded ? 
+4. then final base64 answer = 3dac93b8cd250aa8c1a36fffc79a17a
+
+
+
+Question 3 - Once you decode the cookie, you will notice that it is only 31 characters long, which appears to be an md5 hash missing its last character. So, try to fuzz the last character of the decoded md5 cookie with all alpha-numeric characters, while encoding each request with the encoding methods you identified above. (You may use the "alphanum-case.txt" wordlist from Seclist for the payload)
+1. send /admin.php to burp now 
+2. send intercepted request to repeater
+3. replace the cookie in request to the cookie we uncovered in question 2 -> 3dac93b8cd250aa8c1a36fffc79a17a
+4. Add § around the cookie
+5. use /opt/useful/SecLists/Fuzzing/alphanum-case.txt as wordlist
+6. add payload processing 
+6.a. add prefix -> 3dac93b8cd250aa8c1a36fffc79a17a
+6.b. encode -> base64 encode
+6.c. encode -> Encode as ASCII hex
+7. attack 
+8. anything with length of 1285 will get right response
+9. look at response tab            
+10. HTB{burp_1n7rud3r_n1nj4!}
+
+
+
+Question 4 - You are using the 'auxiliary/scanner/http/coldfusion_locale_traversal' tool within Metasploit, but it is not working properly for you. You decide to capture the request sent by Metasploit so you can manually verify it and repeat it. Once you capture the request, what is the 'XXXXX' directory being called in '/XXXXX/administrator/..'?
+1. msfconsole -q 
+2. use auxiliary/scanner/http/coldfusion_locale_traversal
+3. set PROXIES 127.0.0.1:8080
+4. set rhost 94.237.63.125
+5. set rport 30221 
+6. run
+7. look at burps proxy 
+8. GET /CFIDE/administrator/index.cfm HTTP/1.1
+
+
