@@ -1,0 +1,52 @@
+Footprinting Lab - Easy
+We were commissioned by the company Inlanefreight Ltd to test three different servers in their internal network. The company uses many different services, and the IT security department felt that a penetration test was necessary to gain insight into their overall security posture.
+
+The first server is an internal DNS server that needs to be investigated. In particular, our client wants to know what information we can get out of these services and how this information could be used against its infrastructure. Our goal is to gather as much information as possible about the server and find ways to use that information against the company. However, our client has made it clear that it is forbidden to attack the services aggressively using exploits, as these services are in production.
+
+Additionally, our teammates have found the following credentials "ceil:qwer1234", and they pointed out that some of the company's employees were talking about SSH keys on a forum.
+
+The administrators have stored a flag.txt file on this server to track our progress and measure success. Fully enumerate the target and submit the contents of this file as proof.
+
+## k so we have creds - ceil:qwer1234 and the other hint was they were talking bout SSH keys in a forum or something. so were gonna start out with ol faithful - sudo nmap -sCV -A 10.129.42.195
+
+1) sudo nmap -sCV -A 10.129.42.195
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2025-01-30 14:03 CST
+Nmap scan report for 10.129.42.195
+Host is up (0.0084s latency).
+Not shown: 996 closed tcp ports (reset)
+PORT     STATE SERVICE VERSION
+21/tcp   open  ftp
+| fingerprint-strings: 
+|   GenericLines: 
+|     220 ProFTPD Server (ftp.int.inlanefreight.htb) [10.129.42.195]
+|     Invalid command: try being more creative
+|_    Invalid command: try being more creative
+22/tcp   open  ssh     OpenSSH 8.2p1 Ubuntu 4ubuntu0.2 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey: 
+|   3072 3f:4c:8f:10:f1:ae:be:cd:31:24:7c:a1:4e:ab:84:6d (RSA)
+|   256 7b:30:37:67:50:b9:ad:91:c0:8f:f7:02:78:3b:7c:02 (ECDSA)
+|_  256 88:9e:0e:07:fe:ca:d0:5c:60:ab:cf:10:99:cd:6c:a7 (ED25519)
+53/tcp   open  domain  ISC BIND 9.16.1 (Ubuntu Linux)
+| dns-nsid: 
+|_  bind.version: 9.16.1-Ubuntu
+2121/tcp open  ftp
+| fingerprint-strings: 
+|   GenericLines: 
+|     220 ProFTPD Server (Ceil's FTP) [10.129.42.195]
+|     Invalid command: try being more creative
+|_    Invalid command: try being more creative
+
+2) from this output we see (Ceils FTP) on port 2121 so lets use the free creds given to us to log in 
+3) enter ceil then qwer1234
+4) ls -lah 
+5) we see a .ssh directory we can read and since that was in the hint as well lets peek n poke
+6) we see 3 files inside .ssh -> authroized_keys & id_rsa & id_rsa.pub -> i used get to downlaod all three cause i always forget the one we actually need. 
+7) back on host machine were going to try to ssh our way in 
+7) change permissions on id_rsa -> chmod 600 id_rsa 
+8) ssh ceil@10.129.42.195 -i id_rsa
+9) ls -lah -> same thing as in ftp server 
+10) cd ..
+11) ls -lah 
+12) cd flag 
+13) cat flag.txt -> HTB{7nrzise7hednrxihskjed7nzrgkweunj47zngrhdbkjhgdfbjkc7hgj}
+
