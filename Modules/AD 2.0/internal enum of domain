@@ -1,0 +1,123 @@
+so in this pretend pentest inlanefreight has choosen more of a "black box" approach:
+
+* A custom pentest VM within their internal network that calls back to our jump host, and we can SSH into it to perform testing.
+* They've also given us a Windows host that we can load tools onto if need be.
+* They've asked us to start from an unauthenticated standpoint but have also given us a standard domain user account (htb-student) which can be used to access the Windows attack host.
+* "Grey box" testing. They have given us the network range 172.16.5.0/23 and no other information about the network.
+* Non-evasive testing.
+
+We have not been provided credentials or a detailed internal network map.
+
+so our first order of business: 
+
+1. enumerate the internal network and subnet they gave us for hosts, services, and paths for a foothold
+2. active and passive enum on users and host, and any vulns we find from step 1
+3. document ALL our findings. this will come into play later. 
+
+since we know this is an AD module here are some Key data points we are looking for: 
+
+1. AD Users	- We are trying to enumerate valid user accounts we can target for password spraying.
+2. AD Joined Computers -	Key Computers include Domain Controllers, file servers, SQL servers, web servers, Exchange mail servers, database servers, etc.
+3. Key Services	- Kerberos, NetBIOS, LDAP, DNS
+4. Vulnerable Hosts and Services -	Anything that can be a quick win. ( a.k.a an easy host to exploit and gain a foothold)
+
+While everyone works differently, and since AD has SOO much data to it.. we will make our own methodolgies as time goes on but we will always start in the same place: 
+
+Passive recon, finding any hosts -> followed by active validation of the reulst (what services are running, names, potential vulnerabilities, etc.) . once we know where the host lives we can start probing the hosts. 
+
+so what are some techniques for passive recon? 
+
+Wireshark or TCPDump are good tools for network traffic we can capture and go through. 
+
+running Wireshark and finding ARP packets can help us be aware of hosts. in the example we found plenty of ARP packets -> 172.16.5.5, 172.16.5.25 172.16.5.50, 172.16.5.100, and 172.16.5.125.
+
+Wireshark can also show us MDNS packets which has made us aware of the host name of : ACADEMY-EA-WEB01
+
+Responder can tell us a bit more detailed information on the network -> sudo responder -I ens224 -A -> -A = analyze and it wont posion the traffic 
+
+Another tool we can use since they did give us the subnet is -> fping -> SYNTAX: fping -asgq 172.16.5.0/23 -> output would look like this: 
+fping -asgq 172.16.5.0/23
+
+172.16.5.5
+172.16.5.25
+172.16.5.50
+172.16.5.100
+172.16.5.125
+172.16.5.200
+172.16.5.225
+172.16.5.238
+172.16.5.240
+
+     510 targets
+       9 alive
+     501 unreachable
+       0 unknown addresses
+
+    2004 timeouts (waiting for response)
+    2013 ICMP Echos sent
+       9 ICMP Echo Replies received
+    2004 other ICMP received
+
+ 0.029 ms (min round trip time)
+ 0.396 ms (avg round trip time)
+ 0.799 ms (max round trip time)
+       15.366 sec (elapsed real time)
+
+So now what? we have a list of active host IP's? we can put them into a file and run nmap to scan for services and ports: 
+
+sudo nmap -v -A -iL hosts.txt -oN /home/htb-student/Documents/host-enum
+
+hosts.txt = all the ips listed line by line 
+lets review some results: 
+Nmap scan report for inlanefreight.local (172.16.5.5)
+Host is up (0.069s latency).
+Not shown: 987 closed tcp ports (conn-refused)
+PORT     STATE SERVICE       VERSION
+53/tcp   open  domain        Simple DNS Plus
+88/tcp   open  kerberos-sec  Microsoft Windows Kerberos (server time: 2022-04-04 15:12:06Z)
+135/tcp  open  msrpc         Microsoft Windows RPC
+139/tcp  open  netbios-ssn   Microsoft Windows netbios-ssn
+389/tcp  open  ldap          Microsoft Windows Active Directory LDAP (Domain: INLANEFREIGHT.LOCAL0., Site: Default-First-Site-Name)
+|_ssl-date: 2022-04-04T15:12:53+00:00; -1s from scanner time.
+| ssl-cert: Subject:
+| Subject Alternative Name: DNS:ACADEMY-EA-DC01.INLANEFREIGHT.LOCAL
+| Issuer: commonName=INLANEFREIGHT-CA
+| Public Key type: rsa
+| Public Key bits: 2048
+| Signature Algorithm: sha256WithRSAEncryption
+| Not valid before: 2022-03-30T22:40:24
+| Not valid after:  2023-03-30T22:40:24
+| MD5:   3a09 d87a 9ccb 5498 2533 e339 ebe3 443f
+|_SHA-1: 9731 d8ec b219 4301 c231 793e f913 6868 d39f 7920
+445/tcp  open  microsoft-ds?
+464/tcp  open  kpasswd5?
+593/tcp  open  ncacn_http    Microsoft Windows RPC over HTTP 1.0
+636/tcp  open  ssl/ldap      Microsoft Windows Active Directory LDAP (Domain: INLANEFREIGHT.LOCAL0., Site: Default-First-Site-Name)
+<SNIP>  
+3268/tcp open  ldap          Microsoft Windows Active Directory LDAP (Domain: INLANEFREIGHT.LOCAL0., Site: Default-First-Site-Name)
+3269/tcp open  ssl/ldap      Microsoft Windows Active Directory LDAP (Domain: INLANEFREIGHT.LOCAL0., Site: Default-First-Site-Name)
+3389/tcp open  ms-wbt-server Microsoft Terminal Services
+| rdp-ntlm-info:
+|   Target_Name: INLANEFREIGHT
+|   NetBIOS_Domain_Name: INLANEFREIGHT
+|   NetBIOS_Computer_Name: ACADEMY-EA-DC01
+|   DNS_Domain_Name: INLANEFREIGHT.LOCAL
+|   DNS_Computer_Name: ACADEMY-EA-DC01.INLANEFREIGHT.LOCAL
+|   DNS_Tree_Name: INLANEFREIGHT.LOCAL
+|   Product_Version: 10.0.17763
+|_  System_Time: 2022-04-04T15:12:45+00:00
+<SNIP>
+5357/tcp open  http          Microsoft HTTPAPI httpd 2.0 (SSDP/UPnP)
+|_http-title: Service Unavailable
+|_http-server-header: Microsoft-HTTPAPI/2.0
+Service Info: Host: ACADEMY-EA-DC01; OS: Windows; CPE: cpe:/o:microsoft:windows
+
+so we have naming standard used by NetBIOS and DNS and we can see that RDP is pointed toward the DC of ACADEMY-EA-DC01.INLANEFREIGHT.LOCAL
+
+there will be a report like one above in the results page we printed. look through each one and take note of names of all hosts and what ports / services / and versions are on each as this will be KEY later on for exploiting.
+
+so we have hosts, services, versions ports and all that whats next? users. 
+
+
+
+
