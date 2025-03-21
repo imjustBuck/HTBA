@@ -1,0 +1,19 @@
+To mount a successful password spraying attack, we first need a list of valid domain users to attempt to authenticate with. There are several ways that we can gather a target list of valid users:
+1. leveraging SMB NULL session to retrieve complete list of domain users from DC 
+2. utilizing LDAP anonymous bind to query LDAP and pull down the domain user list 
+3. using a tool like kerbrute to validate users utilizing a word list like -> https://github.com/insidetrust/statistically-likely-usernames OR gathers by using a tool like -> https://github.com/initstring/linkedin2username 
+4. Using a set of credentials from a Linux or Windows attack system either provided by our client or obtained through another means such as LLMNR/NBT-NS response poisoning using Responder or even a successful password spray using a smaller wordlist
+
+Regardless of the method we choose, and if we have the password policy or not, we must always keep a log of our activities, including, but not limited to:
+
+1. The accounts targeted
+2. Domain Controller used in the attack
+3. Time of the spray
+4. Date of the spray
+5. Password(s) attempted
+
+This will help us ensure that we do not duplicate efforts. If an account lockout occurs or our client notices suspicious logon attempts, we can supply them with our notes to crosscheck against their logging systems and ensure nothing nefarious was going on in the network.
+
+SMB NULL Session to Pull User List
+If you are on an internal machine but don’t have valid domain credentials, you can look for SMB NULL sessions or LDAP anonymous binds on Domain Controllers.
+
