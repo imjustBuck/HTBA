@@ -239,6 +239,24 @@ We can see from our output that we validated 56 users in the INLANEFREIGHT.LOCAL
 
 
 
+Identifying Potential Vulnerabilities
+
+the local system account aka NT AUTHORITY\SYSTEM is the highest level access on windows (aka the holy grail) 
+ It is also very common for third-party services to run in the context of this account by default. A SYSTEM account on a domain-joined host will be able to enumerate Active Directory by impersonating the computer account, which is essentially just another kind of user account. Having SYSTEM-level access within a domain environment is nearly equivalent to having a domain user account.
+
+There are several ways to gain SYSTEM-level access on a host, including but not limited to:
+
+* Remote Windows exploits such as MS08-067, EternalBlue, or BlueKeep.
+* Abusing a service running in the context of the SYSTEM account, or abusing the service account SeImpersonate privileges using Juicy Potato. This type of attack is possible on older Windows OS' but not always possible with Windows Server 2019.
+* Local privilege escalation flaws in Windows operating systems such as the Windows 10 Task Scheduler 0-day.
+* Gaining admin access on a domain-joined host with a local account and using Psexec to launch a SYSTEM cmd window
+
+By gaining SYSTEM-level access on a domain-joined host, you will be able to perform actions such as, but not limited to:
+* enumerate the domain using built-in tools or tools such as BloodHound and PowerView
+* Perform Kerberoasting / ASREPRoasting within the same domain
+* run tools like Inveigh (windows verson of responder) to gather Net-NTLMv2 hashes or perform smb relay 
+* token impersonation to hijack a privileged domain user acct
+* Carry out ACL attacks 
 
 
 
