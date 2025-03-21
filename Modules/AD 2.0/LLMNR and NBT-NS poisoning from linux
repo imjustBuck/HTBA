@@ -1,0 +1,56 @@
+At this point, we have completed our initial enumeration of the domain. We obtained some basic user and group information, enumerated hosts while looking for critical services and roles like a Domain Controller, and figured out some specifics such as the naming scheme used for the domain. In this phase, we will work through two different techniques side-by-side: network poisoning and password spraying. We will perform these actions with the goal of acquiring valid cleartext credentials for a domain user account, thereby granting us a foothold in the domain to begin the next phase of enumeration from a credentialed standpoint.
+
+*!*!**! The next two sections will cover common ways to gather creds and gail initial footholds in env. *!*!*!* 
+a Man-in-the-Middle attack on Link-Local Multicast Name Resolution (LLMNR) and NetBIOS Name Service (NBT-NS) broadcasts.
+
+depending on the network this could give us low priv or admin password hashes to be cracked offline. 
+
+Link-Local Multicast Name Resolution (LLMNR) and NetBIOS Name Service (NBT-NS) are Microsoft Windows components that serve as alternate methods of host identification that can be used when DNS fails.
+
+The kicker here is that when LLMNR/NBT-NS are used for name resolution, ANY host on the network can reply. This is where we come in with *Responder* to poison these requests
+
+. If the requested host requires name resolution or authentication actions, we can capture the NetNTLM hash and subject it to an offline brute force attack in an attempt to retrieve the cleartext password. The captured authentication request can also be relayed to access another host or used against a different protocol (such as LDAP) on the same host.
+
+Let's walk through a quick example of the attack flow at a very high level:
+
+1. A host attempts to connect to the print server at \\print01.inlanefreight.local, but accidentally types in \\printer01.inlanefreight.local.
+2. DNS server responds saying host is unknown
+3. host then broadcasts to entire local network asking if anyone knows the location of \\printer01
+4. the attacker aka us. with *Responder* running responds to the host saying hey hi im the host \\printer01 that theyre looking for
+5. Host then believes us/*responder* and authenticates with username and ntlm hash 
+6. we take hash and crack offline for further use. 
+
+Several tools can be used to attempt LLMNR & NBT-NS poisoning:
+
+Tool             Description 
+Responder	      Responder is a purpose-built tool to poison LLMNR, NBT-NS, and MDNS, with many different functions.
+Inveigh	        Inveigh is a cross-platform MITM platform that can be used for spoofing and poisoning attacks.
+Metasploit	    Metasploit has several built-in scanners and spoofing modules made to deal with poisoning attacks.
+
+Responder is written in Python and typically used on a Linux attack host, though there is a .exe version that works on Windows. Inveigh is written in both C# and PowerShell (considered legacy). Both tools can be used to attack the following protocols:
+
+LLMNR
+DNS
+MDNS
+NBNS
+DHCP
+ICMP
+HTTP
+HTTPS
+SMB
+LDAP
+WebDAV
+Proxy Auth
+Responder also has support for:
+
+MSSQL
+DCE-RPC
+FTP, POP3, IMAP, and SMTP auth
+
+** always be sure to run Responder as sudo to get best results ** 
+
+we will go over this more in alter sections but once we do capture a hash with responder -> copy and paste into file on HOST machine -> run hashcat -> hashcat -m 5600 hash.txt /usr/share/wordlists/rockyou.txt 
+
+
+
+
