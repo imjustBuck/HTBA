@@ -446,3 +446,11 @@ Server certificate
 
 MIIENTCCAx2gAwIBAgIUD+SlFZAWzX5yLs2q3ZcfdsRQqMYwDQYJKoZIhvcNAQEL
 ...SNIP...
+
+#### FTP CHALLENGE 
+
+Question 1 - Which version of the FTP server is running on the target system? Submit the entire banner as the answer. - for this ill do my go to nmap scan and we can just do - nmap -p21 -sCV -A <ip> - InFreight FTP v1.1
+
+!!! logging into the ftp server after running the nmap scan above allowed me to knwo anonymous login was allowed and it told me the version as soon as i typed in ' ftp 10.129.203.220 ' and then i did use the get command to get flag.txt and get the answer 
+
+Question 2 - Enumerate the FTP server and find the flag.txt file. Submit the contents of it as the answer. -> before trying im assuming im going to connect to ftp via anonymous then use the get command on flag.txt and then read it off host machine -> HTB{b7skjr4c76zhsds7fzhd4k3ujg7nhdjre}
