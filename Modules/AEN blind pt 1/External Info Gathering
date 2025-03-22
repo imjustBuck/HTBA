@@ -1,21 +1,192 @@
 so agian this is blind im skipping the notes they show us and going straight for questions as if it were a real pentest. 
 
 
+10.129.191.30
 vHosts needed for these questions:
 * inlanefreight.local
 
 
 
-Question 1 - Perform a banner grab of the services listening on the target host and find a non-standard service banner. Submit the name as your answer (format: word_word_word)
+Question 1 - Perform a banner grab of the services listening on the target host and find a non-standard service banner. Submit the name as your answer (format: word_word_word) - 1337_HTB_DNS
+1. sudo nano /etc/hosts -> add -> 10.129.191.30   inlanefreight.local
+2. nmap -sCV -A inlanefreight.local 
+tarting Nmap 7.94SVN ( https://nmap.org ) at 2025-03-22 13:15 CDT
+Nmap scan report for inlanefreight.local (10.129.191.30)
+Host is up (0.060s latency).
+Not shown: 989 closed tcp ports (reset)
+PORT     STATE SERVICE  VERSION
+21/tcp   open  ftp      vsftpd 3.0.3
+| ftp-anon: Anonymous FTP login allowed (FTP code 230)
+|_-rw-r--r--    1 0        0              38 May 30  2022 flag.txt
+| ftp-syst: 
+|   STAT: 
+| FTP server status:
+|      Connected to ::ffff:10.10.15.252
+|      Logged in as ftp
+|      TYPE: ASCII
+|      No session bandwidth limit
+|      Session timeout in seconds is 300
+|      Control connection is plain text
+|      Data connections will be plain text
+|      At session startup, client count was 1
+|      vsFTPd 3.0.3 - secure, fast, stable
+|_End of status
+22/tcp   open  ssh      OpenSSH 8.2p1 Ubuntu 4ubuntu0.5 (Ubuntu Linux; protocol 2.0)
+| ssh-hostkey: 
+|   3072 71:08:b0:c4:f3:ca:97:57:64:97:70:f9:fe:c5:0c:7b (RSA)
+|   256 45:c3:b5:14:63:99:3d:9e:b3:22:51:e5:97:76:e1:50 (ECDSA)
+|_  256 2e:c2:41:66:46:ef:b6:81:95:d5:aa:35:23:94:55:38 (ED25519)
+25/tcp   open  smtp     Postfix smtpd
+|_smtp-commands: ubuntu, PIPELINING, SIZE 10240000, VRFY, ETRN, STARTTLS, ENHANCEDSTATUSCODES, 8BITMIME, DSN, SMTPUTF8, CHUNKING
+53/tcp   open  domain   (unknown banner: 1337_HTB_DNS)
+| fingerprint-strings: 
+|   DNSVersionBindReqTCP: 
+|     version
+|     bind
+|_    1337_HTB_DNS
+| dns-nsid: 
+|_  bind.version: 1337_HTB_DNS
+80/tcp   open  http     Apache httpd 2.4.41 ((Ubuntu))
+|_http-title: Inlanefreight
+|_http-server-header: Apache/2.4.41 (Ubuntu)
+110/tcp  open  pop3     Dovecot pop3d
+|_ssl-date: TLS randomness does not represent time
+|_pop3-capabilities: UIDL SASL STLS PIPELINING CAPA RESP-CODES AUTH-RESP-CODE TOP
+| ssl-cert: Subject: commonName=ubuntu
+| Subject Alternative Name: DNS:ubuntu
+| Not valid before: 2022-05-30T17:15:40
+|_Not valid after:  2032-05-27T17:15:40
+111/tcp  open  rpcbind  2-4 (RPC #100000)
+| rpcinfo: 
+|   program version    port/proto  service
+|   100000  2,3,4        111/tcp   rpcbind
+|   100000  2,3,4        111/udp   rpcbind
+|   100000  3,4          111/tcp6  rpcbind
+|_  100000  3,4          111/udp6  rpcbind
+143/tcp  open  imap     Dovecot imapd (Ubuntu)
+|_ssl-date: TLS randomness does not represent time
+| ssl-cert: Subject: commonName=ubuntu
+| Subject Alternative Name: DNS:ubuntu
+| Not valid before: 2022-05-30T17:15:40
+|_Not valid after:  2032-05-27T17:15:40
+|_imap-capabilities: more post-login LOGINDISABLEDA0001 have ID OK IDLE SASL-IR capabilities IMAP4rev1 STARTTLS Pre-login LITERAL+ ENABLE LOGIN-REFERRALS listed
+993/tcp  open  ssl/imap Dovecot imapd (Ubuntu)
+|_ssl-date: TLS randomness does not represent time
+|_imap-capabilities: more post-login have ID OK IDLE SASL-IR capabilities IMAP4rev1 Pre-login LOGIN-REFERRALS LITERAL+ ENABLE AUTH=PLAINA0001 listed
+| ssl-cert: Subject: commonName=ubuntu
+| Subject Alternative Name: DNS:ubuntu
+| Not valid before: 2022-05-30T17:15:40
+|_Not valid after:  2032-05-27T17:15:40
+995/tcp  open  ssl/pop3 Dovecot pop3d
+|_pop3-capabilities: UIDL SASL(PLAIN) USER PIPELINING CAPA RESP-CODES AUTH-RESP-CODE TOP
+| ssl-cert: Subject: commonName=ubuntu
+| Subject Alternative Name: DNS:ubuntu
+| Not valid before: 2022-05-30T17:15:40
+|_Not valid after:  2032-05-27T17:15:40
+|_ssl-date: TLS randomness does not represent time
+8080/tcp open  http     Apache httpd 2.4.41 ((Ubuntu))
+| http-open-proxy: Potentially OPEN proxy.
+|_Methods supported:CONNECTION
+|_http-title: Support Center
+|_http-server-header: Apache/2.4.41 (Ubuntu)
+1 service unrecognized despite returning data. If you know the service/version
+
+
+3. a lot of info here.. we see flag.txt in ftp -> we see DNS port 53 and the banner answer fo this question - 1337_HTB_DNS . and some higher ports so a lot of good info to keep note of for later on down the road 
+4. for shits n gigs lets ftp in and get flag -> ftp anonymous@inlanefreight.local
+Connected to inlanefreight.local.
+220 (vsFTPd 3.0.3)
+331 Please specify the password.
+Password: 
+230 Login successful.
+Remote system type is UNIX.
+Using binary mode to transfer files.
+ftp> dir
+229 Entering Extended Passive Mode (|||46805|)
+150 Here comes the directory listing.
+-rw-r--r--    1 0        0              38 May 30  2022 flag.txt
+226 Directory send OK.
+ftp> get flag.txt
+local: flag.txt remote: flag.txt
+229 Entering Extended Passive Mode (|||47291|)
+150 Opening BINARY mode data connection for flag.txt (38 bytes).
+100% |*************************************************************************************************************************************************|    38       22.87 KiB/s    00:00 ETA
+226 Transfer complete.
+38 bytes received in 00:00 (3.30 KiB/s)
+ftp> exit
+221 Goodbye.
+
+5. cat flag.txt 
+HTB{0eb0ab788df18c3115ac43b1c06ae6c4}
+
 
 
 Question 2 -  Perform a DNS Zone Transfer against the target and find a flag. Submit the flag value as your answer (flag format: HTB{ }).
+1. dig axfr inlanefreight.local @10.129.191.30
 
+; <<>> DiG 9.18.33-1~deb12u2-Debian <<>> axfr inlanefreight.local @10.129.191.30
+;; global options: +cmd
+inlanefreight.local.	86400	IN	SOA	ns1.inlanfreight.local. dnsadmin.inlanefreight.local. 21 604800 86400 2419200 86400
+inlanefreight.local.	86400	IN	NS	inlanefreight.local.
+inlanefreight.local.	86400	IN	A	127.0.0.1
+blog.inlanefreight.local. 86400	IN	A	127.0.0.1
+careers.inlanefreight.local. 86400 IN	A	127.0.0.1
+dev.inlanefreight.local. 86400	IN	A	127.0.0.1
+flag.inlanefreight.local. 86400	IN	TXT	"HTB{DNs_ZOn3_Tr@nsf3r}"
+gitlab.inlanefreight.local. 86400 IN	A	127.0.0.1
+ir.inlanefreight.local.	86400	IN	A	127.0.0.1
+status.inlanefreight.local. 86400 IN	A	127.0.0.1
+support.inlanefreight.local. 86400 IN	A	127.0.0.1
+tracking.inlanefreight.local. 86400 IN	A	127.0.0.1
+vpn.inlanefreight.local. 86400	IN	A	127.0.0.1
+inlanefreight.local.	86400	IN	SOA	ns1.inlanfreight.local. dnsadmin.inlanefreight.local. 21 604800 86400 2419200 86400
+;; Query time: 9 msec
+;; SERVER: 10.129.191.30#53(10.129.191.30) (TCP)
+;; WHEN: Sat Mar 22 13:28:20 CDT 2025
+;; XFR size: 14 records (messages 1, bytes 448)
 
+2. so answer is HTB{DNs_ZOn3_Tr@nsf3r} BUT we should add all of these DNS records and subdomians to our notes for future use. 
 
 Question 3 - What is the FQDN of the associated subdomain?
+1. from output of question 2 we can see that its flag.inlanefreight.local
 
 
+Question 4 -  Perform vhost discovery. What additional vhost exists? (one word) - monitoing
+1. ffuf -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt:FUZZ -u http://inlanefreight.local -H 'Host: FUZZ.inlanefreight.local' -fs 15157
 
-Question 4 -  Perform vhost discovery. What additional vhost exists? (one word)
+        /'___\  /'___\           /'___\       
+       /\ \__/ /\ \__/  __  __  /\ \__/       
+       \ \ ,__\\ \ ,__\/\ \/\ \ \ \ ,__\      
+        \ \ \_/ \ \ \_/\ \ \_\ \ \ \ \_/      
+         \ \_\   \ \_\  \ \____/  \ \_\       
+          \/_/    \/_/   \/___/    \/_/       
 
+       v2.1.0-dev
+________________________________________________
+
+ :: Method           : GET
+ :: URL              : http://inlanefreight.local
+ :: Wordlist         : FUZZ: /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt
+ :: Header           : Host: FUZZ.inlanefreight.local
+ :: Follow redirects : false
+ :: Calibration      : false
+ :: Timeout          : 10
+ :: Threads          : 40
+ :: Matcher          : Response status: 200-299,301,302,307,401,403,405,500
+ :: Filter           : Response size: 15157
+________________________________________________
+
+support                 [Status: 200, Size: 26635, Words: 11730, Lines: 523, Duration: 14ms]
+blog                    [Status: 200, Size: 8708, Words: 1509, Lines: 232, Duration: 22ms]
+status                  [Status: 200, Size: 878, Words: 105, Lines: 43, Duration: 13ms]
+monitoring              [Status: 200, Size: 56, Words: 3, Lines: 4, Duration: 10ms]
+careers                 [Status: 200, Size: 51806, Words: 22041, Lines: 732, Duration: 13ms]
+tracking                [Status: 200, Size: 35211, Words: 10413, Lines: 791, Duration: 13ms]
+ir                      [Status: 200, Size: 28548, Words: 2885, Lines: 210, Duration: 59ms]
+dev                     [Status: 200, Size: 2048, Words: 643, Lines: 74, Duration: 1091ms]
+vpn                     [Status: 200, Size: 1578, Words: 414, Lines: 35, Duration: 2916ms]
+gitlab                  [Status: 302, Size: 113, Words: 5, Lines: 1, Duration: 49ms]
+:: Progress: [4989/4989] :: Job [1/1] :: 130 req/sec :: Duration: [0:00:05] :: Errors: 0 ::
+
+2. now this is the second time running which is how we knew to clear clutter with the -fs 15157 
+3. monitoing.inlanefreight.local 
