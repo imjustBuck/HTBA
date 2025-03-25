@@ -1,0 +1,9 @@
+so realisitcally as soon as we get into one of these mugs we need to download n trasnfer sharphound and then smack that zip into bloodhound cuz thats where a lot of this info on who can do what and what accounts to target. so ya know prolly on blind run number 2 with these notes :p 
+
+so from last section ( not the questions answered but reading the section and using other credential password hunting methods we found -> mssqladm:DBAilfreight1! ) 
+
+Digging into the BloodHound data we see that we have GenericWrite over the ttimmons user. Using this we can set a fake SPN on the ttimmons account and perform a targeted Kerberoasting attack. If this user is using a weak password then we can crack it and proceed onwards.
+
+Let's go back to the DEV01 machine where we had loaded PowerView. We can create a PSCredential object to be able to run commands as the mssqladm user without having to RDP again.
+
+this also assumes we still have the fuckin c:\DontNetNuke\Portals\0> shell open so yeah maybe just never ever fucking close anything ever. ever. 
