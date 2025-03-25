@@ -146,6 +146,17 @@ PORT     STATE SERVICE
 
 and two if we ran the static nmap again lol we'd figure it the fuck out : ] 
 
+* Cred hunting one liners * 
+
+Finding Stored Creds: Get-ChildItem -Path C:\ -Recurse -Include *password*,*cred*,*login* 2>$null
+
+Searching for cleartext passwords in memory (PS): findstr /si password *.txt | more 
+
+Interesting Files in shares: Get-ChildItem -Path \\DC01\Shares -Recurse | Select-String -Pattern "password|admin|login" -CaseSensitive
+
+autologon creds in registry: reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" 
+
+
 so the syntax for the local portforwarding in order for us to xfreerdp into hporter would be -> 
 ssh -i rootkey -L 13389:172.16.8.20:3389 root@10.129.114.147
 
