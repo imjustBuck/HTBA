@@ -34,3 +34,39 @@ First, let's take some time to listen to the network and see what's going on. We
 We notice some ARP requests and replies, MDNS, and other basic layer two packets (since we are on a switched network, we are limited to the current broadcast domain) some of which we can see below. This is a great start that gives us a few bits of information about the customer's network setup.
 
 we have run through the examples and syntax in all prior examples this time through its more about focusing on the content and really being detail focused. 
+
+
+
+Tools used: 
+Wireshark
+Responder
+fping
+nmap 
+
+Identifying Users
+If our client does not provide us with a user to start testing with (which is often the case), we will need to find a way to establish a foothold in the domain by either obtaining clear text credentials or an NTLM password hash for a user, a SYSTEM shell on a domain-joined host, or a shell in the context of a domain user account. 
+
+Obtaining a valid user with credentials is critical in the early stages of an internal penetration test. This access (even at the lowest level) opens up many opportunities to perform enumeration and even attacks. Let's look at one way we can start gathering a list of valid users in a domain to use later in our assessment.
+
+*!*!* THIS WILL BE KEY FOR US !*!*!* Kerbrute - Internal AD Username Enumeration
+
+Kerbrute can be a stealthier option for domain account enumeration. It takes advantage of the fact that Kerberos pre-authentication failures often will not trigger logs or alerts. We will use Kerbrute in conjunction with the jsmith.txt or jsmith2.txt user lists from Insidetrust. 
+
+This repository contains many different user lists that can be extremely useful when attempting to enumerate users when starting from an unauthenticated perspective. We can point Kerbrute at the DC we found earlier and feed it a wordlist. The tool is quick, and we will be provided with results letting us know if the accounts found are valid or not, which is a great starting point for launching attacks such as password spraying, which we will cover in-depth later in this module.
+
+Identifying Potential Vulnerabilities
+
+The local system account NT AUTHORITY\SYSTEM is a built-in account in Windows operating systems. It has the highest level of access in the OS and is used to run most Windows services.
+It is also very common for third-party services to run in the context of this account by default. 
+
+A SYSTEM account on a domain-joined host will be able to enumerate Active Directory by impersonating the computer account, which is essentially just another kind of user account. Having SYSTEM-level access within a domain environment is nearly equivalent to having a domain user account.
+
+we have a lot of ways to look for this inside obsidan on Windows Priv Esec workflows. 
+
+By gaining SYSTEM-level access on a domain-joined host, you will be able to perform actions such as, but not limited to:
+
+Enumerate the domain using built-in tools or offensive tools such as BloodHound and PowerView.
+ * Perform Kerberoasting / ASREPRoasting attacks within the same domain.
+* Run tools such as Inveigh to gather Net-NTLMv2 hashes or perform SMB relay attacks.
+* Perform token impersonation to hijack a privileged domain user account.
+* Carry out ACL attacks.
