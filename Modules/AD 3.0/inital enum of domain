@@ -1,0 +1,36 @@
+Below are some of the key data points that we should be looking for at this time and noting down into our notetaking tool of choice and saving scan/tool output to files whenever possible.
+
+Data Point	                                      Description
+
+AD Users	                                        We are trying to enumerate valid user accounts we can target for password spraying.
+
+AD Joined Computers	                              Key Computers include Domain Controllers, file servers, SQL servers, web servers, Exchange mail servers, database servers, etc.
+
+Key Services	                                    Kerberos, NetBIOS, LDAP, DNS
+
+Vulnerable Hosts and Services	                    Anything that can be a quick win. ( a.k.a an easy host to exploit and gain a foothold)
+
+
+TTPs
+Enumerating an AD environment can be overwhelming if just approached without a plan. There is an abundance of data stored in AD, and it can take a long time to sift if not looked at in progressive stages, and we will likely miss things.
+
+We need to set a game plan for ourselves and tackle it piece by piece. Everyone works in slightly different ways, so as we gain more experience, we'll start to develop our own repeatable methodology that works best for us. 
+
+Regardless of how we proceed, we typically start in the same place and look for the same data points. We will experiment with many tools in this section and subsequent ones. It is important to reproduce every example and even try to recreate examples with different tools to see how they work differently, learn their syntax, and find what approach works best for us.
+
+We will start with passive identification of any hosts in the network, followed by active validation of the results to find out more about each host (what services are running, names, potential vulnerabilities, etc.). 
+
+Once we know what hosts exist, we can proceed with probing those hosts, looking for any interesting data we can glean from them. 
+
+After we have accomplished these tasks, we should stop and regroup and look at what info we have. At this time, we'll hopefully have a set of credentials or a user account to target for a foothold onto a domain-joined host or have the ability to begin credentialed enumeration from our Linux attack host.
+
+Let's look at a few tools and techniques to help us with this enumeration.
+
+
+Identifying Hosts
+
+First, let's take some time to listen to the network and see what's going on. We can use Wireshark and TCPDump to "put our ear to the wire" and see what hosts and types of network traffic we can capture. This is particularly helpful if the assessment approach is "black box." 
+
+We notice some ARP requests and replies, MDNS, and other basic layer two packets (since we are on a switched network, we are limited to the current broadcast domain) some of which we can see below. This is a great start that gives us a few bits of information about the customer's network setup.
+
+we have run through the examples and syntax in all prior examples this time through its more about focusing on the content and really being detail focused. 
