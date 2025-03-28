@@ -1,0 +1,120 @@
+✅ Summary: Password Policy Enumeration
+🎯 Why It Matters:
+Knowing password policy helps build realistic and targeted wordlists (e.g., complexity requirements, length).
+
+Helps avoid account lockouts.
+
+Helps estimate how frequently and how aggressively you can spray passwords.
+
+🧭 Got This, Do That: Password Policy Enumeration
+🔓 UNcredentialed Enumeration
+🧪 Method 1: SMB NULL Session
+Tools: rpcclient, enum4linux, enum4linux-ng, CrackMapExec
+
+✅ Goal: Pull password policy anonymously via SMB
+
+Commands:
+
+bash
+Copy
+Edit
+rpcclient -U "" -N <DC_IP>
+> querydominfo
+> getdompwinfo
+bash
+Copy
+Edit
+enum4linux -P <DC_IP>
+enum4linux-ng -P <DC_IP> -oA <output_base>
+🧠 Look For:
+
+Min password length
+
+Complexity requirement
+
+Lockout threshold + duration
+
+🧪 Method 2: LDAP Anonymous Bind
+Tools: ldapsearch, windapsearch.py, ad-ldapdomaindump.py
+
+✅ Goal: Pull domain policies via LDAP with no auth
+
+Example:
+
+bash
+Copy
+Edit
+ldapsearch -h <DC_IP> -x -b "DC=domain,DC=local" -s sub "*" | grep -B10 pwdHistoryLength
+🔐 Credentialed Enumeration
+🧪 Method 1: CrackMapExec
+bash
+Copy
+Edit
+crackmapexec smb <DC_IP> -u <user> -p <pass> --pass-pol
+🧪 Method 2: rpcclient (With Creds)
+bash
+Copy
+Edit
+rpcclient -U "<user>" -W "<domain>" <DC_IP>
+> getdompwinfo
+🧪 Method 3: Windows (Net.exe built-in)
+cmd
+Copy
+Edit
+net accounts
+🧪 Method 4: PowerView
+powershell
+Copy
+Edit
+Import-Module .\PowerView.ps1
+Get-DomainPolicy
+🧠 What You Want to Extract:
+
+Min/Max Password Length
+
+Password Complexity (PasswordComplexity=1)
+
+Lockout Threshold
+
+Lockout Duration
+
+Auto Unlock?
+
+Password History
+
+🧱 Default Password Policy Cheat Sheet
+Policy	Default
+Minimum password length	7
+Maximum password age	42 days
+Minimum password age	1 day
+Password complexity required	Enabled
+Lockout threshold	0
+Lockout duration	Not set
+Account unlock method	Usually auto
+⚙️ When Stuck: Password Policy Enumeration Checklist
+✅	Question	Tool
+🔲	Do I have credentials?	CME, rpcclient, PowerView
+🔲	Do NULL sessions work?	enum4linux, rpcclient
+🔲	Does LDAP allow anonymous binds?	ldapsearch, windapsearch
+🔲	Can I run net.exe on a Windows host?	net accounts
+🔲	Can I import PowerView?	Get-DomainPolicy
+🔲	Do I know the lockout threshold & duration?	All methods
+🔲	Can I safely build a password list?	Based on policy
+🧠 Key Insight for Spraying:
+If you find:
+
+✅ Min password length = 8
+
+✅ Complexity = Enabled
+
+✅ Lockout threshold = 5
+
+✅ Lockout duration = 30 minutes
+
+Then you can safely attempt 2-3 password guesses per user every 31 minutes.
+
+But if you don’t know the policy:
+
+Only 1 attempt per user.
+
+Wait at least an hour between sprays.
