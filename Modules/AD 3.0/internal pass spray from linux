@@ -70,4 +70,99 @@ SMB         172.16.5.125    445    ACADEMY-EA-WEB0  [+] ACADEMY-EA-WEB0\administ
 
 The output above shows that the credentials were valid as a local admin on 3 systems in the 172.16.5.0/23 subnet. We could then move to enumerate each system to see if we can find anything that will help further our access.
 
+🔍 Summary: Internal Password Spraying from Linux
+This section walks through how to use various tools (rpcclient, Kerbrute, CrackMapExec) to perform password spraying against domain users once you've built a valid user list. It also covers local administrator password reuse — trying the same password/hash across hosts in the network to see where it works.
+
+Key Takeaways:
+
+Password spraying = 1 password across many users to avoid lockout
+
+Know the password policy (lockout threshold, complexity, etc.) before you spray
+
+Use tools like rpcclient, kerbrute, or crackmapexec
+
+Local admin password reuse can grant widespread access
+
+Reuse patterns can include similar naming across users/domains
+
+Use --local-auth with CME when spraying local hashes to avoid domain lockouts
+
+✅ “Got This, Do That” Workflow
+IF You Have a Valid User List and Password(s):
+THEN Spray Accounts (Carefully):
+rpcclient Method
+
+bash
+Copy
+Edit
+for u in $(cat valid_users.txt); do 
+  rpcclient -U "$u%Welcome1" -c "getusername;quit" <DC_IP> | grep Authority; 
+done
+✅ Success: Output includes “Authority Name”
+
+⛔ Failure: No output
+
+kerbrute Method
+
+bash
+Copy
+Edit
+kerbrute passwordspray -d <domain> --dc <DC_IP> valid_users.txt Welcome1
+✅ Success: “VALID LOGIN” output
+
+Fast and may bypass typical logon failure alerts (stealthier)
+
+crackmapexec Method
+
+bash
+Copy
+Edit
+sudo crackmapexec smb <DC_IP> -u valid_users.txt -p Welcome1 | grep +
+✅ Look for [+] entries = Valid credentials
+
+Use this to confirm which logins work
+
+IF You Get a Valid Login:
+THEN Validate the Credential with CME:
+bash
+Copy
+Edit
+sudo crackmapexec smb <DC_IP> -u <user> -p <pass>
+Confirms access and domain info
+
+IF You Have a Local Admin Hash (e.g., from SAM Dump):
+THEN Try Local Admin Spraying Across the Subnet:
+bash
+Copy
+Edit
+sudo crackmapexec smb --local-auth 172.16.5.0/23 -u administrator -H <NTLM_HASH> | grep +
+✅ Look for (Pwn3d!) — means local admin access was successful
+
+Prioritize SQL/Exchange/high-value hosts
+
+Tip: If you find $desktop%@admin123, try $server%@admin123
+
+Password Reuse Hunting:
+Try known passwords across users like ajones → ajones_adm
+
+Try known patterns across domains if trusts exist
+
+🧠 Pro Tips:
+Always log:
+
+Users tried
+
+Passwords used
+
+Times of each spray
+
+Wait between sprays (based on lockout policy)
+
+Avoid locking out any accounts
+
+Highlight password reuse in reports (especially local admin reuse)
+
+
+
+
 This technique, while effective, is quite noisy and is not a good choice for any assessments that require stealth. It is always worth looking for this issue during penetration tests, even if it is not part of our path to compromise the domain, as it is a common issue and should be highlighted for our clients. One way to remediate this issue is using the free Microsoft tool Local Administrator Password Solution (LAPS) to have Active Directory manage local administrator passwords and enforce a unique password on each host that rotates on a set interval.
