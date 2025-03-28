@@ -1,0 +1,191 @@
+🧠 Summary: Enumerating Security Controls
+This section is all about getting a feel for the defenses in place after you've gained domain access or a foothold on a host.
+
+Why this matters:
+
+Tools like PowerView or custom scripts may get blocked by AV or AppLocker.
+
+Understanding AV/EPP/EDR status can help you choose stealthier tools or techniques.
+
+Knowing who can read LAPS passwords may help pivot laterally.
+
+Sometimes you need to live off the land using built-in Windows tools.
+
+✅ “Got This, Do That” Workflow
+🔍 IF You're on a Windows Host (Domain-Joined) — Post-Foothold
+→ Check for Windows Defender Status
+powershell
+Copy
+Edit
+Get-MpComputerStatus | select RealTimeProtectionEnabled
+What you're looking for:
+
+True: Defender is active. Avoid obvious tools like Mimikatz or PowerView straight up.
+
+If BehaviorMonitorEnabled or OnAccessProtectionEnabled are True, tread lightly.
+
+→ Check for AppLocker Rules (Application Whitelisting)
+powershell
+Copy
+Edit
+Get-AppLockerPolicy -Effective | select -ExpandProperty RuleCollections
+What you're looking for:
+
+Action: Deny with powershell.exe or cmd.exe — see if other paths like PowerShell_ISE.exe are allowed
+
+Common bypass: Use alternate locations (e.g., SysWOW64 or ISE).
+
+→ Check for PowerShell Language Mode
+powershell
+Copy
+Edit
+$ExecutionContext.SessionState.LanguageMode
+If result = ConstrainedLanguage, you're limited in PowerShell features:
+
+.NET, COM objects, some modules won't run.
+
+May need to pivot or escalate to bypass it.
+
+→ Check for LAPS (Local Admin Password Solution) Config
+Find which groups/users can read LAPS passwords:
+powershell
+Copy
+Edit
+Find-LAPSDelegatedGroups
+Find-AdmPwdExtendedRights
+Check if you can read actual LAPS passwords:
+powershell
+Copy
+Edit
+Get-LAPSComputers
+If your account can read cleartext passwords → big lateral movement opportunity.
+
+Always note expiration dates for potential gaps or rotation windows.
+
+📌 Situational “If This, Then That” Cheat Sheet
+Got This?	Do That
+Defender Real-Time Enabled	Avoid obvious malware-like tools (PowerView, Mimikatz). Use stealthier tools like SharpView, manually inspect via WMI.
+AppLocker Deny on PowerShell	Try alternate paths (PowerShell_ISE.exe, SysWOW64), use rundll32, or regsvr32 for LoLBins
+Constrained Language Mode	Use cmd.exe, migrate to full language session, or look for another host
+Can Read LAPS Passwords	Use creds to pivot to that host, dump hashes, check sessions, continue enumeration
+See Delegated LAPS Groups	Target those users for password spray or Kerberoasting
+No AV / Loose Controls on a Host	Use it as a staging ground for BloodHound, Responder, or heavier tooling
+🧠 Takeaway:
+This section is your recon playbook for determining what kind of offensive tooling you can safely use. Think of it as mapping the security terrain before trying to drive through it.
+
+After this step:
+→ If you're safe to move, resume BloodHound, SharpView, lateral movement, etc.
+→ If not, consider pivoting to a more loosely secured host or escalating privileges.
+
+✅ Tool Blocked → 🛠️ Use This Instead
+🔍 Tool: PowerView Blocked
+Fallbacks:
+
+net group "Domain Admins" /domain (Enumerate group members)
+
+net user <username> /domain (User details)
+
+nltest /dclist:<domain> (Find DCs)
+
+dsquery (For various AD objects; may need RSAT)
+
+ADSI via PowerShell:
+
+powershell
+Copy
+Edit
+$domain = [ADSI]"LDAP://<domain>"
+$searcher = New-Object DirectoryServices.DirectorySearcher($domain)
+$searcher.Filter = "(objectClass=user)"
+$searcher.FindAll()
+🧠 Tool: SharpHound/BloodHound Blocked
+Fallbacks:
+
+Manual Graph Mapping using:
+
+net group, net localgroup, whoami /groups
+
+gpresult /R (Group policy and group membership)
+
+PowerShell queries:
+
+powershell
+Copy
+Edit
+(Get-ADUser <username> -Properties MemberOf).MemberOf
+(Get-ADGroupMember "Domain Admins").Name
+Use ADExplorer.exe (GUI but silent) if allowed
+
+🪪 Tool: CrackMapExec Blocked
+Fallbacks:
+
+Use rpcclient or smbclient (Linux) for SMB enumeration:
+
+bash
+Copy
+Edit
+rpcclient -U "" -N <target>
+smbclient -L //<target>/ -N
+winexe, smbmap, or impacket tools like smbexec.py
+
+🔑 Tool: Kerbrute Blocked
+Fallbacks:
+
+Try AS-REP roasting instead if Pre-Auth is disabled:
+
+bash
+Copy
+Edit
+GetNPUsers.py <domain>/ -usersfile users.txt -format hashcat -outputfile hashes.txt
+LDAP enumeration (if anonymous binds allowed):
+
+bash
+Copy
+Edit
+ldapsearch -x -h <DC IP> -b "DC=domain,DC=local"
+🧪 Tool: Rubeus Blocked
+Fallbacks:
+
+Mimikatz (if allowed): for TGT / TGS harvesting
+
+Manual ticket request:
+
+powershell
+Copy
+Edit
+klist
+RunAs /netonly (creates ticket)
+💉 Tool: Responder Blocked
+Fallbacks:
+
+Use Inveigh (PowerShell alternative to Responder)
+
+Try SMB share poisoning via dropped .SCF or .LNK files
+
+Look for exposed shares with write perms and plant bait files
+
+🛡️ Tool: LAPS Toolkit Blocked
+Fallbacks:
+
+Get-ADComputer -Filter * -Properties ms-Mcs-AdmPwdExpirationTime,ms-Mcs-AdmPwd (if readable)
+
+Manual LDAP search:
+
+bash
+Copy
+Edit
+ldapsearch -x -h <dc> -b "DC=domain,DC=local" "(ms-Mcs-AdmPwd=*)"
+🧱 AppLocker / Constrained Language Mode
+Fallbacks:
+
+Use C:\Windows\System32\cmd.exe or C:\Windows\SysWOW64\WindowsPowerShell\v1.0\powershell.exe (alternate paths)
+
+Use regsvr32, mshta, or InstallUtil as LOLBINs
+
+Run unsigned .NET assemblies via:
+
+powershell
+Copy
+Edit
+[System.Reflection.Assembly]::Load([IO.File]::ReadAllBytes("payload.exe"))
+
