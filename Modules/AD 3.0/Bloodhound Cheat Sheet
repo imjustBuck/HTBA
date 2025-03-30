@@ -1,0 +1,126 @@
+🧠 BloodHound Cheat Sheet (A → Z Focus)
+🔄 Initial Enumeration Steps (Post Foothold)
+Run SharpHound with all collection methods if allowed:
+
+r
+Copy
+Edit
+SharpHound.exe -c all
+✅ If noisy: use selective collection:
+
+r
+Copy
+Edit
+SharpHound.exe -c Session,LocalAdmin,Trusts,RDP,DCOnly,ACL
+🔍 Top Queries to Run Off Rip
+🔑 User Hunting
+Find All Domain Admins:
+
+cypher
+Copy
+Edit
+MATCH (n:Group {name:"DOMAIN ADMINS@DOMAIN.LOCAL"})<-[:MemberOf*1..]-(u:User) RETURN u
+Users with DCSync Rights:
+
+cypher
+Copy
+Edit
+MATCH (n:User)-[:HasExtendedRight]->(r:ExtendedRight {name:"GetChangesAll"}) RETURN n
+Users with RDP Access:
+
+pgsql
+Copy
+Edit
+MATCH (u:User)-[:CanRDP]->(c:Computer) RETURN u.name, c.name
+Users with WinRM Access:
+
+pgsql
+Copy
+Edit
+MATCH (u:User)-[:CanPSRemote]->(c:Computer) RETURN u.name, c.name
+Users with SQL Admin Access:
+
+pgsql
+Copy
+Edit
+MATCH (u:User)-[:SQLAdmin]->(c:Computer) RETURN u.name, c.name
+Users that Can Abuse ACLs:
+
+ruby
+Copy
+Edit
+MATCH p=(u:User)-[:GenericAll|GenericWrite|WriteDacl|WriteOwner|AllExtendedRights*1..]->(n) RETURN p
+💻 Machine/Host Targeting
+Find Computers Where Domain Users Can RDP:
+
+pgsql
+Copy
+Edit
+MATCH (g:Group {name:"DOMAIN USERS@DOMAIN.LOCAL"})<-[:MemberOf*1..]-(u:User)-[:CanRDP]->(c:Computer) RETURN DISTINCT c.name
+Find Hosts with Admin Access from a User:
+
+css
+Copy
+Edit
+MATCH (u:User {name:"USERNAME@DOMAIN.LOCAL"})-[:AdminTo]->(c:Computer) RETURN c
+Find Computers with High Value Sessions:
+
+pgsql
+Copy
+Edit
+MATCH (u:User)-[:HasSession]->(c:Computer) WHERE u.highvalue = true RETURN u.name, c.name
+⚙️ Priv Escalation & Lateral Movement
+Shortest Path to Domain Admins (from owned user):
+
+Replace USERNAME with compromised user
+
+pgsql
+Copy
+Edit
+MATCH (n:User {name:"USERNAME@DOMAIN.LOCAL"}), (m:Group {name:"DOMAIN ADMINS@DOMAIN.LOCAL"}) 
+MATCH p=shortestPath((n)-[*..]->(m)) 
+RETURN p
+Find Shortest Paths from All Owned Users to DA:
+
+pgsql
+Copy
+Edit
+MATCH (u:User)-[:OwnedBy]->(:User) 
+MATCH (g:Group {name:"DOMAIN ADMINS@DOMAIN.LOCAL"}) 
+MATCH p=shortestPath((u)-[*..]->(g)) 
+RETURN p
+Find Computers with SeImpersonatePrivilege (for Potato attacks):
+
+css
+Copy
+Edit
+MATCH (c:Computer)-[:HasPrivilege]->(p:Privilege {name:"SeImpersonatePrivilege"}) RETURN c
+💡 Tips to Save Time and Go From Foothold to DA Faster
+Step	Tactic
+🟢 Foothold	Grab user token, enumerate with SharpHound. Drop into BloodHound ASAP.
+🔍 Recon	Focus on DCSync, RDP, WinRM, SQLAdmin paths. Look for “1-hop paths”.
+🎯 Targeting	Find session paths to high-value users (Admin, DA). Get where they are, not who they are.
+🛠 Abuse Paths	Look for GenericWrite / WriteDACL over objects. These are abusable and often overlooked.
+🔁 Repeat	Every user you compromise → rerun queries. Paths change as your access grows.
+🛑 Common Pitfalls / Things to Watch For
+Default Domain Users in Remote Desktop Group = Low-priv goldmine
+
+BloodHound GUI lag — use Neo4j + Cypher directly when data gets heavy
+
+“No Path Found”? Re-import data after new creds, sessions, or admin rights
+
+Only Sessions Exist? Use RDP/WinRM to land on boxes and pull creds
+
+Local Admin != DA — still valuable for pivoting
+
+🔗 Useful Tools to Pair with BloodHound
+🐍 Impacket (for lateral and DCSync attacks)
+
+🦝 Rubeus (Kerberoasting + S4U abuse)
+
+🦊 PowerView (deep AD object enumeration)
+
+🧪 PowerUpSQL (SQL Server lateral move + RCE)
+
+🍠 JuicyPotato / PrintSpoofer (SeImpersonate → SYSTEM)
+
