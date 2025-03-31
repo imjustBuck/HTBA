@@ -1,0 +1,171 @@
+Suppose auditing of process creation events and corresponding command line values is enabled. In that case, this information is saved to the Windows security event log as event ID 4688: A new process has been created. Organizations may enable logging of process command lines to help defenders monitor and identify possibly malicious behavior and identify binaries that should not be present on a system. This data can be shipped to a SIEM tool or ingested into a search tool, such as ElasticSearch, to give defenders visibility into what binaries are being run on systems in the network. The tools would then flag any potentially malicious activity, such as the whoami, netstat, and tasklist commands being run from a marketing executive's workstation.
+
+This study shows some of the most run commands by attackers after initial access (tasklist, ver, ipconfig, systeminfo, etc.), for reconnaissance (dir, net view, ping, net use, type, etc.), and for spreading malware within a network (at, reg, wmic, wusa, etc.). Aside from monitoring for these commands being run, an organization could take things a step further and restrict the execution of specific commands using fine-tuned AppLocker rules. For an organization with a tight security budget, leveraging these built-in tools from Microsoft can offer excellent visibility into network activities at the host level. Most modern enterprise EDR tools perform detection/blocking but can be out of reach for many organizations due to budgetary and personnel constraints. This small example shows that security improvements, such as network and host-level visibility, can be done with minimal effort, cost, and massive impact.
+
+I performed a penetration test against a medium-sized organization a few years ago with a small security team, no enterprise EDR, but was using a similar configuration to what was detailed above (auditing process creation and command-line values). They caught and contained one of my team members when they ran the tasklist command from a member of the finance department's workstation (after capturing credentials using Responder and cracking them offline).
+
+Administrators or members of the Event Log Readers group have permission to access this log. It is conceivable that system administrators might want to add power users or developers into this group to perform certain tasks without having to grant them administrative access.
+
+Confirming Group Membership
+  Event Log Readers
+C:\htb> net localgroup "Event Log Readers"
+
+Alias name     Event Log Readers
+Comment        Members of this group can read event logs from local machine
+
+Members
+
+-------------------------------------------------------------------------------
+logger
+The command completed successfully.
+Microsoft has published a reference guide for all built-in Windows commands, including syntax, parameters, and examples. Many Windows commands support passing a password as a parameter, and if auditing of process command lines is enabled, this sensitive information will be captured.
+
+We can query Windows events from the command line using the wevtutil utility and the Get-WinEvent PowerShell cmdlet.
+
+Searching Security Logs Using wevtutil
+  Event Log Readers
+PS C:\htb> wevtutil qe Security /rd:true /f:text | Select-String "/user"
+
+        Process Command Line:   net use T: \\fs01\backups /user:tim MyStr0ngP@ssword
+We can also specify alternate credentials for wevtutil using the parameters /u and /p.
+
+Passing Credentials to wevtutil
+  Event Log Readers
+C:\htb> wevtutil qe Security /rd:true /f:text /r:share01 /u:julie.clay /p:Welcome1 | findstr "/user"
+For Get-WinEvent, the syntax is as follows. In this example, we filter for process creation events (4688), which contain /user in the process command line.
+
+Note: Searching the Security event log with Get-WInEvent requires administrator access or permissions adjusted on the registry key HKLM\System\CurrentControlSet\Services\Eventlog\Security. Membership in just the Event Log Readers group is not sufficient.
+
+Searching Security Logs Using Get-WinEvent
+  Event Log Readers
+PS C:\htb> Get-WinEvent -LogName security | where { $_.ID -eq 4688 -and $_.Properties[8].Value -like '*/user*'} | Select-Object @{name='CommandLine';expression={ $_.Properties[8].Value }}
+
+CommandLine
+-----------
+net use T: \\fs01\backups /user:tim MyStr0ngP@ssword
+The cmdlet can also be run as another user with the -Credential parameter.
+
+Other logs include PowerShell Operational log, which may also contain sensitive information or credentials if script block or module logging is enabled. This log is accessible to unprivileged users.
+
+GPT Summary 
+
+🧠 Summary
+Event ID 4688: “A new process has been created” — logs every command run, including full command-line args.
+
+If command-line logging is enabled, things like:
+
+bash
+Copy
+Edit
+net use T: \\fs01\backups /user:tim MyStr0ngP@ssword
+get captured — and that’s gold for you as an attacker.
+
+If you're in the Event Log Readers group (or an admin), you can:
+
+Query those logs locally
+
+Hunt for creds, recon commands, or tool usage
+
+Get insight into what defenders might see
+
+Blue teams use this to catch red teamers who run things like tasklist, whoami, net, etc. — especially from weird workstations (e.g., marketing, finance).
+
+🔁 Got This, Do That Workflow
+🔍 Initial Check
+cmd
+Copy
+Edit
+net localgroup "Event Log Readers"
+✅ If your user is listed → you can query logs like a boss.
+
+🧨 Hunting for Credentials
+✅ Use wevtutil (works with Event Log Readers group)
+cmd
+Copy
+Edit
+wevtutil qe Security /rd:true /f:text | findstr "/user"
+Or filter for other suspicious keywords like:
+
+cmd
+Copy
+Edit
+findstr /i "password token key access" 
+✅ Use Get-WinEvent (requires admin or reg key edit)
+powershell
+Copy
+Edit
+Get-WinEvent -LogName Security | where { $_.ID -eq 4688 -and $_.Properties[8].Value -like '*/user*'} | Select-Object @{name='CommandLine';expression={ $_.Properties[8].Value }}
+🧠 NOTE: You can only run this as admin unless HKLM\System\CurrentControlSet\Services\Eventlog\Security permissions are changed.
+
+🔀 If This, Then That Decision Tree
+Condition	Action
+In Event Log Readers group	✅ Use wevtutil to hunt logs
+Not in group / no access	🚫 Try privilege escalation to get into that group
+Admin access or reg key modified	✅ Use Get-WinEvent for cleaner PowerShell parsing
+Want to hunt for plaintext creds	🔍 Search for /user, password, access, etc.
+Need to impersonate credentials seen	🎯 Try net use, RDP, or dump token if user is active
+🧬 Patterns You Should Recognize
+Process creation logs (4688) often contain passwords passed on the command line.
+
+Common attacker tools & commands that show up:
+
+net use, tasklist, ipconfig, wmic, whoami, etc.
+
+Defender alert: These commands on non-IT workstations (e.g., finance) are a red flag.
+
+Defender techniques: AppLocker, Sysmon, and centralized log monitoring (Splunk, Elastic, etc.)
+
+💡 Hints / Tips
+If you land RCE or a shell as a regular user, check if you're in Event Log Readers — this gives you internal recon visibility most attackers miss.
+
+These logs are also useful for identifying other attacker behavior in shared networks (great in CTFs or red team sims).
+
+Get-WinEvent is cleaner but needs elevated access → default to wevtutil when limited.
+
+You can often catch password reuse or poor scripting habits in logs (e.g., scheduled tasks or batch scripts exposing creds).
+
+🧠 TL;DR:
+Event Log Readers group ≠ SYSTEM access,
+but gives you x-ray vision into what users and attackers are doing on the box — and sometimes hands you passwords.
+
+🧠 Think of it like this:
+“I’m not escalating yet — I’m watching the keys fall out of other people’s pockets.”
+
+🎯 Primary Goal:
+Find plaintext creds, tokens, passwords in logs
+
+Catch sloppy ops (e.g., admins using /user:username password in commands)
+
+Identify which users are active, and on which systems
+
+🚀 What You Can Do With That Info:
+Pass-the-Hash, RDP, SMB sessions, or lateral movement
+
+Spray or crack discovered creds
+
+Pivot into higher-privileged accounts
+
+Plan privilege escalation based on what others are doing on the network
+
+📌 CPTS Mindset:
+You Have Access To Logs	You Should...
+See /user:admin somePassword	Copy creds → test them on RDP, SMB, WinRM, etc.
+See tasklist, whoami, etc. from finance	That’s sus → possible red teamer → watch for crossover
+See NT AUTHORITY\SYSTEM launching weird commands	Defender might’ve scripted automation — or it’s an attacker
+🛑 You’re Not Doing:
+SYSTEM escalation via token abuse
+
+DLL hijacking
+
+Service misconfigs
+
+✅ You Are Doing:
+Recon to stack leverage
+
+Tracking down weak operational security
+
+Possibly identifying misconfigured or reused credentials
+
+
+
+
