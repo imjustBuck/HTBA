@@ -1,0 +1,85 @@
+🔄 What is SocksOverRDP?
+SocksOverRDP is a creative way to turn an RDP session itself into a tunnel using a SOCKS proxy over Windows' internal Dynamic Virtual Channels (DVC).
+Basically, it piggybacks on your active RDP session to tunnel traffic, which is perfect when:
+
+You can’t install SSH or Chisel.
+
+You’re stuck in a Windows-only environment.
+
+You're looking to fly under the radar with "built-in" behavior (clipboard, audio, etc.).
+
+🧠 Flow Breakdown
+Here’s how it plays out:
+
+🔐 Setup Phase:
+You RDP into a pivotable machine (like 172.16.5.19).
+
+You copy over SocksOverRDP-Plugin.dll to your attack box (10.129.x.x), and then load it using:
+
+cmd
+Copy
+Edit
+regsvr32.exe SocksOverRDP-Plugin.dll
+This acts as the client-side tunnel initializer over RDP.
+
+You also need the server-side component (SocksOverRDP-Server.exe) to run on the internal machine (172.16.5.19).
+
+🔌 Tunnel Initialization:
+Once you connect to 172.16.5.19 using mstsc.exe, the SOCKS listener gets created on your initial machine (the one running the plugin DLL), and it will listen on:
+
+makefile
+Copy
+Edit
+127.0.0.1:1080
+The server running on 172.16.5.19 (or wherever the RDP session terminates) will handle routing the traffic to your final destination, like:
+
+Copy
+Edit
+172.16.6.155
+🔄 Proxy Routing:
+You fire up Proxifier Portable on your initial foothold machine (10.129.x.x) and configure it to send traffic through:
+
+makefile
+Copy
+Edit
+127.0.0.1:1080
+Now any traffic (like mstsc.exe, PowerShell, or browser) goes:
+
+nginx
+Copy
+Edit
+Your foothold (10.129.x.x) → RDP tunnel → 172.16.5.19 → Internal target (172.16.6.155)
+🔧 Realistic Use Cases:
+✅ When SSH isn’t available (which happens often in Windows-heavy environments).
+✅ When firewalls block traditional ports but RDP is open and already being used.
+✅ When you want to avoid custom binaries or obvious tools that raise alarms.
+✅ When detection evasion is critical, and you want to hide inside legit RDP traffic.
+
+⚔️ Final Thoughts
+Performance: It’s RDP — so it's slower than Chisel or SSH tunnels.
+
+Stealth: Much stealthier in blue team environments.
+
+Convenience: Not ideal for full exploitation, but killer for pivoting through internal Windows-only networks.
+
+You’ve now got a full Swiss Army knife of pivoting options:
+
+SSH
+
+ProxyChains
+
+Metasploit portfwd
+
+Chisel
+
+SocksOverRDP
+
+Socat
+
+Sshuttle
+
+Rpivot
+
+Dnscat2
+
+Windows netsh
