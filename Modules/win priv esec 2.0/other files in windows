@@ -1,0 +1,102 @@
+🧠 Section Summary: Other Files That May Contain Credentials
+This section trains us to:
+
+🧭 Manually hunt creds in loose files (network shares, desktops, weird folders)
+
+🔍 Identify non-obvious data leaks like StickyNotes or .kdbx DBs
+
+⚔️ Prep for real-world messy environments, where creds are everywhere except where you'd expect
+
+🧠 Learn to modify our toolset/scripts to include sneaky spots like plum.sqlite, OneNote files, etc.
+
+This ain’t just exam content — this is red team recon DNA.
+
+🧠 “Got This? Do That” Flowchart
+Got This?	Do That
+User access to local or share drive	Search manually for files with sensitive extensions: *.kdbx, *.ppk, *.config, *.xml, *.ini, *.txt, etc.
+Have access to network shares	Use Snaffler, PowerView, or dir /s /b to crawl and log interesting filenames
+Found StickyNotes DB	Extract and parse plum.sqlite using DB Browser, strings, or PowerShell with PSSQLite
+Access to user folders	Grab browser dicts, StickyNotes, OneNote, and history/configs
+Need fast keyword match	Use findstr or Select-String for terms like "password", "secret", "admin", "P@ss"
+See .config or .rdp files	Check for hardcoded creds in plaintext or base64
+Found .ps1 scripts	Look for Export-Clixml, base64 blobs, or Connect- style automation
+Have admin on host	Repeat all searches across all user folders
+💣 Critical One-Liners (Search Payloads)
+🔍 Search Current Folder for Cred Terms (Basic)
+cmd
+Copy
+Edit
+findstr /SI /M "password" *.xml *.ini *.txt *.config
+🔍 Search All Files in Folder (Verbose line + match)
+cmd
+Copy
+Edit
+findstr /spin "password" *.*
+🔍 Search Specific Extensions in Folder Recursively
+cmd
+Copy
+Edit
+dir /S /B *pass*.txt == *cred* == *config*
+🔍 Search with PowerShell
+powershell
+Copy
+Edit
+Select-String -Path C:\Users\<user>\Documents\*.txt -Pattern "password"
+🔍 Find Common Cred File Extensions Recursively
+powershell
+Copy
+Edit
+Get-ChildItem C:\ -Recurse -Include *.rdp, *.config, *.vnc, *.cred -ErrorAction Ignore
+🗒 Search All Users' Sticky Notes for Passwords
+powershell
+Copy
+Edit
+Invoke-SqliteQuery -Database "C:\Users\<user>\AppData\Local\Packages\Microsoft.MicrosoftStickyNotes_8wekyb3d8bbwe\LocalState\plum.sqlite" -Query "SELECT Text FROM Note"
+🔎 StickyNotes Fallback - Strings Method
+bash
+Copy
+Edit
+strings plum.sqlite-wal | grep -iE "password|admin|vc"
+📂 File Locations to Check (Put These in Your Looting Script)
+🔐 Credential Goldmine Targets:
+markdown
+Copy
+Edit
+*.kdbx (KeePass DB)
+*.ppk (SSH Private Keys)
+*.vmdk / *.vhd / *.vdhx (Virtual disks)
+*.rdp (Remote Desktop Configs)
+*.config / *.ini / *.xml / *.ps1
+*.docx / *.xlsx / *.one / *.txt
+plum.sqlite / Custom Dictionary.txt
+📁 Interesting Default Paths:
+pgsql
+Copy
+Edit
+C:\Users\<user>\Documents\
+C:\inetpub\wwwroot\web.config
+C:\Users\<user>\AppData\Local\Packages\Microsoft.MicrosoftStickyNotes_8wekyb3d8bbwe\LocalState\plum.sqlite
+C:\Users\<user>\AppData\Local\Google\Chrome\User Data\Default\Custom Dictionary.txt
+🧪 Weird Hidden Locations (edge case creds):
+shell
+Copy
+Edit
+%SYSTEMDRIVE%\pagefile.sys
+%WINDIR%\repair\sam
+%WINDIR%\debug\NetSetup.log
+%WINDIR%\system32\config\*.sav
+%WINDIR%\system32\CCM\logs\*.log
+%USERPROFILE%\ntuser.dat
+🧠 Patterns / OPSEC Hints
+📋 StickyNotes is a full DB. If you find plum.sqlite, assume there's loot inside.
+
+🧩 Look for .rdp or .config files on desktops — lazy devs leave creds.
+
+🧼 Clean up after copying/mounting .vmdk or .vhd — these scream “YOU’RE CAUGHT” in a real pentest.
+
+🔐 If you see .kdbx files, go look for .key or plaintext passwords nearby — KeePass creds are often adjacent.
+
+🧠 Any folder like \\FILE01\users\bjones with loose perms is a jackpot — scrape them all.
+
+🔂 Once you're SYSTEM or admin, loop through every user profile and re-search.
+
