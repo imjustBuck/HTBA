@@ -1,0 +1,128 @@
+PLINK: 
+
+🧠 What is Plink?
+Plink.exe is the command-line version of PuTTY's SSH client.
+
+Used on Windows systems to make SSH connections, just like ssh on Linux.
+
+Supports dynamic port forwarding, meaning it can create a SOCKS proxy just like ssh -D.
+
+🔧 Use Case in CPTS / Pentest Scenarios
+You:
+
+Compromise a Windows host that either:
+
+Doesn’t have ssh installed (common pre-Win10 Fall 2018), or
+
+Has PuTTY/Plink lying around
+
+Need a pivot to another network or system
+
+Don’t want to pull in too many tools that might trip AV/EDR
+
+Boom—use Plink to build a SOCKS proxy and tunnel traffic through that box.
+
+🧪 Command Breakdown
+If you're on a Windows box, and want to create a SOCKS proxy via Plink:
+
+bash
+Copy
+Edit
+plink.exe -ssh -D 9050 ubuntu@10.129.15.50
+-ssh → Protocol
+
+-D 9050 → Start a SOCKS proxy on local port 9050
+
+ubuntu@10.129.15.50 → Connect to the pivot box (Ubuntu)
+
+🛠️ Optional Add-On: Proxifier
+GUI tool for Windows to route traffic through SOCKS proxies.
+
+Works like proxychains, but pretty.
+
+Configure it to send traffic (like RDP, Nmap, or custom apps) through 127.0.0.1:9050.
+
+🤔 So When Would You Use This?
+You’re attacking from Windows (yes, it happens)
+
+You compromised a Windows machine and need to pivot with what’s already there
+
+SSH is still an option, but ssh.exe isn't available
+
+You’re avoiding custom tools to keep OPSEC tight
+
+🧩 Comparison to Others
+Tool	Platform	Typical Usage
+ssh -D	Linux/macOS	Default SOCKS tunneling on Linux-based attack box
+Plink	Windows	SSH SOCKS tunneling when ssh is missing
+proxychains	Linux	Routes tool traffic over a SOCKS/HTTP proxy
+Proxifier	Windows	GUI version of proxychains
+socat	Linux	Listener/redirector when SSH is not available
+
+
+
+SSHTUNNEL: 
+
+🚀 What Is sshuttle?
+A Python-based tool that creates a transparent proxy over SSH.
+
+It automates iptables rules to route traffic through a remote host without needing to manually set up proxychains or SOCKS proxies.
+
+Think of it as "poor man's VPN" — once it's up, your whole system thinks it's on the pivot network.
+
+🧰 When Would You Use It?
+You’ve got SSH access to a pivot box (e.g., Ubuntu server).
+
+You want to scan or interact with an internal network (e.g., 172.16.5.0/23) without setting up:
+
+proxychains
+
+socks_proxy
+
+manual port forwarding
+
+⚙️ How Does It Work?
+You SSH into the pivot host with:
+
+bash
+Copy
+Edit
+sudo sshuttle -r ubuntu@10.129.202.64 172.16.5.0/23 -v
+-r: SSH into pivot box
+
+172.16.5.0/23: internal subnet to route through that pivot
+
+It:
+
+Adds iptables NAT rules to reroute all traffic destined for that subnet
+
+Routes that traffic transparently through SSH
+
+No SOCKS proxy, no special configuration needed for tools
+
+You then use any tool directly, e.g.:
+
+bash
+Copy
+Edit
+nmap -v -sV -p3389 172.16.5.19 -A -Pn
+✅ Why Is It Nice?
+Feature	sshuttle
+Requires proxychains	❌ No
+Requires SOCKS	❌ No
+Transparent routing	✅ Yes
+Works like VPN	✅ Yes
+UDP support	❌ No
+ICMP support	✅ Yes
+Windows support	❌ Not native (Linux/macOS only)
+🔐 OPSEC Thoughts
+Pro: Very stealthy if you already have SSH access
+
+Con: If your iptables changes get logged/monitored, it may raise flags on the pivot box
+
+🔥 Real World or CPTS Use?
+✅ Great for CPTS labs: fast setup, no proxychains jank, clean output
+
+⚠️ Real world: works best when you’ve got legit SSH access (not always the case), and may not scale well compared to socks proxies and pivot tools
+
+
