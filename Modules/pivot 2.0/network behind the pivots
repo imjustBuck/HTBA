@@ -1,0 +1,76 @@
+🧠 Section Summary: The Networking Behind Pivoting
+🔑 Goal of This Section
+To pivot correctly, you must understand how networking works under the hood — especially:
+
+Interfaces and IPs
+
+Routing tables
+
+Gateways
+
+Ports & services
+
+🧩 Got This, Do That — Networking Concepts for Pivoting
+🎯 If you’ve compromised a host…
+Got This	Do That
+Host with multiple NICs	Run ifconfig (Linux/macOS) or ipconfig (Windows) — look for secondary IP ranges that indicate internal subnets you can pivot into
+Host has public AND private IPs	Likely in a DMZ or dual-homed setup — private IPs might give you a way into internal LANs
+NICs like tun0	This is your VPN interface (e.g., HTB labs). All traffic to the lab routes through this. Be aware of it when setting routes or forwarding
+Host's NIC shows 10.x.x.x, 192.168.x.x, 172.16.x.x	These are private subnets — confirm network segmentation and potential pivot candidates
+You have shell on a box	Run route print or netstat -r (Windows), or ip route, netstat -rn (Linux) to check routing table and map reachable networks
+Host can route to another subnet you can’t reach	Use tools like AutoRoute, pivot listeners, or SSH/Chisel to bounce traffic through it
+🛠️ Tools / Commands to Know
+Command	Use
+ifconfig / ipconfig	Show all network interfaces, IPs, and NICs
+ip route / netstat -r	Show the routing table — what networks the host can talk to
+route add	Manually add a route (with or without AutoRoute in Meterpreter)
+arp -a	Shows IP ↔ MAC mappings — helps identify other live hosts/subnets
+tracert / traceroute	Confirm multi-hop routes and firewall traversal possibilities
+🧭 Key Concepts Recap
+✅ IP Addressing & NICs
+Every NIC gets an IP — one host can have multiple NICs, each connected to a different subnet
+
+Finding secondary NICs/IPs is the #1 way to find pivot opportunities
+
+Look for internal IP ranges to find hidden networks (10.0.0.0/8, 192.168.0.0/16, etc.)
+
+✅ Routing
+Routing table decides how traffic exits the box
+
+Routes are:
+
+Direct (host has an IP in the subnet)
+
+Indirect (go to a gateway)
+
+Learn the table → understand what subnets are reachable but isolated from you
+
+Pivot hosts = become routers for you (via tools like autoroute, chisel, socat, etc.)
+
+✅ Default Gateway
+If traffic is going outside the local subnet, it's sent to the default gateway
+
+You can piggyback this route if you pivot to a host on that LAN
+
+✅ Protocols / Ports
+Port = service endpoint, not a physical thing
+
+Critical for pivoting because:
+
+You’ll bind listeners on specific ports
+
+You may need to spoof or forward traffic through allowed ports (e.g., HTTP/HTTPS)
+
+Web servers, RDP, SMB = usually allowed in firewalls — use them as cover
+
+🔥 Tactical Takeaways for CPTS + Real World
+🧠 Always check for secondary NICs/IPs — pivot paths often hide here
+
+🧭 Draw the network — use Draw.io or whiteboard to plan paths
+
+🪞 Pivot = routing through compromised host — either with port forwarding or creating a new route
+
+🕳️ Routing tables are gold — they reveal unseen subnets
+
+⚙️ Be protocol-aware — know what’s allowed so you can “hide in plain sight”
+
