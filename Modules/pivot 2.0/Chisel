@@ -95,3 +95,53 @@ You won’t always need it for CPTS, but when SSH is off the table, Chisel is yo
 
 CPTS might lean into SSH or Meterpreter routes — but they’ll respect a pivot done with Chisel.
 
+🥊 Chisel vs Proxychains – What’s the Difference?
+Feature	Chisel	Proxychains
+What it is	A SOCKS5 tunnel tool (client-server)	A traffic redirector for Linux tools
+Purpose	Creates a SOCKS proxy tunnel through a pivot	Sends your local tools’ traffic through a SOCKS proxy
+Use Case	When you want to create a tunnel through a compromised machine	When you want tools like nmap, xfreerdp, etc. to route through that tunnel
+Where it's used	On pivot host (server) and your box (client)	Only on your box
+SOCKS Support	Yes — Chisel creates the SOCKS proxy	No — Proxychains uses an existing SOCKS proxy
+Protocol	Uses HTTP/WebSocket for tunneling (great for firewall evasion)	Routes TCP traffic over SOCKS (it’s just a wrapper)
+Common Pairing	You set up a Chisel tunnel, then run proxychains to push traffic through it	Always used with a SOCKS4/5 server (like Chisel, SSH -D, etc.)
+🧠 So how do they work together?
+Chisel = Makes the tunnel
+Proxychains = Uses the tunnel
+
+🔁 If Chisel is the car, Proxychains is the GPS telling your tools to use that car instead of going direct.
+
+🧪 Example Flow
+🔧 You set up a Chisel server on the pivot:
+
+bash
+Copy
+Edit
+./chisel server -p 1234 --socks5
+🧠 You connect from your attack box:
+
+bash
+Copy
+Edit
+./chisel client 10.129.202.64:1234 socks
+Now you have 127.0.0.1:1080 as a working SOCKS5 proxy.
+
+⚙️ In proxychains.conf, you add:
+
+conf
+Copy
+Edit
+socks5 127.0.0.1 1080
+🚀 And then you do:
+
+bash
+Copy
+Edit
+proxychains nmap -sT -Pn 172.16.5.19 -p3389
+proxychains xfreerdp /v:172.16.5.19
+🧠 TL;DR
+Chisel is the engine that creates the path through the pivot.
+
+Proxychains is the steering wheel that tells your local tools to use that path.
+
+They’re not interchangeable — but together? They’re 🔥 for network pivoting.
+
