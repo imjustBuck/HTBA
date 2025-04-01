@@ -196,3 +196,43 @@ This part of CPTS is teaching you to think like this:
 or
 
 "This is a shared system. Let me peek in ProgramData folders for backup jobs, logs, creds, or scheduler junk."
+
+
+# Look for config files that may store remote session data
+Get-ChildItem -Path "$env:APPDATA", "$env:LOCALAPPDATA", "C:\ProgramData" -Recurse -Include *.xml,*.config,*.ini,*.rdg,*.rtsz,*.rdp -ErrorAction SilentlyContinue
+
+# Search for keywords like password, host, or username
+Get-ChildItem -Recurse -Include *.xml,*.config,*.ini,*.txt | Select-String -Pattern "password|username|host|credential"
+
+
+“This user has RDCMan and mRemoteNG installed? They probably manage a bunch of internal stuff. Let me check .rdg and confCons.xml for creds.”
+
+And if you find anything like:
+
+HostName=
+
+Password=
+
+username=
+
+.kdbx
+
+.rdg
+
+ConnectionManager/Settings/ folder
+
+Your spidey sense should tingle 💀
+
+💾 Bonus: Tools to Help Loot / Decrypt
+Tool	Use Case
+mremoteng_decrypt.py	Decrypt mRemoteNG passwords
+rdgdecrypt.py	Decrypt RDCMan .rdg files
+keepass2john + hashcat	Crack KeePass master passwords
+SharpChrome	Extract browser creds/cookies
+LaZagne	Loot saved passwords from many clients
+CredNinja	Enumerate RDP/WinRM creds across systems
+🧠 TL;DR:
+✅ YES, always be looking for RDP/SSH/VPN/Management apps — not just mRemoteNG
+✅ Know what those apps look like on disk and in AppData/ProgramData
+✅ Know the format their configs are in (.xml, .ini, .rdg, etc.)
+✅ Use search + loot + decrypt — not shotgun, but sniper mindset
