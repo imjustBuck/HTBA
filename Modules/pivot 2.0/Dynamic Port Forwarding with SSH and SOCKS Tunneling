@@ -1,0 +1,84 @@
+🧠 Section Summary: Port Forwarding in Context
+This section shows how to pivot through a compromised machine using SSH port forwarding and SOCKS tunneling — basically turning your foothold into a network bridge to hit internal resources.
+
+🧩 Got This, Do That — Port Forwarding & Tunneling
+Got This	Do That
+Compromised a Linux box with SSH access	Use ssh -L or ssh -D for local or dynamic forwarding
+You know a port (e.g. MySQL 3306) is only locally exposed on the target	Use ssh -L to forward it to your machine and interact with it directly
+Target has a second NIC on an internal subnet	Use ssh -D to start a SOCKS proxy and scan/pivot through that network
+Want to route tools like Nmap or MSF through the tunnel	Use proxychains + update /etc/proxychains.conf to use your -D port (usually 9050)
+Need to RDP into an internal Windows box through the tunnel	Use xfreerdp through proxychains
+Need to use Metasploit modules over the tunnel	Start proxychains msfconsole and run your modules like normal
+Proxychains too slow or error-prone?	Use tools like Chisel, socat, or plink for more stable tunnels
+🔁 Quick Ref – SSH Port Forward Types
+Type	Command	Description
+Local Port Forward	ssh -L 1234:localhost:3306 user@pivot	Maps your localhost:1234 → pivot:3306
+Dynamic Port Forward (SOCKS)	ssh -D 9050 user@pivot	Creates a SOCKS proxy to route any TCP traffic through pivot
+Multiple Ports	ssh -L 1234:localhost:3306 -L 8080:localhost:80 user@pivot	Forward multiple services at once
+🛠️ Tool Stack You Must Know Cold
+Tool	Use
+ssh -L / ssh -D	Set up port forwarding and SOCKS tunnels
+netstat / ss -antp	Confirm if local port forward is active
+proxychains	Route Nmap, MSF, or other tools over your SOCKS proxy
+/etc/proxychains.conf	Add: socks4 127.0.0.1 9050 at bottom for local SOCKS
+nmap -sT -Pn	Only scan that works reliably over SOCKS
+xfreerdp	GUI RDP client usable over proxychains
+msfconsole (via proxychains)	Use MSF modules over your dynamic pivot path
+🔥 CPTS-Focused Tactics
+🕵️‍♂️ 1. Find Local-Only Services
+If Nmap shows port open internally but closed externally, that’s pivot fuel
+
+Forward those ports with ssh -L and exploit from your own machine
+
+🌐 2. Pivot Into Internal Networks
+If foothold has ens192 (public) and ens224 (internal like 172.16.x.x):
+
+Use ssh -D 9050 user@target
+
+Scan internal LAN using:
+
+bash
+Copy
+Edit
+proxychains nmap -sT -Pn 172.16.5.19
+🧱 3. Bypass Firewall Rules
+SOCKS tunneling routes around outbound blocks and segmentation
+
+Your attack traffic looks like SSH traffic going outbound 👌
+
+🪝 4. Use with GUI/Interactive Clients
+Need to RDP into a box? Do:
+
+bash
+Copy
+Edit
+proxychains xfreerdp /v:172.16.5.19 /u:victor /p:pass@123
+Everything from the GUI goes through SSH → SOCKS → pivot
+
+📌 Warnings & Reminders
+🔥 proxychains ≠ magic – It only works with TCP, and only full connect scans (-sT)
+
+🧱 ICMP blocked by default – Use -Pn to disable ping check or scans will fail
+
+🧵 Tunnel threads die silently – if the SSH session drops, all forwards die
+
+🕳️ Partial packets like -sS won't work over SOCKS — stick to -sT
+
+💡 Visualization (recommended)
+As the module suggests, draw this flow:
+
+plaintext
+Copy
+Edit
+[Your Box] ←(localhost:9050)— SSH —→ [Ubuntu Pivot Box] ←→ [Internal 172.16.x.x Network]
+           ^ SOCKS4 tunnel         ^ Internal NIC         ^ Hidden subnet
+✅ TL;DR Summary – What You’re Learning Here
+🧠 How to convert SSH foothold into a transport layer
+
+🔁 How to chain multiple networks together
+
+🛠️ How to route any tool over SOCKS (with proxychains)
+
+🎯 How to reach otherwise isolated targets like 172.16.x.x boxes or internal RDP services
+
+💣 How to turn that path into an exploit vector using MSF, Nmap, or GUI tools
