@@ -1,0 +1,179 @@
+Credentials can unlock many doors for us during our assessments. We may find credentials during our privilege escalation enumeration that can lead directly to local admin access, grant us a foothold into the Active Directory domain environment, or even be used to escalate privileges within the domain. There are many places that we may find credentials on a system, some more obvious than others.
+
+Application Configuration Files
+Searching for Files
+Against best practices, applications often store passwords in cleartext config files. Suppose we gain command execution in the context of an unprivileged user account. In that case, we may be able to find credentials for their admin account or another privileged local or domain account. We can use the findstr utility to search for this sensitive information.
+
+  Credential Hunting
+PS C:\htb> findstr /SIM /C:"password" *.txt *.ini *.cfg *.config *.xml
+Sensitive IIS information such as credentials may be stored in a web.config file. For the default IIS website, this could be located at C:\inetpub\wwwroot\web.config, but there may be multiple versions of this file in different locations, which we can search for recursively.
+
+Dictionary Files
+Chrome Dictionary Files
+Another interesting case is dictionary files. For example, sensitive information such as passwords may be entered in an email client or a browser-based application, which underlines any words it doesn't recognize. The user may add these words to their dictionary to avoid the distracting red underline.
+
+  Credential Hunting
+PS C:\htb> gc 'C:\Users\htb-student\AppData\Local\Google\Chrome\User Data\Default\Custom Dictionary.txt' | Select-String password
+
+Password1234!
+Unattended Installation Files
+Unattended installation files may define auto-logon settings or additional accounts to be created as part of the installation. Passwords in the unattend.xml are stored in plaintext or base64 encoded.
+
+Unattend.xml
+Code: xml
+<?xml version="1.0" encoding="utf-8"?>
+<unattend xmlns="urn:schemas-microsoft-com:unattend">
+    <settings pass="specialize">
+        <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <AutoLogon>
+                <Password>
+                    <Value>local_4dmin_p@ss</Value>
+                    <PlainText>true</PlainText>
+                </Password>
+                <Enabled>true</Enabled>
+                <LogonCount>2</LogonCount>
+                <Username>Administrator</Username>
+            </AutoLogon>
+            <ComputerName>*</ComputerName>
+        </component>
+    </settings>
+Although these files should be automatically deleted as part of the installation, sysadmins may have created copies of the file in other folders during the development of the image and answer file.
+
+PowerShell History File
+Command to
+Starting with Powershell 5.0 in Windows 10, PowerShell stores command history to the file:
+
+C:\Users\<username>\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt.
+Confirming PowerShell History Save Path
+As seen in the (handy) Windows Commands PDF, published by Microsoft here, there are many commands which can pass credentials on the command line. We can see in the example below that the user-specified local administrative credentials to query the Application Event Log using wevutil.
+
+  Credential Hunting
+PS C:\htb> (Get-PSReadLineOption).HistorySavePath
+
+C:\Users\htb-student\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt
+Reading PowerShell History File
+Once we know the file's location (the default path is above), we can attempt to read its contents using gc.
+
+  Credential Hunting
+PS C:\htb> gc (Get-PSReadLineOption).HistorySavePath
+
+dir
+cd Temp
+md backups
+cp c:\inetpub\wwwroot\* .\backups\
+Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://www.powershellgallery.com/packages/MrAToolbox/1.0.1/Content/Get-IISSite.ps1'))
+. .\Get-IISsite.ps1
+Get-IISsite -Server WEB02 -web "Default Web Site"
+wevtutil qe Application "/q:*[Application [(EventID=3005)]]" /f:text /rd:true /u:WEB02\administrator /p:5erv3rAdmin! /r:WEB02
+We can also use this one-liner to retrieve the contents of all Powershell history files that we can access as our current user. This can also be extremely helpful as a post-exploitation step. We should always recheck these files once we have local admin if our prior access did not allow us to read the files for some users. This command assumes that the default save path is being used.
+
+  Credential Hunting
+PS C:\htb> foreach($user in ((ls C:\users).fullname)){cat "$user\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadline\ConsoleHost_history.txt" -ErrorAction SilentlyContinue}
+
+dir
+cd Temp
+md backups
+cp c:\inetpub\wwwroot\* .\backups\
+Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://www.powershellgallery.com/packages/MrAToolbox/1.0.1/Content/Get-IISSite.ps1'))
+. .\Get-IISsite.ps1
+Get-IISsite -Server WEB02 -web "Default Web Site"
+wevtutil qe Application "/q:*[Application [(EventID=3005)]]" /f:text /rd:true /u:WEB02\administrator /p:5erv3rAdmin! /r:WEB02
+PowerShell Credentials
+PowerShell credentials are often used for scripting and automation tasks as a way to store encrypted credentials conveniently. The credentials are protected using DPAPI, which typically means they can only be decrypted by the same user on the same computer they were created on.
+
+Take, for example, the following script Connect-VC.ps1, which a sysadmin has created to connect to a vCenter server easily.
+
+Code: powershell
+# Connect-VC.ps1
+# Get-Credential | Export-Clixml -Path 'C:\scripts\pass.xml'
+$encryptedPassword = Import-Clixml -Path 'C:\scripts\pass.xml'
+$decryptedPassword = $encryptedPassword.GetNetworkCredential().Password
+Connect-VIServer -Server 'VC-01' -User 'bob_adm' -Password $decryptedPassword
+Decrypting PowerShell Credentials
+If we have gained command execution in the context of this user or can abuse DPAPI, then we can recover the cleartext credentials from encrypted.xml. The example below assumes the former.
+
+  Credential Hunting
+PS C:\htb> $credential = Import-Clixml -Path 'C:\scripts\pass.xml'
+PS C:\htb> $credential.GetNetworkCredential().username
+
+bob
+
+
+PS C:\htb> $credential.GetNetworkCredential().password
+
+Str0ng3ncryptedP@ss!
+
+                    SUMMMARY FROM GPTER  
+
+🧠 Section Summary: Credential Hunting (Local Looting)
+This section teaches us to:
+
+🧹 Scrape the box for hardcoded creds
+
+🧾 Check history/config files for sensitive info
+
+🛠️ Understand how creds are stored (plaintext, encoded, encrypted w/ DPAPI)
+
+🎯 Use one-liners for fast scanning
+
+💣 Pivot creds to escalate further (local admin, domain, lateral movement)
+
+This is one of those "always run this list" type deals — the signal-to-success ratio is high.
+
+🔍 “Got This? Do That” Workflow
+Got This?	Do That
+You have user-level access	Search for plaintext creds in common config file types (*.xml, *.ini, *.config, etc.)
+Found PowerShell scripts	Look for Export-Clixml files and try to decrypt with .GetNetworkCredential()
+You found unattend.xml	Check for <Password> fields and base64 decode if needed
+You see web.config or IIS files	Check for connectionStrings or credentials inside
+You can access PowerShell history	Grep for password, wevtutil, or interesting commands
+You’re admin now	Re-run the searches for other users' folders and profile data
+You find Chrome dict files	Look for weird entries like P@ssword1234 in Custom Dictionary.txt
+You need fast all-user scanning	Run PowerShell loops to hit all user folders for history/config data
+🔥 One-Liner Search Payloads (Copy/Paste Gold)
+🔎 General Config File Password Hunt
+powershell
+Copy
+Edit
+findstr /SIM /C:"password" *.txt *.ini *.cfg *.config *.xml
+🔎 Search all drives for web.config recursively
+powershell
+Copy
+Edit
+Get-ChildItem -Path C:\ -Recurse -Include web.config -ErrorAction SilentlyContinue
+📚 Chrome Custom Dictionary
+powershell
+Copy
+Edit
+gc 'C:\Users\<username>\AppData\Local\Google\Chrome\User Data\Default\Custom Dictionary.txt'
+🛠️ Unattended Install Files (find file)
+powershell
+Copy
+Edit
+Get-ChildItem -Path C:\ -Recurse -Include unattend.xml -ErrorAction SilentlyContinue
+📜 Read PowerShell History File (Current User)
+powershell
+Copy
+Edit
+gc (Get-PSReadLineOption).HistorySavePath
+📜 Read PowerShell History for All Users
+powershell
+Copy
+Edit
+foreach($user in ((ls C:\users).fullname)){cat "$user\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadline\ConsoleHost_history.txt" -ErrorAction SilentlyContinue}
+🔓 Decrypt PowerShell Secure String (DPAPI-based)
+powershell
+Copy
+Edit
+$cred = Import-Clixml -Path 'C:\scripts\pass.xml'
+$cred.GetNetworkCredential().username
+$cred.GetNetworkCredential().password
+💡 Pro Tips / Patterns
+🔁 Always rerun history or Clixml decryption after privilege escalation.
+
+🧠 Anything saved via Export-Clixml can only be decrypted by the same user on the same box — unless you abuse DPAPI.
+
+💀 PowerShell history is full of juicy stuff during live systems — many admins forget it’s even being logged.
+
+🧪 If creds are encoded (base64), use FromBase64String() + GetString() in PowerShell to decode.
+                    
