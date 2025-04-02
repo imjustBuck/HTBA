@@ -1,0 +1,22 @@
+🔑 1. What You’re Looking For
+Target	Goal
+Root domain (/)	Fuzz for dirs
+/blog/ or any dir	Fuzz for files or subdirs
+.php, .aspx, .html, etc.	Fuzz for specific file extensions
+Query strings like ?id=	Fuzz parameters (coming up soon)
+Possible VHosts or subdomains	Use vhost fuzzing & add to /etc/hosts
+🔑 2. Which Wordlist to Use
+Use Case	Wordlist
+Directory brute-force	directory-list-2.3-small.txt or common.txt
+Extension discovery	web-extensions.txt
+Parameter fuzzing	params.txt, param-names.txt, burp-parameter-names.txt
+VHost/Subdomain	dns-Jhaddix.txt, subdomains-top1million-5000.txt
+CMS or tech-specific	CMS-specific wordlists (like /Joomla/, /Drupal/) from SecLists
+💡 Strategy Reminder
+Start broad (dirs), go narrow (files).
+
+Use -fc 403 or -fs to clean noise.
+
+Use -e when you know the site uses .php, .html, etc.
+
+Recursive + depth 1 is your best friend to save time.
