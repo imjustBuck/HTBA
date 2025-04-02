@@ -1,0 +1,24 @@
+🔁 If This, Then That: Extension & Page Fuzzing
+Situation	Action
+index.php exists	✅ Confirm server is PHP-based — now switch to .php file fuzzing
+index.html exists	Could be static site — use .html or try looking for JS/hidden input
+Extension test returns 403	Try requesting as curl -A 'Googlebot' or switch user agents
+No extensions found	Try extensionless fuzzing: /blog/FUZZ
+Found .php file	Add to report, visit directly, test for GET/POST params, auth, etc.
+Found .phps or .bak	📢 ALERT: Possible source code or backup disclosure
+File returns 200 OK with non-zero content	Validate manually – could contain creds, logic flaws, hidden fields, etc.
+🛠️ Wordlists & When to Use Them
+Wordlist	Use Case
+/directory-list-2.3-small.txt	General directory or PHP file brute-forcing
+/web-extensions.txt	Finding backend technologies (e.g., .php, .aspx, .jsp)
+common.txt	Faster and lighter than full 2.3 list; good for second-pass scans
+raft-small-files.txt	Great for targeting backup files, logs, configs
+cms-specific wordlists	If you know it's WordPress, Joomla, etc., use targeted lists
+⚡ Pro Tip: Double FUZZ
+If you’re ever unsure what file and what extension might exist, try:
+
+bash
+Copy
+Edit
+ffuf -w filenames.txt:FILE -w extensions.txt:EXT -u http://IP:PORT/FUZZ -u http://IP:PORT/FILE.EXT
+This way you can go after stuff like admin.php, backup.bak, or index.old.
