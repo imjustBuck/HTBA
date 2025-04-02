@@ -1,0 +1,48 @@
+🔁 Big Picture Flow:
+/blog says admin panel moved to academy.htb ✅
+
+You can’t access academy.htb until you add it to /etc/hosts
+
+Same logic applies to any subdomains like admin.academy.htb — they won’t resolve publicly
+
+🔐 Why No Hits During Subdomain Fuzz?
+Ffuf uses DNS to resolve FUZZ.academy.htb
+
+But only academy.htb is in /etc/hosts
+
+So anything like admin.academy.htb → fails with "couldn’t resolve"
+
+🧠 Key Fix (and what you’ll do next):
+To discover subdomains on private boxes, you need to:
+
+Option A – Manual Subdomain Discovery from Clues
+If /blog says "Admin panel at admin.academy.htb"
+
+You just manually add it:
+
+bash
+Copy
+Edit
+echo "10.10.10.123 admin.academy.htb" | sudo tee -a /etc/hosts
+Option B – Wordlist + Hosts File
+If you’re fuzzing for subdomains, and want them to resolve locally, then:
+
+Loop through the wordlist manually and add promising ones
+
+OR create a little script that auto-adds:
+
+bash
+Copy
+Edit
+for sub in $(cat subdomains-top1million-5000.txt); do
+  echo "10.10.10.123 $sub.academy.htb" | sudo tee -a /etc/hosts
+done
+(This gets messy fast though — better for testing 5-10 likely subs than dumping 5000)
+
+🔑 Takeaway TL;DR:
+Public DNS fuzzing won’t help with private HTB domains
+
+If you get a “connection error”, it’s not a 404 — it’s a DNS fail
+
+You must manually add subdomains to /etc/hosts before fuzzing or visiting
+  
