@@ -66,3 +66,46 @@ Copy
 Edit
 sudo echo "IP admin.academy.htb" >> /etc/hosts
 Then revisit it in the browser or curl it to test for login portals, APIs, etc.
+
+🥊 Subdomain vs Virtual Host (VHost) — What's the Difference?
+Concept	Subdomain	VHost
+Definition	A DNS record (e.g. admin.site.com) that maps to an IP.	A server config that hosts multiple domains on the same IP (name-based virtual hosting).
+Discovery Tool	DNS-based (public or internal DNS).	Header-based (by manipulating the Host: header).
+Depends On	Public DNS records or internal DNS resolution.	Web server configuration — not DNS.
+Example	api.google.com → resolves via DNS.	admin.site.local → doesn’t resolve unless added to /etc/hosts, but still served by Apache/Nginx.
+Common Usage	Real-world, public-facing domains.	Internal apps, staging, dev panels, admin portals.
+How to Fuzz	Replace FUZZ in the URL (e.g. http://FUZZ.site.com).	Replace FUZZ in the Host header, hitting the IP or base domain.
+🚦 When to Use Subdomain Fuzzing
+Use this when:
+
+✅ The domain is public or resolves (e.g. academy.htb)
+✅ You want to see what DNS records exist
+✅ You're mapping a wider external attack surface
+✅ You can hit the internet or internal DNS
+
+bash
+Copy
+Edit
+ffuf -w wordlist.txt:FUZZ -u http://FUZZ.site.com/
+🧠 Real-world example: Trying to find dev, staging, or admin on a publicly hosted site? Use this.
+
+🕵️‍♂️ When to Use VHost Fuzzing
+Use this when:
+
+✅ You're dealing with a box IP or one domain only
+✅ Subdomain fuzzing gave you nothing
+✅ You're in an internal pentest, HTB-style lab, or CTF
+✅ You suspect name-based virtual hosting
+
+bash
+Copy
+Edit
+ffuf -w wordlist.txt:FUZZ -u http://academy.htb:PORT/ -H "Host: FUZZ.academy.htb"
+🧠 Real-world example: academy.htb resolves, but nothing cool is found. You send Host: admin.academy.htb — the box says “welcome admin” = jackpot. Now add it to /etc/hosts.
+
+⚔️ TL;DR — Got This? Do That
+Situation	Tool/Method
+You have a domain and want to find what DNS subdomains exist	Use subdomain fuzzing with FUZZ.domain.com
+You have a domain or IP, and suspect other sites might be served from the same host	Use vhost fuzzing with -H "Host: FUZZ.domain.com"
+You get a message like “Admin panel moved to admin.site”	Try vhost fuzzing or manually add to /etc/hosts
+Subdomain fuzzing returns nothing, but you suspect there's more	Flip to vhost fuzzing — always try both if in doubt
