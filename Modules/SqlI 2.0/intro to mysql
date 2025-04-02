@@ -146,3 +146,85 @@ CREATE TABLE logins (
     PRIMARY KEY (id)
     );
 Note: Allow 10-15 seconds for the servers in the questions to start, to allow enough time for Apache/MySQL to initiate and run.
+
+GPT SUKMMARY 
+🔑 Foundational Concepts Recap:
+✅ What is SQL used for?
+Retrieving, updating, deleting data
+
+Creating databases/tables
+
+Managing users and permissions
+
+✅ Accessing MySQL:
+bash
+Copy
+Edit
+mysql -u root -p        # prompt for password
+mysql -u root -p<pass>  # avoid (can leak in history)
+mysql -u root -h <host> -P <port> -p
+Default port: 3306
+
+-p (password) — no space between -p and password
+
+-P (port) — uppercase P for port
+
+🛠️ Database Setup:
+🧱 Creating a Database:
+sql
+Copy
+Edit
+CREATE DATABASE users;
+SHOW DATABASES;
+USE users;
+USE is case-insensitive, but DB names are case-sensitive
+
+📋 Tables & Structure:
+✅ Creating a Table:
+sql
+Copy
+Edit
+CREATE TABLE logins (
+    id INT,
+    username VARCHAR(100),
+    password VARCHAR(100),
+    date_of_joining DATETIME
+);
+✅ Viewing Tables & Structure:
+sql
+Copy
+Edit
+SHOW TABLES;
+DESCRIBE logins;
+🧩 Table Properties:
+AUTO_INCREMENT → Automatically increments on inserts
+
+NOT NULL → Field is required
+
+UNIQUE → No duplicates allowed
+
+DEFAULT NOW() → Default to current timestamp
+
+PRIMARY KEY (id) → Uniquely identifies each row
+
+🔄 Final Version:
+sql
+Copy
+Edit
+CREATE TABLE logins (
+    id INT NOT NULL AUTO_INCREMENT,
+    username VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(100) NOT NULL,
+    date_of_joining DATETIME DEFAULT NOW(),
+    PRIMARY KEY (id)
+);
+💭 Mindset Shift for SQLi:
+You're already thinking in the right direction, bro:
+
+If input reflects an error → vulnerability likely exists
+
+Error-handling → breadcrumb to exploit path
+
+UNION + NULLs come later — when we start crafting payloads after we know SQLi is possible
+
+
