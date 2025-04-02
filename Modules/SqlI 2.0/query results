@@ -1,0 +1,50 @@
+🔍 Core Concepts Recap – Query Results
+✅ ORDER BY
+Sorts the result of a query.
+
+Default is ASC (ascending); can specify DESC (descending).
+
+Can sort by multiple columns:
+
+sql
+Copy
+Edit
+ORDER BY column1 ASC, column2 DESC;
+✅ LIMIT
+Restricts the number of results returned.
+
+You can add an offset like so:
+
+sql
+Copy
+Edit
+SELECT * FROM logins LIMIT 2;       -- returns first 2 rows
+SELECT * FROM logins LIMIT 1, 2;    -- starts at 2nd row, gets 2 results
+✅ WHERE
+Filters based on condition:
+
+sql
+Copy
+Edit
+SELECT * FROM logins WHERE id = 1;
+SELECT * FROM logins WHERE username = 'admin';
+✅ LIKE
+Pattern matching using:
+
+% → any number of characters
+
+_ → exactly one character
+
+sql
+Copy
+Edit
+WHERE username LIKE 'admin%'   -- admin, administrator
+WHERE username LIKE '___'      -- tom
+When it comes to SQLi, ORDER BY, LIMIT, and LIKE are often used to:
+
+Enumerate column counts (ORDER BY 1, ORDER BY 2, etc.)
+
+Extract limited data to avoid detection
+
+Blind SQLi responses 
+
