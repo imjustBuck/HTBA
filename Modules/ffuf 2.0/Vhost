@@ -1,0 +1,68 @@
+🧠 Concept Recap: VHost vs Subdomain
+Subdomain fuzzing relies on public DNS — if it's not published, it won't resolve.
+
+VHost fuzzing sends requests directly to the IP with different Host: headers, tricking the server into revealing which internal vhosts exist.
+
+✅ When to Use VHost Fuzzing
+Got This?
+
+You have an IP + domain (e.g. academy.htb)
+
+You've already added it to /etc/hosts
+
+You suspect there's a vhost like admin.academy.htb
+
+Regular subdomain fuzzing didn’t return anything
+
+Do That:
+Run:
+
+bash
+Copy
+Edit
+ffuf -w /opt/useful/seclists/Discovery/DNS/subdomains-top1million-5000.txt:FUZZ \
+-u http://academy.htb:PORT/ \
+-H 'Host: FUZZ.academy.htb' \
+-c -v
+🎯 How Do I Know I Found Something?
+When you run that fuzz:
+
+Most responses will have the same size/status — likely all 200 OK with the same size.
+
+When a VHost is valid, the response will stand out by:
+
+Having a different size
+
+Possibly redirecting (302)
+
+Or even showing unique titles/content
+
+💡 Use -fs to filter out repeated junk like:
+
+bash
+Copy
+Edit
+-fs 900  # Filter size 900 if all default junk responses are 900 bytes
+🧪 Example of a Successful Hit:
+Let’s say the following line pops up:
+
+yaml
+Copy
+Edit
+admin                   [Status: 200, Size: 1732, Words: 201, Lines: 36]
+While all others are:
+
+yaml
+Copy
+Edit
+xyz                     [Status: 200, Size: 900, Words: 90, Lines: 12]
+🟢 That Size: 1732 is the odd one out = likely a real VHost.
+
+🛠️ Tip for Real Engagements or Exams:
+Once you find a valid VHost like admin.academy.htb, immediately do:
+
+bash
+Copy
+Edit
+sudo echo "IP admin.academy.htb" >> /etc/hosts
+Then revisit it in the browser or curl it to test for login portals, APIs, etc.
