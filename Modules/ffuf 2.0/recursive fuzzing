@@ -1,0 +1,36 @@
+🔁 If This, Then That: Recursive Fuzzing
+Situation	Then Do This
+You find one or two dirs like /blog/ or /forum/	🔄 Use -recursion -recursion-depth 1 to auto-dive deeper
+You don’t want to scan too deep and waste time	Set a cap: -recursion-depth 1 or 2 max
+You’re seeing nested paths like /users/settings/preferences	Consider bumping depth to 2–3 only if prior paths are fruitful
+All discovered paths are shallow (e.g. /blog/index.php)	Keep -recursion-depth 1, no need to dig further
+You want clean output for reporting	Add -v and -o results.json -of json for structured logging
+You know extension site-wide (e.g. PHP)	Use -e .php to double the scan efficiency
+You’re testing locally (HTB, Pwnbox)	Can crank up threads (-t 100+) for speed 🔥
+🧠 Pro Tips
+Use --maxtime or --maxtime-job if you need to limit long recursive scans.
+
+Combine with -fc 403 if you’re getting spammed by permission-denied junk.
+
+Use recursion early, but refine it often. Don't just leave it running for hours without reviewing results.
+
+🧪 Sample Commands to Keep Handy
+Basic Recursive Directory Fuzzing:
+
+bash
+Copy
+Edit
+ffuf -w /opt/useful/seclists/Discovery/Web-Content/common.txt:FUZZ -u http://IP/FUZZ -recursion -recursion-depth 1 -v
+Recursive + PHP Focus:
+
+bash
+Copy
+Edit
+ffuf -w /opt/useful/seclists/Discovery/Web-Content/directory-list-2.3-small.txt:FUZZ \
+-u http://IP/FUZZ -recursion -recursion-depth 2 -e .php -v
+Targeted High-Speed Recon:
+
+bash
+Copy
+Edit
+ffuf -w ./cms-specific.txt:FUZZ -u http://IP/FUZZ -recursion -recursion-depth 1 -e .php -t 100 -v
