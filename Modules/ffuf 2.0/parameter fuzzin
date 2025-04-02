@@ -1,0 +1,77 @@
+💡 Parameter Fuzzing TL;DR
+Type	URL Placement	ffuf Flag	When to Use	Note
+GET	In the query string (?FUZZ=value)	-u	To discover hidden GET params	Easiest to spot
+POST	In the body (param=FUZZ)	-X POST -d	When backend uses POST forms	Add content-type
+Value	Replace the value (param=FUZZ)	-d or -u	To find correct ID/Token/Key	Can brute force
+🧠 "Got This? Do That" Fuzzing Flow
+🔎 1. Discovered a Page That Says "Access Denied" or Looks Role-Sensitive?
+→ Try GET parameter fuzzing
+
+bash
+Copy
+Edit
+ffuf -w burp-parameter-names.txt:FUZZ \
+     -u http://target/page.php?FUZZ=value \
+     -fs [default_response_size]
+✔ Filters out false positives
+✔ Use -mc if 403s matter
+✔ Visit any 200s manually
+
+🛠️ 2. You Think the Backend Uses Forms or POST Auth?
+→ Try POST parameter fuzzing
+
+bash
+Copy
+Edit
+ffuf -w burp-parameter-names.txt:FUZZ \
+     -u http://target/page.php \
+     -X POST -d 'FUZZ=value' \
+     -H 'Content-Type: application/x-www-form-urlencoded' \
+     -fs [default_response_size]
+✔ If you get new response size/status → potential hidden logic
+✔ If unsure, replay with curl or Burp
+
+🔐 3. Found a Parameter, but Now You Need the Right Value?
+→ Fuzz Parameter Values
+
+✅ Build a list of likely values:
+
+bash
+Copy
+Edit
+seq 1 1000 > ids.txt
+🔥 Fuzz it:
+
+bash
+Copy
+Edit
+ffuf -w ids.txt:FUZZ \
+     -u http://target/page.php \
+     -X POST -d 'id=FUZZ' \
+     -H 'Content-Type: application/x-www-form-urlencoded' \
+     -fs [default_response_size]
+✔ Could be:
+
+Numeric IDs
+
+UUIDs
+
+API keys
+
+Role values (admin, staff, etc)
+
+You could also try things like: -w usernames.txt:FUZZ -d 'user=FUZZ' if testing access by username
+
+💣 Pro Tips
+Always check page source code, JS files, or Burp history for parameter clues
+
+Don’t just test with “key” — try known values, case flips, even empty (=, =0)
+
+FFUF Filters:
+
+-fs = filter by response size (used most)
+
+-fc = filter by response code
+
+-fw = filter by word count (optional but dope when responses are similar)
+
