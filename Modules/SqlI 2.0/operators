@@ -1,0 +1,59 @@
+🔧 SQL Logical Operators – Breakdown for Your Workflow
+✅ AND
+Both conditions must be true
+
+Used when narrowing down/filtering for very specific matches
+
+SELECT * FROM users WHERE username != 'john' AND id > 1;
+
+✅ OR
+Only one condition needs to be true
+
+Good for broadening results
+
+SELECT * FROM users WHERE username = 'john' OR id < 2;
+
+✅ NOT
+Inverts the result (true ➝ false, false ➝ true)
+
+SELECT * FROM users WHERE NOT id = 1;
+
+Can be written as: username != 'john' or !username = 'john'
+
+✅ Symbol Equivalents
+Word	Symbol
+AND	&&
+OR	`
+NOT	!
+NOT EQUAL	!= or <>
+These show up a lot in injections too — worth memorizing.
+
+⚖️ Operator Precedence (Execution Order)
+Think like a mini PEMDAS for SQL:
+
+/ * % (division, multiplication, modulus)
+
++ - (addition, subtraction)
+
+Comparison: = != > < <= >= LIKE
+
+NOT or !
+
+AND or &&
+
+OR or ||
+
+✅ TIP: Always wrap logical conditions in () when chaining to avoid confusion and control eval order.
+
+sql
+Copy
+Edit
+SELECT * FROM logins WHERE (username != 'tom') AND (id > 1);
+🧠 Mindset Tip:
+When SQLi kicks off, and you’re trying to break logic or exploit a boolean injection, these operators will come into play hard:
+
+admin' OR 1=1--
+
+admin' AND 1=2--
+
+So knowing exactly what they return (true or false) will help you manipulate control flow like a boss.
