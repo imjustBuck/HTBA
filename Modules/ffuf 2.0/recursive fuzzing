@@ -34,3 +34,127 @@ bash
 Copy
 Edit
 ffuf -w ./cms-specific.txt:FUZZ -u http://IP/FUZZ -recursion -recursion-depth 1 -e .php -t 100 -v
+
+✅ Start with -recursion-depth 1
+Gets top-level dirs and their immediate children.
+
+Keeps speed decent (~2–3x slower than flat scan).
+
+Gives you enough visibility without overwhelming noise or timeouts.
+
+🔍 Then Decide If You Wanna Go Deeper:
+Once you identify interesting paths like:
+
+/blog/admin/
+
+/dashboard/dev/
+
+/backup/2022/
+
+👉 You can manually recurse those with a targeted scan, like:
+
+bash
+Copy
+Edit
+ffuf -w /opt/useful/seclists/Discovery/Web-Content/directory-list-2.3-small.txt:FUZZ \
+-u http://target/backup/FUZZ -recursion -recursion-depth 1 -e .php -v
+That way you're not going full "scan the Mariana Trench" mode by accident and wasting 20+ minutes.
+
+❌ Avoid -recursion-depth 5 Off Rip Unless…
+You're super scoped in (e.g., /staging/ or /test/) and want the full tree.
+
+You're running it overnight and don't care about speed.
+
+You're triaging one directory and need full context.
+
+🧠 TL;DR Flow:
+pgsql
+Copy
+Edit
+Run recursion with depth 1 ➜ analyze hits ➜ recurse interesting ones manually
+Keeps it fast, focused, and doesn't murder your box or network. You nailed it, Buck.
+
+
+
+🧪 Example Output (Recursive Depth 1)
+Let’s say you run:
+
+bash
+Copy
+Edit
+ffuf -w directory-list-2.3-small.txt:FUZZ -u http://target/FUZZ \
+-recursion -recursion-depth 1 -e .php -v
+You get these results:
+
+text
+Copy
+Edit
+[Status: 301, Size: 330] | URL | http://target/admin/
+[Status: 200, Size: 1200] | URL | http://target/admin/login.php
+[Status: 200, Size: 900]  | URL | http://target/admin/settings.php
+[Status: 301, Size: 330] | URL | http://target/admin/config/
+🎯 Why This Is Worth Going Deeper
+/admin/ returns pages, not just empty 200s or redirects.
+
+You found a nested directory: /admin/config/
+
+That directory wasn’t fuzzed yet — you stopped at depth 1.
+
+✅ Trigger for Depth 2:
+Now that /admin/config/ exists…
+
+Run a targeted depth 1 again on that new directory:
+
+bash
+Copy
+Edit
+ffuf -w directory-list-2.3-small.txt:FUZZ -u http://target/admin/config/FUZZ \
+-recursion -recursion-depth 1 -e .php -v
+If that returns files like:
+
+text
+Copy
+Edit
+[Status: 200, Size: 1150] | URL | http://target/admin/config/db.php
+[Status: 200, Size: 840]  | URL | http://target/admin/config/keys.php
+💥 That’s depth 2 doing work.
+
+❌ When Not to Go Deeper:
+Let’s say you get:
+
+text
+Copy
+Edit
+[Status: 301, Size: 330] | URL | http://target/css/
+[Status: 200, Size: 0]   | URL | http://target/css/main.css
+Or:
+
+text
+Copy
+Edit
+[Status: 200, Size: 0]   | URL | http://target/images/
+You don't need to recurse:
+
+Static folders (images, css, js, fonts)
+
+Empty folders or ones returning junk
+
+Repeated 403s or 404s
+
+🧠 Rule of Thumb:
+If You See…	Do This
+index.php, login.php, config/, or any dynamic-looking file	Go deeper
+Static stuff (.css, .jpg, /assets/)	Skip
+More subdirs in a found directory	Run another depth-1 from that subdir
+403s?	Try other wordlists or switch to param fuzzing
+So yeah, you're not just watching for hits, you're hunting for:
+
+Nested directories 🔁
+
+Dynamic files 💻
+
+Config or admin stuff 🛑
+
+Auth or input functionality 🔑
+
+Once you hit those? Depth 2 is calling.
