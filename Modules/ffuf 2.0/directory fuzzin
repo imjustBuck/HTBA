@@ -43,5 +43,20 @@ arduino
 Copy
 Edit
 http://SERVER_IP:PORT/blog
-Even if it looks empty — it’s fair game to fuzz /blog/FUZZ next.
 
+🛠️ FFUF Command – Fuzzing Inside /blog/
+bash
+Copy
+Edit
+ffuf -w /opt/useful/seclists/Discovery/Web-Content/common.txt:FUZZ \
+     -u http://SERVER_IP:PORT/blog/FUZZ \
+     -fc 404 -t 40 -o blog-subdir-scan.txt
+🔍 Breakdown:
+Option	Meaning
+-w	Using common.txt since we’re looking for files/pages now, not massive discovery
+-u	URL target: /blog/FUZZ
+-fc 404	Filter out “Not Found” pages
+-t 40	40 threads for good speed
+-o	Save results to file for reference or report writing
+🧠 If This, Then That for /blog/ Scan
+| Found /blog/login | Try common creds or test for auth bypass (hint: SQLi 👀) | | Found /blog/admin | Look for misconfigs or broken access control | | Found /blog/index.php.bak | Jackpot – could reveal code | | Found /blog/config | Possible static secrets or backup | | Found nothing | Try bigger wordlist or check for case sensitivity, e.g., Blog, BLOG |
