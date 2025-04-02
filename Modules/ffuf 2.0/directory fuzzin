@@ -1,0 +1,47 @@
+🧠 If This, Then FFUF That — Directory Fuzzing
+🧩 Situation	🧨 What To Do
+You’re testing a root URL and want to see what folders exist	Fuzz /FUZZ with a directory list
+You get back HTTP 200/301/302	Directory probably exists — try visiting it
+You get a hit like /blog but it looks empty	It may have hidden subpages — enumerate deeper in next steps
+You get a ton of 403s	Consider filtering them with -fc 403 or checking if there's an index.html missing
+Response is always the same size (e.g., size 42)	Use -fs 42 to filter out false positives
+Target is slow or rate-limiting	Decrease threads (-t 20), use delay, or try -rate flag
+🛠️ FFUF Workflow: First Pass Fuzz
+bash
+Copy
+Edit
+ffuf -w /opt/useful/seclists/Discovery/Web-Content/directory-list-2.3-small.txt:FUZZ \
+     -u http://SERVER_IP:PORT/FUZZ \
+     -fc 404 -t 40 -o scan-root-dir.txt
+This will:
+
+Fuzz for root directories
+
+Ignore 404 pages
+
+Run with 40 threads (balanced speed)
+
+Output to a file
+
+🚦 Response Status Code Meanings in FFUF
+Status	Meaning
+200	Valid page
+301/302	Redirect — usually valid path
+403	Forbidden (may still exist)
+404	Not Found (usually ignored)
+500	Internal error (could be exploitable)
+✅ Confirming Hits
+Once you get something like:
+
+yaml
+Copy
+Edit
+blog                    [Status: 301, Size: 326, Words: 20, Lines: 10]
+You visit:
+
+arduino
+Copy
+Edit
+http://SERVER_IP:PORT/blog
+Even if it looks empty — it’s fair game to fuzz /blog/FUZZ next.
+
