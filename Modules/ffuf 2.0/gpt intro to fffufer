@@ -1,0 +1,40 @@
+🔎 If This, Then FFUF That:
+Situation	Use FFUF To	Example
+You see a web server running but only a blank page or 403	Discover hidden routes	ffuf -u http://target/FUZZ -w /wordlist.txt
+App returns a login panel or has forms	Look for /admin, /panel, /login, etc.	Use SecLists/Discovery/Web-Content/ wordlists
+You found dev.target.com in SSL cert or headers	Bruteforce subdomains or VHOSTs	ffuf -u http://target/ -H "Host: FUZZ.target.com" -w subdomains.txt
+Weird behavior suggests VHOST routing	Try VHOST fuzzing	Add discovered hostnames to /etc/hosts
+You get a hit but 403 status	Try different extensions or headers	Use -e .php,.bak or header fuzzing
+You find /uploads/, /backup/, /config/	Look for exposed files	Use file wordlists like raft-small-files.txt or common.txt
+🧠 Smart Wordlist Choices
+Goal	Wordlist Suggestions
+Directory brute	SecLists/Discovery/Web-Content/raft-medium-directories.txt, common.txt, directory-list-2.3-medium.txt
+File brute	raft-small-files.txt, extensions_common.txt
+Hidden params	burp-parameter-names.txt, params.txt
+VHOST/Subdomain	subdomains-top1million-5000.txt, dns-Jhaddix.txt
+Admin Panels	admin-panels.txt, CMS-scanners/ in SecLists
+⚙️ Example FFUF Usage Patterns
+Directory Fuzzing
+
+bash
+Copy
+Edit
+ffuf -u http://10.10.11.11/FUZZ -w /usr/share/seclists/Discovery/Web-Content/common.txt -t 100 -fc 403
+VHOST Fuzzing
+
+bash
+Copy
+Edit
+ffuf -u http://10.10.11.11/ -H "Host: FUZZ.target.local" -w subdomains.txt -fs 4242
+File Extension Fuzzing
+
+bash
+Copy
+Edit
+ffuf -u http://10.10.11.11/FUZZ -w wordlist.txt -e .php,.html,.bak -fc 404
+Parameter Fuzzing
+
+bash
+Copy
+Edit
+ffuf -u "http://10.10.11.11/index.php?FUZZ=test" -w /usr/share/seclists/Discovery/Web-Content/burp-parameter
