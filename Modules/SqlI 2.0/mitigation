@@ -1,0 +1,71 @@
+🔐 SQL Injection Mitigation Summary (for reports / write-ups)
+✅ 1. Input Sanitization
+What it is: Escaping harmful characters (like ', ", ;, etc.) so they lose their special SQL meaning.
+
+How it works: Functions like mysqli_real_escape_string() escape dangerous input so it’s treated as a literal string, not executable SQL.
+
+Limitation: It's better than nothing, but still considered a weaker fix vs prepared statements. Can still be bypassed in some edge cases.
+
+✅ 2. Input Validation
+What it is: Only allowing expected input — like validating that a port code is letters-only using regex.
+
+Example:
+
+php
+Copy
+Edit
+$pattern = "/^[A-Za-z\s]+$/";
+if(!preg_match($pattern, $_GET['port_code'])) {
+  die("Invalid input");
+}
+Purpose: Blocks clearly malicious input (like SQL syntax) before it even reaches the query.
+
+Limitation: May break functionality if not carefully implemented. Best used with other methods.
+
+✅ 3. Least Privilege DB Accounts
+What it is: Running the web app with a low-privilege DB user (e.g., only has SELECT access).
+
+Why it matters: Even if SQLi is successful, the attacker is limited — can’t DROP TABLE, write files, or load sensitive data.
+
+Ideal Setup:
+
+✅ reader user with SELECT on a single table
+
+❌ No access to mysql.user, information_schema, etc.
+
+✅ 4. Parameterized Queries / Prepared Statements
+What it is: Defining the SQL structure first, then passing input separately as parameters.
+
+Why it's strong: No matter what the input contains, it's never executed as part of the SQL syntax.
+
+Example (PHP - MySQLi):
+
+php
+Copy
+Edit
+$query = "SELECT * FROM logins WHERE username=? AND password=?";
+$stmt = mysqli_prepare($conn, $query);
+mysqli_stmt_bind_param($stmt, 'ss', $username, $password);
+mysqli_stmt_execute($stmt);
+✅ 5. Web Application Firewalls (WAF)
+What it is: Filters requests for malicious patterns (e.g., UNION SELECT, INFORMATION_SCHEMA, ' OR 1=1--).
+
+Example Tools:
+
+🛡️ ModSecurity (Open Source)
+
+🛡️ Cloudflare WAF / AWS WAF / Azure WAF
+
+Pro: Works as a last line of defense even if code is vulnerable.
+
+Con: Can be bypassed by skilled attackers using obfuscation.
+
+🔚 Conclusion Tips for Reports
+Combine input sanitization + validation + parameterized queries for best results.
+
+Avoid root/superuser DB accounts for apps.
+
+Consider implementing a WAF for an additional security layer.
+
+Always test your apps with tools like sqlmap, Burp Suite, or manual testing to verify security.
+
