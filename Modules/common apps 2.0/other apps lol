@@ -1,0 +1,45 @@
+🔄 Summary: What This Section Actually Says
+Real-life networks are messy.
+
+You won’t always see the exact 9 apps from the modules.
+
+But if you know how to fingerprint, enumerate, and exploit apps? You’re fine.
+
+Your scans will be noisy.
+
+EyeWitness reports might be 500+ pages deep.
+
+The gold (like forgotten Jenkins boxes or default creds on Axis2) is there if you keep digging.
+
+Think modular, not memorized.
+
+Did you learn how to:
+
+Spot login portals?
+
+Try default creds?
+
+Recognize Git repos with secrets?
+
+Abuse APIs like Zabbix?
+
+Throw a .war or .aar for RCE?
+
+Then you’ve got what you need.
+
+🔥 Honorable Mentions – What to Actually Do When You See These:
+App	What To Do
+Axis2	Check for admin:axis2. If in, upload AAR (Axis2 service webshell) or use Metasploit.
+WebSphere	Try system:manager, deploy .war shell, get RCE.
+Elasticsearch	Check for old unauthenticated APIs, maybe /_search or file disclosure.
+Zabbix	Abuse API → execute remote commands. CVEs and built-in features both dangerous.
+Nagios	Try nagiosadmin:PASSW0RD, fingerprint version, look for RCE or privesc.
+WebLogic	Check for Java deserialization RCEs (lots of unauth RCEs over the years).
+Internal Wikis / SharePoint	Search for credentials, SSH keys, secrets, etc.
+DotNetNuke (DNN)	Look for file upload, auth bypass, XSS. It’s a classic .NET mess.
+vCenter	Try CVE-2021-22005 (OVA upload RCE), weak creds, or privesc (JuicyPotato if Windows).
+🧠 TL;DR Mental Model
+Find a weird web app? → Fingerprint it.
+Find login panel? → Try default creds.
+Get a version number? → Google public exploits.
+Nothing works? → Look for built-in features you can abuse.
