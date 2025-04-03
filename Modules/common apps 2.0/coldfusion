@@ -1,0 +1,74 @@
+🧠 Summary: ColdFusion in CPTS Terms
+You’re likely to encounter this on web-facing Windows targets, often tied to ColdFusion 8-11.
+
+It’s old and dusty, but if you see port 8500 open, or directories like /CFIDE or .cfm extensions, you might have a juicy RCE or LFI.
+
+This is post-scan/post-enum, not a first-hit vector unless you immediately see ColdFusion signs in Nmap or HTTP responses.
+
+⚔️ CPTS Workflow: ColdFusion Enumeration & Exploitation
+✅ Discovery
+Nmap: Port 8500 open → suspicious.
+
+Check HTTP paths:
+
+/CFIDE/administrator/
+
+/cfdocs/
+
+Look for .cfm, .cfc extensions
+
+✅ Vulnerability Identification
+Run searchsploit adobe coldfusion
+
+Match ColdFusion version (e.g., v8) to:
+
+CVE-2010-2861: Directory Traversal → password.properties loot
+
+CVE-2009-2265: Unauth RCE via FCKeditor upload
+
+✅ Exploitation
+Directory Traversal
+
+Use: /CFIDE/administrator/settings/mappings.cfm?locale=../../../../etc/passwd
+
+Or run Python exploit 14641.py with:
+
+nginx
+Copy
+Edit
+python2 14641.py <ip> 8500 "../../../../ColdFusion8/lib/password.properties"
+Unauthenticated RCE
+
+Upload payload via vulnerable endpoint:
+
+swift
+Copy
+Edit
+/CFIDE/scripts/ajax/FCKeditor/editor/filemanager/connectors/cfm/upload.cfm
+Run 50057.py with proper lhost, rhost, lport
+
+🔁 If This, Then That (ITTT)
+Got This	Do That
+Port 8500 open	Check /CFIDE/administrator/ path
+.cfm files or ColdFusion headers	Identify version (ColdFusion 8, 9, 11 etc.)
+Can access /CFIDE/...	Try LFI with locale=../../... (CVE-2010-2861)
+Version = ColdFusion 8	Try RCE exploit 50057.py for unauthenticated file upload
+Got password.properties	Look for credentials or decrypt hashes for lateral move
+Nothing juicy via traversal	Try uploading and triggering .jsp webshell
+.cfm errors show up	Check if query strings allow command injection (cfexecute abuse)
+🧩 Hints & Patterns
+CFIDE folder is like the “admin panel” dead giveaway.
+
+ColdFusion loves verbose error messages — input random junk to get error-based versioning.
+
+If your .jsp shell path ends in .jsp/yourfile.txt in response → backtrack and test just .jsp.
+
+Payload naming is often UUID-style — watch for the response from 50057.py to copy the right shell path.
+
+💭 Real Talk (CPTS Mental Model)
+You’re not expected to memorize the exact exploits.
+
+You're expected to recognize the tech, identify vuln fingerprints, and execute known exploitation paths efficiently.
+
+ColdFusion = legacy tech with legacy flaws. If you spot it, 99% chance you can pop it.
+
