@@ -1,0 +1,85 @@
+🧭 Initial Workflow - Enumeration & Recon (Before Touching Anything)
+If This...	Then That...
+You’re given CIDRs, hostnames, or scope ranges	Drop into your notes as Scope List and tag each with testing windows/flags
+You're unsure what ports to scan	Start with nmap -p 80,443,8000,8080,8180,8888,10000 and expand from there
+You find lots of HTTP/S services	Use EyeWitness or Aquatone to screenshot everything and fingerprint tech
+You discover a hostname with -dev, -qa, -test	Flag it for likely weak auth, debug features, or dev creds
+You find Splunk, PRTG, Jenkins, GitLab, etc.	Mark them priority targets – usually juicy and poorly secured
+You find lots of ports, Windows & Linux mixed in	Group hosts by OS + Services for later deep diving
+🛠️ Tooling Notes
+Tool	When to Use
+nmap	Use with --open -sV -oA for both initial port + service version scanning
+EyeWitness	Feed it .xml from Nmap/Nessus to get screenshots + default creds suggestions
+Aquatone	Use with .xml or .txt list if you want lighter/faster scanning/screenshotting
+Nessus	Use if allowed for full vuln discovery (helps with patch level gaps)
+📒 Note-Taking Framework Example
+diff
+Copy
+Edit
+🗂️ Project: External Pentest - ACME Inc
+
+📌 Scope
+- 10.129.201.50
+- app-dev.inlanefreight.local
+
+📌 Discovery
+- 🔍 Nmap Scan: [Command used] + timestamp
+- 👁️ EyeWitness output folder path
+- 📸 Aquatone report + screenshots folder
+
+📌 Interesting Hosts:
+- gitlab-dev.inlanefreight.local – public Git? Dev creds? CI leaks?
+- jenkins.inlanefreight.local – default creds + WAR file possible?
+- app-dev.inlanefreight.local:8000 – weird port + open access
+
+📌 Follow-Up Actions:
+- Try admin/admin on Jenkins
+- Check Splunk 8000/8089 for default creds
+- Check HTTP headers for CMS tech
+💡 Hidden Hints & Enumeration Patterns
+Pattern	What to Think
+/manager, /host-manager in Tomcat	WAR file upload → RCE if default creds exist
+/admin, /dashboard, /panel	Try weak creds; if denied, fuzz params or cookies
+Ports 8000, 8080, 8443, 10000	Dev portals, alt UIs, admin interfaces – juicy, often forgotten
+Hostnames like support-dev or osticket	osTicket / Helpdesk systems = great for social + credential harvesting
+GitLab URLs	Look for public projects, README.md, .env, .git/config, .gitignore files
+Splunk without auth	Trial expired? You can read dashboards, run queries, maybe RCE (later section)
+Static size (e.g., 900 bytes 200 OK)	Likely default or placeholder page – filter these with -fs in ffuf
+⏩ Post-Enumeration Prioritization Cheat Sheet
+Service / App	What to Try / Look For
+Tomcat	/manager/html, /host-manager/html – default creds, WAR upload
+Jenkins	Check for open dashboard → script console → Groovy RCE
+GitLab	Public repos, secrets in .env / .git folder
+Splunk	No-auth dashboards, exposed API endpoints
+osTicket	Register → ticket interaction → spoofing support
+PRTG / Nagios	Weak/default creds, plugin exploits
+Custom CMS	Tech stack fingerprinting → then test for file uploads, XSS, auth bypass
+✅ Summary Strategy for Enumeration
+Kickoff Scans
+
+Ping sweep, port scan (nmap), web port-focused scan
+
+Web App Inventory
+
+EyeWitness & Aquatone against output
+
+Tag & Track
+
+Flag high-interest apps (Jenkins, Splunk, GitLab, etc.)
+
+Dev / QA / Test = weak links
+
+Log Everything
+
+Nmap syntax
+
+Timestamps
+
+App discovered + port + URL
+
+Screenshot paths
+
+Prep for App Exploitation
+
+Once apps are fingerprinted, reference “Attacking Common Apps” playbooks
+
