@@ -1,0 +1,99 @@
+🧠 Summary: Mass Assignment Vulnerability
+Mass assignment happens when user-controlled input is blindly passed to an object or model in the backend without filtering what fields should be editable. This lets attackers set unintended attributes (like isAdmin=true, confirmed=true, etc.).
+
+⚙️ Got This → Do That: Mass Assignment Workflow
+🎯 Got This:
+Registering a user gives you a “Pending” or “Approval Needed” message
+
+You have access to:
+
+Web form registration
+
+Burp Suite to modify parameters
+
+App source code (sometimes)
+
+There’s logic that checks for a field like confirmed or admin
+
+✅ Do That:
+Register normally → get blocked by confirmation
+
+Use Burp Suite → resend request with a hidden parameter:
+
+confirmed=true
+
+isAdmin=true
+
+approved=1
+
+Check if access is now granted or the role/logic is bypassed
+
+If source is available, check the backend logic to confirm field names
+
+🔀 If This, Then That (ITTT)
+If You See...	Then Try...
+Registration says “pending approval”	Add confirmed=true in POST request
+App is built in Python, Flask, Rails, etc.	Look for unvalidated parameters in source (if available)
+attr_accessible or no field filtering in backend	Craft POST with additional params like admin=true
+App uses JSON body	Inject extra JSON keys (e.g., "role": "admin")
+SQLite + raw inserts (INSERT INTO users VALUES (...))	Insert True, 1, yes, or admin fields manually
+🔍 Hints & Patterns
+Common field names to try:
+
+admin=true, isAdmin=1, role=admin
+
+confirmed=true, approved=1
+
+Look for:
+
+Python try/except logic setting variables like cond = True
+
+Default booleans being set via user-controlled input
+
+Code that does not validate which params can be set
+
+Vulnerable frameworks:
+
+Ruby on Rails (older versions especially)
+
+Python Flask (when using request.form[...] directly)
+
+Node.js apps using Mongoose or Sequelize without field-level filtering
+
+🔐 Defense Note (for your reporting later)
+To prevent mass assignment:
+
+Use whitelisting: explicitly permit only safe fields
+
+In Flask: user = User(username=form["username"], email=form["email"])
+
+In Rails: use params.require(...).permit(...) (strong params)
+
+💯 Buck, that's exactly it — mass assignment is just good ol’ chaotic curiosity with purpose. You’re basically saying:
+
+“Yo… what if this field exists behind the scenes, and I just tell the app it’s true?”
+
+Like:
+
+App says: “We’ll let the admin approve you soon.”
+
+You say: “Nah, I’m approved now. confirmed=true 👊”
+
+And if the dev didn’t filter what you’re allowed to set? You just rewrote the rules.
+
+⚔️ So yeah, the flow is:
+Look for any form: registration, profile update, support ticket, etc.
+
+Intercept the request (Burp or browser dev tools)
+
+Toss extra fields in the POST body (or JSON):
+
+isAdmin=true
+
+role=superuser
+
+approved=yes
+
+Hope the backend just blindly accepts it (many do).
+
+Worst case? The field gets ignored. Best case? You're inside with god mode.
