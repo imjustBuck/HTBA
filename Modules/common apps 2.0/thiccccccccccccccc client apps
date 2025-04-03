@@ -1,0 +1,170 @@
+🔍 SUMMARY: Thick Client Assessment (HTB Module)
+What It Is:
+
+Apps installed locally (not browser-based), often custom-built for orgs.
+
+Common in enterprise environments for project tracking, inventory, support, etc.
+
+Built with languages like .NET, Java, C++, Silverlight.
+
+Key Attack Vectors:
+
+Local storage of creds/configs
+
+Hardcoded passwords, poor error handling
+
+Reverse engineering / static analysis
+
+Memory inspection / dynamic analysis
+
+DLL hijacking / binary abuse
+
+Network sniffing for sensitive traffic
+
+Server-side OWASP-type flaws (SQLi, etc.)
+
+Architecture Types:
+
+2-tier: App ↔ DB directly
+
+3-tier: App ↔ App Server ↔ DB (more secure)
+
+⚙️ WORKFLOW: Thick Client App Assessment
+markdown
+Copy
+Edit
+# Step-by-Step Engagement
+
+1. **Initial Recon**
+   - Identify architecture (2-tier vs 3-tier)
+   - Note file types: `.exe`, `.jar`, `.dll`, etc.
+   - Use tools like CFF Explorer, Detect It Easy, Strings
+
+2. **Static Analysis**
+   - Reverse app: DnSpy (for .NET), JADX (for Java), Ghidra/IDA
+   - Look for hardcoded creds, file paths, debug info
+   - Decompile any embedded binaries if found
+
+3. **Dynamic Analysis**
+   - Monitor behavior using ProcMon, TCPView, x64dbg
+   - Watch for spawned processes, dropped files
+   - Use memory tools to dump in-memory .NET assemblies
+
+4. **Network Monitoring**
+   - Wireshark / Burp to capture traffic (esp. if HTTP-based)
+   - Look for plaintext creds, API calls, SOAP/REST interactions
+
+5. **Payload Triggering**
+   - If you find base64 blobs or PowerShell scripts, decode + run
+   - Watch for dropped binaries (like restart-service.exe in this case)
+
+6. **Credential Looting**
+   - If you hit something like runas.exe with creds, try lateral movement
+   - Look for AD commands, service restarts, local admin creds
+🤖 IF THIS, THEN THAT (ITTT) DECISION TREE
+markdown
+Copy
+Edit
+IF app drops temp files
+→ Monitor Temp dir with ProcMon
+→ Disable delete perms → rerun binary
+→ Inspect dropped scripts (batch/ps1)
+
+IF batch/ps1 drops base64 content
+→ Extract + decode manually (manual reassemble)
+→ Analyze resulting executable (likely .NET)
+
+IF memory map shows MZ headers
+→ Dump memory from x64dbg
+→ Use Strings to confirm .NET signature
+→ Reverse using DnSpy + De4Dot
+
+IF .NET binary runs with hardcoded creds
+→ Check for service control or AD interaction
+→ Use creds for lateral movement (psexec, wmiexec, etc.)
+
+IF thick client communicates over network
+→ Sniff with Wireshark or Burp Suite
+→ Look for sensitive tokens, usernames, or auth headers
+🧠 HINTS & PATTERNS (REAL-WORLD / EXAM USE)
+ProcMon + x64dbg combo is killer: Always use ProcMon to find where stuff’s dropped, then x64dbg to see what’s loaded into memory.
+
+Memory dump ≠ useless blob: If you see MZ or .NETFramework in strings, you’re sitting on a reverse-engineering goldmine.
+
+Find PowerShell chains: Encoded PS in bat files is often used for lateral movement or privilege escalation.
+
+Static + Dynamic > One or the other: Reverse the binary AND monitor its runtime — lots of thick client magic is runtime-dependent.
+
+Look for RunAs logic: Hardcoded credentials are often embedded in thick clients that perform actions on behalf of users.
+
+x64dbg settings: Turn off all breakpoints except exit — avoids wasting time in DLL hell during load.
+
+🎯 CPTS CONTEXT: When to Consider a Thick Client Attack Path
+🔥 WHEN DOES THIS POP UP?
+Scenario	You Might Be Looking At a Thick Client
+You compromise a host and see custom .exe apps sitting in C:\Apps\, Desktop, Downloads, etc.	👀 Reverse engineer it — could be a thick client
+You loot SMB shares like NETLOGON, SYSVOL, shared folders and find executables, DLLs, bat/ps1 scripts	🧠 Flag for analysis — may drop or reconstruct binaries
+You're watching a process in ProcMon or tasklist that spawns other files (especially .bat, .ps1, or .tmp) in AppData\Temp	🎯 That's the thick client unpacking a payload or config
+You’re stuck on a low-priv user and find in-house tools with names like Reset-Password.exe, Restart-Service.exe, etc.	🔑 These often include hardcoded creds or invoke privileged operations
+🧠 WHAT SHOULD YOU THINK/DO WHEN YOU SEE THAT?
+Think: "If it’s homegrown and runs stuff… I’m opening it up."
+
+✅ Your CPTS Brain Should Say:
+"What’s in this .exe?"
+
+Use strings, DetectItEasy, or dnSpy if .NET.
+
+Reverse it if needed (use Ghidra, x64dbg).
+
+"Is this creating files I can steal?"
+
+Monitor AppData\Local\Temp while running it.
+
+Use ProcMon64 to track file I/O.
+
+"Is this hiding creds or spawning tools?"
+
+Look for dropped *.bat, *.ps1, or base64 blobs.
+
+Manually decode & run extracted scripts or binaries.
+
+🧩 WHEN TO JUMP INTO THIS DURING CPTS
+Phase	Trigger	Action
+Post-Initial Foothold	You land on a box and loot an SMB share or C:\ directory	Look for custom tools/exes/scripts — thick client path
+Privilege Escalation	You’re low-priv, can’t find typical Windows escalation	See if any .exe lets you interact with services / creds
+Lateral Movement	You find an executable that interacts with services or DBs	Dump its memory / reverse it to extract hardcoded passwords
+You're stuck and need creds	Nothing in memory, no hashes, no dumpable LSASS	This thick client stuff might hand you passwords on a silver platter
+🧭 CPTS-STYLE FLOWCHART (IF THIS, THEN THAT)
+markdown
+Copy
+Edit
+IF you find a suspicious executable in SMB or on disk
+→ Run it with ProcMon active to see temp file drops
+→ Disable delete perms on Temp
+→ Capture .bat or .ps1 output (especially if base64)
+
+IF the binary is .NET (or shows signs of MZ + Framework in strings)
+→ Open in DnSpy
+→ Look for hardcoded usernames, passwords, service logic
+
+IF you extract a new binary from memory or decoding
+→ Run that with ProcMon or x64dbg
+→ Look for what registry keys or services it touches
+→ Use creds to escalate or move laterally
+
+IF you’re stuck on a box with no path forward
+→ Re-check for any strange .exe or in-house tools
+→ They’re probably hiding secrets in plain sight
+🔐 CPTS Exam Tip:
+🧠 Thick client paths won’t be obvious. If you’re on a box and:
+
+you can’t dump LSASS,
+
+can’t abuse services,
+
+can’t privesc via usual weak perms,
+
+Pause, list all .exe files you didn’t investigate yet.
+
+These might be the key to dumping creds, building new binaries, or pivoting to another host.
+
