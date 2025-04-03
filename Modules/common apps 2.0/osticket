@@ -1,0 +1,107 @@
+🧠 “Got This → Do That” – osTicket Edition
+✅ Got This: Port 80/443, generic Apache/IIS + EyeWitness shows osTicket branding
+Do This:
+
+Look for:
+
+powered by osTicket
+
+Cookie named OSTSESSID
+
+Browse to:
+
+/scp/login.php → Admin/staff login
+
+/open.php → User-side ticket creation
+
+✅ Got This: Can submit ticket at /open.php
+Do This:
+
+Submit ticket with external email (your own or fake)
+
+You may receive a custom support email like:
+940288@inlanefreight.local
+
+Use this email to register on:
+
+GitLab, Slack, Rocket.Chat, Mattermost, Wiki, etc.
+
+Receive verification through osTicket interface
+
+📌 This turns osTicket into a “Company Email Generator” — you now have a backdoor for account registration on internal tools
+
+✅ Got This: Support portal accessible & email assigned
+Do This:
+
+Submit ticket
+
+Monitor for agent replies
+
+Extract:
+
+Names
+
+Email patterns
+
+Internal comms
+
+“Standard password” mentions 👀
+
+✅ Got This: Found leaked creds (e.g. via Dehashed, old dump)
+Do This:
+
+Try username and email in login:
+
+sql
+Copy
+Edit
+jclayton / JulieC8765!
+kevin / Fish1ng_s3ason!
+kevin@inlanefreight.local / Fish1ng_s3ason!
+Successful login? You’re in the staff console: /scp/login.php
+→ Browse open/closed tickets
+
+✅ Got This: You’re inside a support agent’s view
+Do This:
+
+Look for:
+
+VPN/reset discussions
+
+“New joiner” passwords
+
+Common patterns (e.g. Welcome123!, Spring2024!)
+
+Sensitive files or data attachments
+
+Export address book if accessible → useful for spraying
+
+✅ Got This: Found “standard reset password” in support ticket
+Do This:
+
+Try login on exposed services:
+
+vpn.inlanefreight.local
+
+RDP, OWA, Citrix, anything else in subdomain list
+
+Try password spraying using common names + the “reset password”
+
+🧠 Bonus Move:
+Use tools like:
+
+linkedin2username to create a user list
+
+Sprayhound or crackmapexec to password spray
+
+Use harvested company emails to impersonate internally or for further recon
+
+🏁 Closing Thoughts (Real-World Impact)
+Support portals are high-value even without direct RCE:
+
+They leak emails, tickets, user behavior, and internal language
+
+One “Oops” by helpdesk giving out a password = VPN access = Foothold
+
+osTicket is your internal social engineering playground
+
