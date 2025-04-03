@@ -1,0 +1,177 @@
+🧠 Summary (TL;DR)
+LDAP is used for central auth and directory lookups (users, groups, machines). It’s lightweight, fast, and very common in corp networks — but has flaws:
+
+🛑 No encryption by default (unless LDAPS or StartTLS)
+
+🐍 Vulnerable to LDAP Injection, similar to SQLi
+
+🧱 Often used in login portals → If inputs are unsanitized, a single * can bypass auth
+
+🧠 Real-world and CPTS style abuse comes from:
+
+Login bypass via injection
+
+Recon/enumeration via ldapsearch if creds are available
+
+Pulling user info (names, emails, DNs) to support phishing or pivoting
+
+⚔️ Workflow: What to Do If You See Port 389
+markdown
+Copy
+Edit
+# CPTS LDAP Attack Flow
+
+1. 🔎 **Recon:**
+   - `nmap -p389 -sV -sC <target>`
+   - Look for `OpenLDAP`, `Active Directory`, or `389/tcp open ldap`
+
+2. 🌐 **Web Login Detected?**
+   - Try LDAP injection (username = `*`, password = `*`)
+   - Try bypasses like:
+     - `*)(uid=*))(|(uid=*`
+     - `*)(objectClass=*)`
+   - If successful → auth bypass and initial access
+
+3. 🧪 **If Credentials Found or Bypassed:**
+   - Use `ldapsearch` to dump user info:
+     ```bash
+     ldapsearch -H ldap://<target>:389 \
+       -D "cn=admin,dc=example,dc=com" \
+       -w <password> \
+       -b "dc=example,dc=com" "(objectClass=*)"
+     ```
+
+4. 🔐 **Escalation / Pivot**
+   - Pull more users/emails/password hashes
+   - Use info for further attacks (Kerberos, ASREPRoast, phishing, etc.)
+
+5. 🛡️ **Post-Exploitation Tip**
+   - If access is gained: search for:
+     - `/etc/ldap/`
+     - Configs with bind credentials
+     - `.ldif` files or logs
+🔁 If This, Then That (ITTT)
+Got This	Then Do This
+Port 389 open	Run nmap -p389 -sV -sC, assume LDAP or AD
+Apache + Login form	Try * or *)(objectClass=*) as creds → LDAP injection
+Login bypassed with *	You have LDAP injection → see if you can escalate or dump info
+Valid LDAP creds discovered	Use ldapsearch to dump users, groups, org info
+No output from ldapsearch	Try adjusting -b to base DN (guess it from domain name)
+Found lots of user data	Use it to brute-force, ASREPRoast (if AD), or escalate with known creds
+🔍 Hints and Patterns
+Login page with no JS validation, vague error messages = test *
+
+If you're inside a corp-style environment and 389 is open → assume it's backing login
+
+Common base DN guesses:
+
+dc=example,dc=com
+
+dc=corp,dc=local
+
+When ldapsearch doesn’t return expected results:
+
+Try different object filters: (objectClass=*), (uid=*), (cn=*)
+
+Always test login with:
+
+Username: * / Password: *
+
+Username: *)(uid=*))(|(uid=* (classic injection)
+
+If it returns a session cookie or dashboard = you win
+
+✅ What You Should Remember for CPTS
+If you see 389 open and a login form: LDAP injection is likely testable — especially if OpenLDAP is detected
+
+CPTS loves showing login bypass via *, so this is one of those easy flags if you're paying attention
+
+Don’t overthink it. If login bypass doesn’t work, move on. But if it does → explore and enumerate from inside.
+
+🧠 LDAP vs Active Directory (AD): Real-World Mental Model
+Term	What it is	Think of it as...
+LDAP	A protocol for querying and modifying directory services	The SQL of directory services
+Active Directory (AD)	A directory service built by Microsoft	A huge relational database of users, machines, groups, policies
+OpenLDAP	Open-source LDAP implementation	Like a Linux-native version of AD
+✅ Overlap: Yes. And It's Deep.
+AD uses LDAP as its primary protocol for querying directory objects (users, groups, computers).
+
+So when tools like ldapsearch, BloodHound, or rpcclient query AD — they’re actually making LDAP calls under the hood.
+
+Any login portal (web or internal) that connects to AD for authentication? It’s probably doing it via LDAP (port 389 or 636).
+
+🕸️ So Why Does LDAP Pop Up in Web Contexts?
+Two reasons:
+
+Some web apps use LDAP for auth — either via AD or OpenLDAP.
+
+Especially legacy internal apps: intranet portals, HR systems, or IT self-service tools.
+
+These will often take your login creds and LDAP-bind them to AD to see if you're legit.
+
+Misconfigurations & bad input handling → LDAP Injection
+
+Login forms not sanitizing * or filter chars
+
+Think of it like SQLi, but for (&(cn=$user)(pass=$pass)) filters
+
+🔥 CPTS Perspective
+You're absolutely right:
+
+LDAP is more AD-focused than web-focused.
+
+But CPTS wants to test if you can recognize that some login forms are backed by LDAP instead of SQL, and then know to try:
+
+plaintext
+Copy
+Edit
+Username: *
+Password: *
+or
+
+plaintext
+Copy
+Edit
+*)(uid=*))(|(uid=*
+So it’s less about LDAP in web apps and more about web auth that plugs into AD via LDAP — that’s the bridge.
+
+🧠 Mental Shortcut for Exams:
+“Port 389? Probably AD or OpenLDAP. If there’s a login form? Try *. If it works? LDAP-backed login = pwned.”
+
+🧪 How to Test for LDAP Injection (CPTS style)
+While ' is your classic SQLi test payload, LDAP has its own set of unique "test characters".
+
+🧷 Common LDAP Injection Test Inputs
+Input	Why it works	Use it when...
+*	Wildcard in LDAP. Often means "match anything".	Testing login forms backed by LDAP
+`)(uid=*))(	(uid=*`	Tries to close the query and inject a new OR clause
+*())()	Breaks filter logic	To force a syntax error, like ' in SQLi
+admin*	Partial wildcard match	When trying to match admin, administrator, etc.
+`*	*`	Forces OR logic
+💡 Example LDAP Filter
+Here's what an app might use behind the scenes:
+
+scss
+Copy
+Edit
+(&(objectClass=user)(uid=BUCK)(userPassword=1234))
+If you input:
+
+makefile
+Copy
+Edit
+Username: * 
+Password: *
+The query becomes:
+
+scss
+Copy
+Edit
+(&(objectClass=user)(uid=*)(userPassword=*))
+Which matches literally every user. Boom — unauth bypass.
+
+🎯 So TL;DR:
+If you see port 389 or 636 open, and there’s a login form anywhere nearby — try * in username and password. That’s your LDAPi test string.
+
+✅ If it works = LDAP injection
+⛔ If it doesn’t = still might be LDAP, just better sanitized
