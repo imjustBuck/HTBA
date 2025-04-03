@@ -1,0 +1,66 @@
+🧠 TL;DR – What You Need to Remember
+🔎 First Rule of Defense:
+You can’t protect what you don’t know exists.
+
+Start with app inventory (internal + external).
+
+Use tools like Nmap, EyeWitness, Nessus, etc.
+
+Look for Shadow IT, test/trial junk, and deprecated apps still exposed.
+
+🛡️ General Application Hardening Checklist:
+✅ Harden This	💡 How
+Authentication	Strong passwords, disable defaults, enforce 2FA (especially admins).
+Access Control	Lock down login pages, IP whitelist, file/folder permissions.
+Disable Dangerous Features	WordPress PHP editor, unauthenticated endpoints.
+Keep It Updated	Patch regularly. Don’t forget plugins.
+Backups	Offsite, periodic, encrypted.
+Monitoring	SIEM, WAF, plugins (Wordfence, etc.).
+AD/LDAP Integration	SSO, centralized auditing, enforce domain password policies.
+🔐 App-Specific Harden Tips:
+App	Tip
+WordPress	Wordfence plugin = all-in-one shield.
+Joomla	AdminExile = secret key login protection.
+Drupal	Obscure/hide the login page.
+Tomcat	Restrict Manager/Host-Manager to localhost/IP whitelist.
+Jenkins	Use Matrix Authorization Plugin for granular control.
+Splunk	Change default creds + license it (free = no auth!).
+PRTG	Update + change that default password.
+osTicket	Don’t expose externally unless necessary.
+GitLab	Admin approval for sign-ups, block disposable domains.
+⚠️ Real-World Mental Model:
+"Patching isn’t enough.
+Credential hygiene, config hardening, and visibility matter more than Nessus scores."
+
+Most orgs patch okay.
+Few fix:
+
+Default creds in Tomcat
+
+Forgotten Jenkins boxes
+
+Public-facing ticketing systems
+
+Open printers leaking creds (seen that too many times)
+
+💥 What You Should Be Thinking as an Attacker:
+Can I find login panels?
+
+Can I try default creds or guess weak ones?
+
+Are any of these tools improperly exposed?
+
+Can I get creds and pivot (LDAP/SQL/SSH)?
+
+Is this app using outdated plugins or versions?
+
+🔚 Final Words Before Skill Assessments:
+The module drilled techniques, now the exam will test if you can:
+
+Find the apps
+
+Fingerprint them
+
+Exploit weaknesses
+
+Or adapt and dig deeper when it’s not obvious
