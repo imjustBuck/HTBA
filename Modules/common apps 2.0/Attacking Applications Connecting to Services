@@ -1,0 +1,87 @@
+🧠 Summary: Attacking Applications Connecting to Services
+You’re dealing with apps that connect to services like:
+
+MS SQL
+
+LDAP
+
+SMB
+
+APIs …and they often store hardcoded credentials or connection strings in compiled binaries (like .exe, .dll, or .jar).
+
+Your job is to reverse the logic or string references, extract creds, then reuse them to pop other boxes or move laterally.
+
+⚙️ Workflow
+🐧 ELF Binary (Linux)
+🕵️ Run it locally to observe behavior.
+
+🧠 Use gdb or gdb-peda to:
+
+disas main
+
+Find SQLDriverConnect or similar functions.
+
+Look for mov rdx, "some string" → follow that memory address.
+
+🎯 Set breakpoints right before the connection call.
+
+💥 Dump RDX (or whatever holds the connection string):
+
+ini
+Copy
+Edit
+DRIVER={ODBC Driver 17};SERVER=localhost,1401;UID=user;PWD=pass;
+🪟 DLL Files (.NET)
+📥 Grab the .dll via SMB, FTP, or whatever.
+
+🔍 Open it with dnSpy.
+
+🔓 Browse to Controllers, Models, or Startup methods.
+
+🎯 Look for:
+
+SQL connection strings
+
+API tokens
+
+Internal URIs (http://localhost:8081, jwt=eyJ...)
+
+📌 Copy out secrets and test them on:
+
+MSSQL: sqsh, impacket-mssqlclient, or sqlcmd
+
+Web login pages
+
+Internal services
+
+Password spraying tools like kerbrute, hydra, or crackmapexec
+
+🧩 If This, Then That (ITTT)
+If You Find...	Then Do...
+SQL connection string in .exe or .dll	Try to connect to the DB directly with mssqlclient.py
+HTTP URLs in strings (like localhost:8081)	Try SSRF, internal API hits, or curl inside the box
+.Net DLL and it's readable in dnSpy	Look for config loading code or controllers for secrets
+Passwords or usernames embedded	Try them for local priv esc, RDP, SQL access, SMB shares
+SQLDriverConnect or connection function in GDB	Break on it and dump the register (usually RDX)
+💡 Patterns & Hints
+Binaries for internal services often store plaintext creds.
+
+Look for anything .config, .dll, .jar, or .ini in:
+
+C:\Users\*\AppData
+
+/opt/, /var/www/, /etc/, or custom dev folders.
+
+.NET apps are a goldmine—dnSpy turns them into C# like magic.
+
+This is post-foothold enumeration—after popping the box, start poking the local apps.
+
+🧠 Pro Tip
+If you’re in an exam or assessment:
+
+Always inspect local binaries or web apps running on uncommon ports (8081, 5000, etc.)
+
+Most people overlook the fact that local apps often hold cleartext creds or API secrets.
+
+Those creds might reuse passwords for SQL, SMB, RDP, or AD logins — jackpot 🎰
+
