@@ -1,0 +1,110 @@
+🧠 TL;DR – Attacking FTP (CPTS Style)
+🔎 Enumeration
+Default Port: 21/tcp
+
+Nmap:
+
+bash
+Copy
+Edit
+nmap -sC -sV -p 21 <IP>
+Look for:
+
+ftp-anon → anonymous login allowed
+
+FTP version banner (e.g., vsFTPd 2.3.4)
+
+Writable dirs like /incoming
+
+🎯 Attack Vectors
+✅ 1. Anonymous Login
+Login via:
+
+bash
+Copy
+Edit
+ftp <IP>
+Username: anonymous
+
+Password: (blank or anonymous@domain.com)
+
+Inside FTP session:
+
+ls, cd → browse
+
+get <file> → download
+
+put <file> → upload
+
+mget / mput → multiple files
+
+Look for:
+
+Passwords
+
+Configs
+
+Anything in .banner, .message, .conf
+
+✅ 2. Brute Force Login (With Hydra)
+If anonymous login fails:
+
+bash
+Copy
+Edit
+hydra -l <username> -P /usr/share/wordlists/rockyou.txt ftp://<IP>
+Example:
+
+bash
+Copy
+Edit
+hydra -l fiona -P /usr/share/wordlists/rockyou.txt ftp://10.129.203.7
+Flags:
+
+-l = single username
+
+-L = file of usernames
+
+-P = file of passwords
+
+Once creds are found, login with ftp <IP> and explore as above.
+
+✅ 3. FTP Bounce Attack
+Old-school trick using PORT command to scan internal hosts:
+
+bash
+Copy
+Edit
+nmap -Pn -v -n -p <PORT> -b anonymous:password@<FTP_Server_IP> <Target_IP>
+Example:
+
+bash
+Copy
+Edit
+nmap -Pn -v -n -p80 -b anonymous:@10.10.110.213 172.17.0.2
+When it works:
+
+Lets you port scan machines behind the FTP server
+
+Rare in modern servers, but juicy if misconfigured
+
+🛠️ Real-World Use
+FTP is legacy, but still in the wild:
+
+Dev pipelines
+
+Printer firmware uploads
+
+Backups
+
+Any upload + web access = 🔥 (especially if /uploads is browsable from HTTP)
+
+✅ CPTS Exam Flow
+Trigger	Action
+Port 21 open	Check with Nmap (-sC -sV)
+ftp-anon shows up	Login with ftp and poke around
+Can't anon in	Brute with Hydra
+Find creds	Try them elsewhere: SMB, LDAP, SSH
+Writable dir?	Upload payload or backdoor
+See upload + web server?	Try upload → webshell path
+Bounce attack possible	Use Nmap -b flag to scan internal systems
