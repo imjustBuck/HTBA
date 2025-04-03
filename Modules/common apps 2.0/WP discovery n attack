@@ -101,3 +101,48 @@ WPScan gets rate-limited	Drop threads -t 1 or use Tor + proxy rotation
 Use it as a precision tool, paired with manual greps, to maximize the value:
 
 "Manual confirms existence, WPScan confirms vulnerabilities."
+
+🔹 Step 1: Off-Rip Nmap Scan
+bash
+Copy
+Edit
+nmap -sCV -p 80,443,8080,8000 --script=http-enum -oA web_enum <target>
+Watch for:
+
+http-generator: WordPress
+
+Paths in robots.txt: /wp-admin/, /wp-includes/
+
+http-title: Just another WordPress site
+
+/wp-login.php in script output
+
+/wp-content/ references
+
+🚨 Any of those = BANGER ALERT: It’s WordPress.
+
+🔹 Step 2: Slide Immediately into WPScan
+bash
+Copy
+Edit
+wpscan --url http://target.site --enumerate u,p,t,ap,at,tt --api-token <yourtoken>
+Grab:
+
+Version (core)
+
+Plugin + theme versions
+
+Known vulns (especially for plugin RCE or LFI)
+
+XML-RPC status
+
+Usernames (admin / john / marketing / test)
+
+🔹 Step 3: Triage From There
+Brute-force XML-RPC? wpscan --password-attack xmlrpc
+
+Authenticated? => Theme editor upload or plugin exploit
+
+Unauth RCE (e.g., wpDiscuz) => Straight shell drop
+
+
