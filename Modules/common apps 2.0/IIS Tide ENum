@@ -1,0 +1,70 @@
+🧠 Summary — What’s This?
+IIS Tilde Enumeration is used to find:
+
+Hidden directories/files
+
+Short 8.3 filenames (e.g., SECRET~1, UPLOAD~1, etc.)
+
+Only applies to IIS (especially v6/7.5) on Windows file systems
+
+This works because Windows still generates legacy 8.3 names even if you don’t see them in the UI — and IIS sometimes leaks info about them when you request /~X.
+
+🛠️ Workflow — Got This? Do That
+🪜 Step-by-Step:
+Identify IIS running (e.g., IIS/7.5 seen via Nmap)
+
+Run iis_shortname_scanner.jar:
+
+Usage: java -jar iis_shortname_scanner.jar 0 5 http://target/
+
+Tells you if it's vulnerable, and reveals:
+
+Short directories (e.g., UPLOAD~1)
+
+Short filenames (e.g., TRANSF~1.ASP)
+
+Try accessing the resources directly:
+
+http://target/UPLOAD~1/
+
+http://target/UPLOAD~1/TRANSF~1.ASP
+
+If blocked or incomplete:
+
+Craft custom wordlist based on pattern (e.g., starts with transf)
+
+Use gobuster to brute-force the full name:
+
+bash
+Copy
+Edit
+gobuster dir -u http://target/ -w list.txt -x .asp,.aspx
+🔄 ITTT — If This, Then That
+Situation	Action
+IIS detected + version ≤ 7.5	Run iis_shortname_scanner.jar
+Short name like TRANSF~1.ASP found	Try GET request directly
+403 / 404 / no luck	Craft list of likely file prefixes → use gobuster
+Gobuster finds transferdata.aspx or similar	That’s your foothold → check for upload, auth bypass, etc.
+App uses .NET backend	Add .aspx and .cs to wordlist brute-force
+🧩 Patterns and Hints
+Short name format:
+
+UPLOAD~1, ADMINP~1, INDEX~1.ASP
+
+If iis_shortname_scanner says "vulnerable", it will leak shortnames, even if GETs are blocked
+
+Useful when robots.txt, auth walls, or hidden folders are present
+
+Gobuster + partial knowledge = full path reveal
+
+💥 When Does This Pop in CPTS?
+Typically early game on web targets (recon > foothold)
+
+Might be a web server that has no visible content, but you sniff out a .NET app using iis_shortname_scanner
+
+Could lead to a file upload endpoint or RCE via upload.aspx or transfer.aspx
+
+🧠 TL;DR - CPTS Mindset
+"No files in sight? IIS smells funny? Tilde scan that thing."
+
+This is one of those obscure recon techniques that can blow a web target wide open — not super common, but dangerous when it works. Keep it in your bag.
