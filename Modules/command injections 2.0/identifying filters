@@ -1,0 +1,135 @@
+🧠 Summary: Identifying Filters (Back-End & WAF)
+After discovering a potential command injection point, our payloads might suddenly stop working.
+Why? There's a back-end filter or a Web Application Firewall (WAF) blocking them.
+
+This section walks you through:
+
+Recognizing when your injection is blocked
+
+Figuring out what exactly is being filtered
+
+And setting the stage for bypassing it later
+
+🔍 Filter/WAF Detection Logic
+🔺 Scenario:
+You use a payload like:
+
+bash
+Copy
+Edit
+127.0.0.1; whoami
+And get a "Invalid input: Filter" error.
+
+That means your injection was caught by:
+
+❌ A back-end filter (like PHP code rejecting certain chars)
+
+❌ Or a WAF (more aggressive; may redirect or show a detailed error page)
+
+🔐 How Filters Work
+Let’s say they use this PHP logic:
+
+php
+Copy
+Edit
+$blacklist = ['&', '|', ';', ...];
+foreach ($blacklist as $character) {
+    if (strpos($_POST['ip'], $character) !== false) {
+        echo "Invalid input";
+    }
+}
+That means:
+
+ANY of these characters → ;, &, | → in your input?
+⛔️ Blocked immediately
+
+🛠️ Identifying What’s Being Blocked
+You do this methodically, testing one piece at a time:
+
+✅ You start with safe:
+Copy
+Edit
+127.0.0.1
+→ Works just fine.
+
+❌ Then try:
+Copy
+Edit
+127.0.0.1;
+→ Blocked → so ; is blacklisted
+
+Repeat this for:
+
+&&
+
+||
+
+|
+
+&
+
+Subshells like `whoami` and $(whoami)
+
+This tells you which characters are tripping the filter.
+
+⚡️ Got This, Do That (ITTTT Style)
+🧩 Got This: You test a known payload (e.g., 127.0.0.1; whoami) and see “Invalid Input”
+✅ Do That:
+→ Break it down piece by piece to isolate the blacklisted character(s)
+
+🕵️ Got This: Only certain characters like ; or && are blocked
+✅ Do That:
+→ Try alternate operators (|, &, backticks, $(), newline %0a, etc.)
+→ This sets you up for filter evasion
+
+🛡️ Got This: Error page looks different, maybe shows request/IP
+✅ Do That:
+→ Suspect a WAF (not back-end filtering) → Try alternate encoding or user-agent spoofing in Burp
+
+🧠 Patterns & Hints
+🔍 Situation	💡 What It Hints
+“Invalid input” in the same field	Likely app-side filtering (PHP, etc.)
+New page with request details/IP shown	WAF likely triggered
+Only ; is blocked	Try using &&, `
+Full word (e.g. whoami) causes block	Try command obfuscation (wh$@oami, etc.) later
+Filters only on front-end	Use Burp to bypass UI validation entirely
+🔥 TL;DR Takeaway
+This section is about identifying why your working payloads suddenly get denied. You're sniffing out what’s filtered (usually special chars) so you can plan how to evade in the next section.
+
+🛠️ Smart Trial & Error Flow:
+✅ Confirm Clean Input Works
+
+Start with just 127.0.0.1 → works fine? Good baseline.
+
+🔍 Test One Thing at a Time
+
+Add ; → blocked? ✅ ; is blacklisted.
+
+Try &&, then |, then &, then backticks (`whoami`), then subshell $() — one at a time.
+
+📈 Log What Gets Through
+
+This helps build a profile of the filter behavior:
+
+Character-only blacklist?
+
+Word blacklist?
+
+WAF blocking all suspicious syntax?
+
+🧪 Encode & Obfuscate
+
+Try URL-encoded characters: %26, %7c, %3b
+
+Try slight obfuscations like wh$@oami, w\hoami, etc.
+
+🔁 Iterate Efficiently
+
+You're not guessing wildly — you're narrowing until you find what works.
+
+🧠 Real-World Insight:
+This trial-and-error process isn’t just about bypassing — it’s about profiling the defense too:
+
+You’re learning how the app thinks.
+
+That’s critical CPTS skill: identifying how defenders configured security.
