@@ -1,0 +1,160 @@
+🔍 Summary: Password Attacks on Network Services
+This section covers brute-forcing credentials across common network services like:
+
+WinRM
+
+SSH
+
+RDP
+
+SMB
+
+You’ll rotate between tools like:
+
+🧠 CrackMapExec (multi-protocol network pentesting tool)
+
+🔨 Hydra (brute-forcer for tons of services)
+
+⚙️ Evil-WinRM (PowerShell shell over WinRM)
+
+🛠️ Metasploit (scanner modules for creds)
+
+💻 xfreerdp, smbclient, ssh, etc. (for connecting post-creds)
+
+📌 Services Covered + Common Ports
+Service	Port	Connects to	Common Tools
+WinRM	5985/5986	Remote PowerShell	CrackMapExec, Evil-WinRM
+SSH	22	Remote shell (Linux/rare Windows)	Hydra, SSH
+RDP	3389	Windows GUI session	Hydra, xfreerdp
+SMB	445	Shares, Admin access	CrackMapExec, smbclient, Hydra, Metasploit
+🧠 "Got This, Do That" - Password Attack Workflow
+Got This Situation	Then Do This
+You know the service + IP	✅ Run CrackMapExec or Hydra to brute with user.list and password.list
+You see WinRM (5985/5986) open	👉 Brute with CME → Log in with Evil-WinRM
+RDP is open (3389)	🧠 Use Hydra (-t 1 or -t 4), then xfreerdp to connect
+SSH is open (22)	💥 Brute with Hydra, connect with ssh user@ip
+SMB is open (445)	🎯 Brute with Hydra or msfconsole, check shares with CME
+Hydra fails with SMB	🛠️ Use Metasploit’s scanner/smb/smb_login instead
+Have creds for SMB	🔓 Use crackmapexec --shares or smbclient to explore shares
+🔓 Command Patterns (Cheat Sheet Style)
+✅ WinRM
+bash
+Copy
+Edit
+crackmapexec winrm <IP> -u user.list -p password.list
+evil-winrm -i <IP> -u <username> -p <password>
+✅ SSH
+bash
+Copy
+Edit
+hydra -L user.list -P password.list ssh://<IP>
+ssh <user>@<IP>
+✅ RDP
+bash
+Copy
+Edit
+hydra -L user.list -P password.list rdp://<IP> -t 4 -W 3
+xfreerdp /v:<IP> /u:<user> /p:<pass>
+✅ SMB
+bash
+Copy
+Edit
+hydra -L user.list -P password.list smb://<IP>
+# or use Metasploit:
+msfconsole
+use auxiliary/scanner/smb/smb_login
+set USER_FILE user.list
+set PASS_FILE password.list
+set RHOSTS <IP>
+run
+
+# Then with creds:
+crackmapexec smb <IP> -u <user> -p <pass> --shares
+smbclient -U <user> \\\\<IP>\\<SHARENAME>
+🧠 Tips, Patterns, and Hints
+🧪 Always start with CrackMapExec if possible – it’s fast, multi-protocol, and gives instant feedback (like [+] user:pass (Pwn3d!)).
+
+🛡️ Hydra is noisy — go easy on threading (-t) with RDP, SMB.
+
+🧼 Avoid brute-forcing Kerberos unless targeting AS-REP/kerberoast style attacks (later modules).
+
+🐍 Evil-WinRM gives interactive PowerShell once you have creds — it's game on after that.
+
+🔂 Combine tools: use CME for scanning + bruting, Evil-WinRM or smbclient for action.
+
+💥 Real Talk (From a Blue Teamer's Brain)
+These attacks scream loud in logs:
+
+RDP brute? Alert 💣
+
+SMB login fails? Alert 💣
+
+WinRM attempts? Alert 💣
+
+…but guess what? Most orgs don’t log WinRM or SMB attempts, or don’t alert on them unless you're hammering.
+
+So in CPTS or real-world:
+💡 “Low & slow” password spraying still flies under radar in 2025 if not watched properly.
+
+⚠️ Why Hydra is slow with SSH:
+SSH is designed to resist brute-forcing.
+
+Most SSH servers:
+
+🔒 Introduce artificial delays between login attempts.
+
+🚫 Temporarily block IPs after a few failures.
+
+🤕 Don't play nice with threading (-t) like RDP or FTP might.
+
+Hydra even throws a warning:
+
+[WARNING] Many SSH configurations limit the number of parallel tasks... use -t 4
+
+So, yeah — brute-forcing SSH directly sucks.
+
+✅ Smarter Move: Attack FTP, Reuse Creds for SSH
+If the target has FTP open (port 21), here's the smart workflow:
+
+1. Brute force FTP first:
+bash
+Copy
+Edit
+hydra -L users.txt -P passwords.txt ftp://<target-ip> -t 10 -V
+FTP is usually much more tolerant of fast login attempts.
+
+No account lockouts by default.
+
+More common to find default or reused creds.
+
+2. Take any found creds and try SSH manually:
+bash
+Copy
+Edit
+ssh <user>@<target-ip>
+or automate:
+
+bash
+Copy
+Edit
+crackmapexec ssh <ip> -u <user> -p <password>
+🎯 Real-World Scenario:
+You brute FTP → get devops:summer2024
+
+Try that on SSH → boom you're in
+
+Or try it on SMB, WinRM, MySQL, RDP...
+
+🧠 Password reuse is stupid common across services — especially internal environments where users don't expect external threat actors.
+
+🔁 Pattern You’re Following:
+Service	Brute With	Pivot To
+FTP (21)	Hydra	SSH, SMB, WinRM
+IMAP/POP3	Hydra	Webmail, Portal, OWA
+SMB (445)	CrackMapExec/Hydra	RDP, WinRM
+MSSQL (1433)	Hydra/CME	WinRM, SMB
+HTTP Basic Auth	Hydra	Admin panels, login portals
+🧠 Pro-Tip:
+After a brute or spray, dump all found creds to a file, then cycle through all open services on the box with them. Your current logic is 100% aligned with what CPTS expects in real-world chaining.
+
+You're building that attacker mindset beautifully. Wanna move into Linux Priv Esc next or got more password attack flow questions?
