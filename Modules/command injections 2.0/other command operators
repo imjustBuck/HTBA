@@ -1,0 +1,156 @@
+🧨 Section: Other Injection Operators
+🔥 Summary
+Once you know you're injecting into a command (e.g. ping), you can chain other commands using different logical and shell-based operators. These change how and when the second command runs based on whether the first one succeeds or fails.
+
+These are key for:
+
+Cleaner output
+
+Bypassing filters
+
+Smuggling payloads when other ops fail
+
+💣 Breakdown of Operators
+✅ ; (Semicolon)
+Executes both commands regardless of success/failure.
+
+Used when you want to guarantee both get executed.
+
+Example:
+
+bash
+Copy
+Edit
+ping -c 1 127.0.0.1; whoami
+Output: both ping and whoami
+
+✅ && (AND)
+Only runs second command if the first succeeds.
+
+Great for chaining clean payloads after a legit command.
+
+Example:
+
+bash
+Copy
+Edit
+ping -c 1 127.0.0.1 && whoami
+Works only if ping is successful.
+
+🔒 Use case: Target might log failed commands. Only run whoami if ping doesn’t error out.
+
+✅ || (OR)
+Only runs second command if the first fails.
+
+Use this when your input might break the first command on purpose.
+
+Example:
+
+bash
+Copy
+Edit
+ping -c 1 || whoami
+Injecting this into a form with no IP will make ping fail, then run whoami.
+
+🔥 Tactical use: If app blocks IPs with WAF or regex filtering, this lets you break it intentionally to trigger your payload.
+
+💡 Injection Table Snapshot
+Injection Type	Useful Operators
+SQLi	' ; -- /* */
+Command Injection	`; &&
+XSS	"><script>
+LDAP	`* ( ) &
+XPath	' or 1=1 or not()
+Header Injection	\n \r %0d %0a
+File Traversal	../ ..\\ %00
+📌 Memorize this table like muscle memory, it’s your recon gear when facing unknown form fields.
+
+🧠 If This, Then That (ITTTT)
+markdown
+Copy
+Edit
+## ITTTT: Other Operators in Command Injection
+
+IF → You have confirmed command injection (e.g. output reflects command execution)  
+THEN → Test with `; whoami`, `&& whoami`, `|| whoami`
+
+---
+
+IF → You want the **second command only if the first works**  
+THEN → Use `&&`  
+Example: `127.0.0.1 && id`
+
+---
+
+IF → You want the **second command only if the first fails**  
+THEN → Use `||`  
+Example: `|| whoami`
+
+---
+
+IF → You want **both commands to run regardless**  
+THEN → Use `;`  
+Example: `127.0.0.1; id`
+
+---
+
+IF → Your injection is blocked by JavaScript/frontend regex  
+THEN → Use Burp, intercept request, encode payload (`CTRL+U`), send in Repeater.
+
+---
+
+IF → You’re testing in a **blind situation (no output)**  
+THEN → Use `; sleep 5`, time-based, or redirect output to file.
+
+🧠 Patterns + Hints
+🔁 Always test commands locally first before injecting — confirms syntax
+
+🧪 Rotate ops: Try ;, then &&, then || — see what leaks what.
+
+🧨 || is OP as hell when you break the first command on purpose.
+
+🎯 ping -c 1 || whoami = fail ping → execute your payload.
+
+📎 Some apps log only failed commands, so chaining might stealth better with &&.
+
+💻 Windows CMD doesn’t like ; — try &, &&, or PowerShell format
+
+🤫 Want clean output? Use || whoami without extra stuff like ping.
+
+🧠 Figuring out how to sneak in your command payload around any filters or input validation.
+
+Here’s the flow in simpler terms:
+
+💥 Once You Know It’s Vulnerable…
+It’s game on. You just have to figure out how the server processes your input, and which operator lets you slip in a second command.
+
+🔑 Operator Behavior Cheat Sheet:
+Operator	Behavior	Notes
+;	Always runs both commands	Works on Linux, not CMD (but works in PowerShell)
+&&	Runs 2nd only if 1st succeeds	Clean output if first command works
+`		`
+`	`	Pipes output of 1st into 2nd
+&	Runs both, background style	2nd might show before 1st in output
+$() or	Subshell in Linux	Wraps the command, can sneak into formats
+%0a or %26 etc.	URL-encoded versions	Used when raw chars get blocked by the front-end
+🧪 Example Strategy:
+Initial Payload Fails: Maybe 127.0.0.1; whoami gets rejected.
+
+Try AND: Use 127.0.0.1 && whoami instead — cleaner, may slip past naive filters.
+
+Try OR: Maybe the command fails if no IP is given — so try || whoami to force execution.
+
+Use Burp: Even if the front-end blocks ;, you send it raw from repeater.
+
+Try Encoding: %3b instead of ;, %26%26 instead of &&, etc.
+
+🎯 Why This Matters:
+Some apps may only allow certain patterns. You’re basically:
+
+Outwitting the input filter
+
+Using the right payload structure
+
+Matching the execution environment (Linux vs Windows)
+
+
