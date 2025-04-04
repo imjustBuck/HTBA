@@ -159,3 +159,52 @@ Password Reuse / Stuffing after cracking one user
 
 🔸 Reuse creds or PtH to laterally move
 
+🔍 SAM + SYSTEM + SECURITY Dumps:
+You get this after you have admin access, usually from:
+
+bash
+Copy
+Edit
+reg.exe save hklm\sam C:\sam.save
+reg.exe save hklm\system C:\system.save
+reg.exe save hklm\security C:\security.save
+What You Get:
+
+🔐 NT hashes of local users (from SAM)
+
+🔐 Cached domain creds (if domain-joined & offline logons were used) from SECURITY
+
+Use secretsdump.py from Impacket to parse
+
+Can be cracked offline or used in Pass-the-Hash attacks
+
+📌 These are static creds stored on disk.
+
+🧠 LSASS Dump (Memory) — lsass.dmp
+Dumped from memory, not disk. Think of this like:
+
+📸 A snapshot of everything actively logged in.
+
+What You Might Pull from LSASS:
+
+✅ NTLM hashes (from MSV auth provider)
+
+✅ Cleartext passwords (only if WDIGEST is enabled, or from credential providers)
+
+✅ Kerberos tickets for logged-on users
+
+✅ DPAPI master keys (used for decrypting secrets)
+
+✅ Web creds, Chrome/IE stored passwords, RDP creds, Outlook creds, VPN creds
+
+✅ Tokens from running services, Scheduled Tasks, SYSTEM services
+
+💥 LSASS = Live session data — stuff you can’t get from SAM.
+
+🧠🔁 TL;DR — Which One Gets What?
+Targeted Dump	Gives You...
+SAM + SYSTEM	NT hashes of local accounts (offline, static)
+SECURITY Hive	Cached domain creds (only if domain-joined and cached logons exist)
+LSASS Memory	🔥 Cleartext creds (sometimes), Kerberos tickets, DPAPI master keys, web/RDP/VPN creds
+So yeah Buck, if you're looking for creds beyond just user logins — like web creds, browser saved logins, or Outlook/VPN passwords —
+💣 LSASS is where that juicy dynamic data lives.
