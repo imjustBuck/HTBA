@@ -1,0 +1,86 @@
+🧠 Summary: Command Injection Prevention
+This section explains how to prevent command injections at the dev and server config levels — because offense informs defense, and knowing what leads to exploitation helps you shut it down as a blue teamer, coder, or appsec engineer.
+
+It’s broken into three main buckets:
+
+🔒 Code-Level Mitigations – Avoiding vulnerable functions, validating + sanitizing input.
+
+🧼 Input Filtering Techniques – Whitelist vs blacklist, regex use, sanitization libraries.
+
+🏰 Server Hardening – Locking down the execution environment so even if something breaks, damage is minimal.
+
+💣 ITTTT: If This, Then Try That – Prevention Flow
+Got This Situation	Then Do This
+Using user input in system commands	❌ Don’t. Use built-in language methods instead (e.g., fsockopen in PHP)
+No alternative but to use system command	✅ Validate & sanitize input rigorously
+Need to validate format (e.g., IP)	✅ Use filter_var() in PHP or regex in JS/Node
+Want to sanitize input	✅ Strip dangerous chars: preg_replace in PHP, .replace() in JS
+Handling HTML or comments	✅ Use libraries like DOMPurify (Node)
+Still using special chars (e.g., quotes, pipes)?	⚠️ Escape only if absolutely necessary — escaping is fragile
+Prevent exploitation on the backend	🛡️ Harden the server (PoLP, disable dangerous funcs, WAF, etc.)
+Need to test app security	🧪 Combine secure coding with pen testing — one can’t replace the other
+🔍 Patterns, Techniques & Tips
+🔧 1. Avoid Dangerous Functions
+Don’t use system(), exec(), shell_exec() unless you absolutely have to.
+
+Use built-in safe alternatives:
+
+PHP: fsockopen() for host checks
+
+NodeJS: Use is-ip, dns, etc.
+
+📥 2. Input Validation & Sanitization
+✅ Validate first — deny anything that doesn’t match strict formatting.
+✅ Sanitize second — strip or encode what's not essential.
+
+PHP:
+
+php
+Copy
+Edit
+filter_var($_GET['ip'], FILTER_VALIDATE_IP);
+$ip = preg_replace('/[^A-Za-z0-9.]/', '', $_GET['ip']);
+JavaScript / Node:
+
+js
+Copy
+Edit
+ip = ip.replace(/[^A-Za-z0-9.]/g, '');
+Libraries:
+
+DOMPurify (Node)
+
+escape(ip) → legacy, not recommended alone
+
+⚠️ Blacklists like if strpos($input, 'cat') !== false are not safe. Bypassable AF.
+
+🏰 3. Server-Level Hardening
+Defense-in-depth. Even if your code fails, your box shouldn’t fall apart.
+
+Action	Description
+🔒 PoLP	Run app as low-privileged user (e.g., www-data)
+🚫 disable_functions	Block dangerous PHP funcs (system, exec, etc.)
+📂 open_basedir	Restrict app access to /var/www/html only
+🧱 Built-in WAFs	Apache mod_security, external WAFs (Cloudflare, Imperva)
+🔁 Reject weird input	Block non-ASCII, double-encoded characters in URLs
+📦 Don’t use old garbage	Avoid vulnerable modules like CGI mode in PHP
+🔐 Final Thought from a Blue Team Perspective
+Command Injection == game over if successful.
+
+But combined layers:
+
+Proper coding
+
+Input controls
+
+Hardened OS
+
+App monitoring
+
+Alerts in Splunk/SIEM
+
+That’s what buys time for detection + response.
+
+"Any single line in a million lines of code can be the hole."
+That's why automated scanning + human validation = key.
+
