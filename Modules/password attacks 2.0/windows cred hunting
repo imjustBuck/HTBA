@@ -1,0 +1,128 @@
+🔍 Credential Hunting in Windows – Mindset and Flow
+🧠 Goal:
+Once we land on a box (GUI or CLI), go fishing for creds — think:
+
+IT admins write stuff down.
+
+Apps store creds poorly.
+
+You're already in. Time to loot.
+
+🔍 Phase 1: "Search-Centric" Recon
+Ask yourself:
+“What would an IT admin be doing here?”
+
+RDP?
+
+Accessing servers?
+
+Remote backups?
+
+Web app admin panels?
+
+KeePass?
+
+Scripting?
+
+🔑 Key Terms to Hunt For
+Use these in file searches (GUI or findstr):
+
+text
+Copy
+Edit
+password passphrase pwd creds credentials login key passkey
+dbcredential dbpassword configuration username useraccount
+🛠️ Phase 2: Tools to Use
+🖥️ GUI
+Use Windows Search Bar — type:
+
+pass
+
+pwd
+
+credentials
+
+🔍 findstr (CLI File Search)
+Great for plaintext hunting:
+
+cmd
+Copy
+Edit
+findstr /SIM /C:"password" *.txt *.ini *.cfg *.config *.xml *.git *.ps1 *.yml
+/S – recursive through directories
+
+/I – case-insensitive
+
+/M – return just the filenames (optional)
+
+/C:"string" – match exact string
+
+🐍 LaZagne (Rapid Dump of Stored App Creds)
+Steps:
+
+Transfer LaZagne.exe to target via RDP or SMB share
+
+Run in PowerShell or CMD:
+
+cmd
+Copy
+Edit
+lazagne.exe all -vv
+🔍 -vv = see detailed process (modules it checks)
+
+Outputs creds from:
+
+WinSCP
+
+Chrome
+
+Outlook
+
+RDP Manager
+
+Firefox
+
+And much more
+
+📁 Phase 3: Where to Look (Manually)
+🔐 Hot Cred Dumping Zones
+Location / File	Description
+SYSVOL GPO scripts	GPP passwords, deploy scripts
+web.config	Often stores DB/user creds in dev/test
+unattend.xml	Leftover install scripts w/ admin creds
+KeePass .kdbx	Pull + crack for vault access
+C:\Users\*\Documents	Look for txt, xlsx, docx creds
+Shares / IT folders	Hardcoded creds in scripts
+AD Description field	Lazy admin notes with passwords
+Example File Types to Search:
+text
+Copy
+Edit
+*.xml *.config *.txt *.ps1 *.ini *.bat *.vbs *.py *.json
+💣 Buck’s Quick Post-Access Flow
+markdown
+Copy
+Edit
+### Credential Hunting Checklist:
+
+✅ Check user Desktop / Documents for:
+   - pass.txt / creds.xlsx
+   - Notes / screenshots / KeePass
+
+✅ Run `findstr` for keyword scans
+
+✅ Drop + run `LaZagne.exe` all -vv
+
+✅ Manually check:
+   - SYSVOL
+   - web.config files
+   - ProgramData folders (like RDPman)
+   - Startup scripts / batch files
+   - KeePass DBs
+   - Outlook / browser stored creds
+
+✅ Bonus: Check registry for saved creds (Google it 😉)
+
+✅ If GUI access: Use File Explorer's search bar
+🧠 Real Talk:
+This part is often the difference between 1 user and domain-wide access. People suck at storing passwords — your job is to catch the slip-ups. Treat every system like it might be carrying plaintext gold.
