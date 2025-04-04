@@ -1,0 +1,94 @@
+🔥 Summary: Injecting Commands
+Once you suspect Command Injection, your next step is testing it by trying to inject OS-level commands using chaining operators like ;, &&, or |. This section walks through:
+
+Using the semicolon (;) to append a second command (whoami) after a safe input like an IP address.
+
+Understanding that some validations only exist on the front-end (JavaScript in the browser), which you can bypass with tools like Burp Suite or ZAP.
+
+Sending the payload manually to the back-end with custom HTTP requests.
+
+If you get command output back (e.g., the username of the running process), that confirms successful command injection.
+
+💡 Key Concepts + Patterns
+🔹 Injection Chaining
+You append a command to an otherwise safe command, e.g.:
+
+bash
+Copy
+Edit
+ping -c 1 127.0.0.1; whoami
+Result: It pings localhost, then runs whoami.
+
+Operator	Behavior
+;	Always runs both commands
+&&	Runs second only if first succeeds
+`	
+`	`
+`cmd` or $(cmd)	Linux sub-shell execution
+🔹 Client-Side Validation ≠ Security
+Many apps use JavaScript-only checks to block things like semicolons or non-IP input.
+
+You can bypass this using Burp or any HTTP client (e.g., curl, Postman).
+
+Always test if back-end sanitization exists — if not, it’s wide open.
+
+🔹 How to Confirm Injection
+If your injected command:
+
+Alters output
+
+Prints system info (e.g., whoami, id, uname -a)
+
+Echoes a known string
+
+Then you’ve got injection.
+
+🧠 ITTT Flow: Injecting Commands
+IF:
+You find an input form that looks like it's triggering system behavior (e.g. ping, traceroute, file creation)
+
+THEN:
+Test for command injection with simple payloads:
+
+127.0.0.1; whoami
+
+127.0.0.1 && id
+
+127.0.0.1 | uname -a
+
+Check if it blocks your input
+
+If you get an error immediately (no network request) → likely front-end validation
+
+Use Burp/ZAP to bypass
+
+Intercept the request
+
+Send to Repeater
+
+Modify the input to inject your command
+
+URL encode (CTRL+U) the payload if needed
+
+Send and inspect the response
+
+Look for command output
+
+If you see system-level output (username, kernel, etc.) → ✅ Confirmed injection
+
+🔍 Hidden Hints + Patterns
+If the app accepts input like “IP”, “hostname”, “filename” or anything that “runs something” — always try injection.
+
+Responses that include ping stats, file listing, or system info may leak hints about the back-end OS.
+
+Watch for echoed output after your payload — that’s gold.
+
+Combine with sleep or ping for blind injection (covered later).
+
+🛠 Example Payloads to Try
+Goal	Payload
+Test if it injects	127.0.0.1; whoami
+Time-based blind test	127.0.0.1 && sleep 5
+Encode it	127.0.0.1%3Bwhoami
+Print flag	127.0.0.1; cat /flag.txt
+Subshell test	127.0.0.1$(whoami) or 127.0.0.1`whoami
