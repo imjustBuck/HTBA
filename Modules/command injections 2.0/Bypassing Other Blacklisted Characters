@@ -1,0 +1,166 @@
+🧠 Summary – Bypassing Other Blacklisted Characters
+Once injection operators like ;, &&, or characters like /, \, and space are blacklisted, we can still build payloads by:
+
+✅ Using environment variables
+They're system variables that contain the characters we need, buried inside a longer string.
+
+Then we slice out just the character we want using substring notation.
+
+🔪 Techniques
+🔹 1. Linux: Substring Extraction
+Format: ${VAR:START:LENGTH}
+
+${PATH:0:1} → /
+Because $PATH starts with /usr, so char at index 0 is /.
+
+${LS_COLORS:10:1} → ;
+Because the LS_COLORS env var contains semicolons as delimiters.
+
+Use Case in Payloads:
+
+bash
+Copy
+Edit
+127.0.0.1${LS_COLORS:10:1}${IFS}whoami
+→ Effectively: 127.0.0.1; whoami — but without using ; or space directly.
+
+🔹 2. Windows CMD: Substring Notation
+Format: %ENVVAR:~START,LENGTH%
+
+%HOMEPATH:~6,-11% → \
+E.g., if HOMEPATH is \Users\htb-student, this grabs the backslash.
+
+Same trick — get characters without typing them directly.
+
+🔹 3. Windows PowerShell: Character Indexing
+PowerShell treats strings like arrays:
+
+$env:HOMEPATH[0] → \
+Grabs first character from HOMEPATH
+
+Also use:
+
+powershell
+Copy
+Edit
+Get-ChildItem Env:
+To see all env vars, then extract specific characters using array indexing.
+
+🔹 4. Character Shifting (Linux)
+This one’s sick — works by:
+
+Passing a character before the one we want
+
+Using tr (translate) to shift ASCII one char forward
+
+Example:
+
+To get \ (ASCII 92), input [, which is ASCII 91:
+
+bash
+Copy
+Edit
+echo $(tr '!-}' '"-~'<<<[)
+⏩ \ gets printed.
+
+You can do the same for ;:
+
+Find the character before ; in ASCII (which is :)
+
+Use it in <<<: like:
+
+bash
+Copy
+Edit
+echo $(tr '!-}' '"-~'<<<:)
+⏩ Will print ;
+
+🌱 Patterns & Tips
+🔍 Goal	💡 Technique	💬 Notes
+Inject space	${IFS} or %09 or brace exp	Tabs work too
+Inject semicolon ;	${LS_COLORS:10:1} or shifting	Confirm using echo
+Inject slash /	${PATH:0:1}	Same for $PWD, $HOME
+Windows slash \	%HOMEPATH:~6,-11% or [0]	Works in CMD and PowerShell
+Any ASCII char	tr + ASCII shifting	Use man ascii to find positions
+🧠 ITTTT – “Got This, Do That”
+IF you’re blocked by character filters (slash, semicolon, etc.)
+THEN:
+
+Use Linux env vars + slicing (${PATH:0:1})
+
+Use ${IFS} or %09 for space/tab
+
+Use ASCII shifting + tr (<<<: to get ;)
+
+Use Windows PowerShell indexing ($env:VAR[0])
+
+Use CMD substring logic (%VAR:~x,y%)
+
+💭 Bonus Hint
+🔧 Use printenv (Linux) or Get-ChildItem Env: (PowerShell) to list all available variables and hunt down juicy chars already hiding in system paths.
+
+
+🗑️ Why Windows Character Shifting is Kinda Trash
+Windows CMD doesn’t have anything like tr or Bash-style ASCII manipulation. Instead, you have to:
+
+Find a string that contains the character you want (e.g. \ in %HOMEPATH%)
+
+Slice it with :~start,length
+Like:
+
+cmd
+Copy
+Edit
+echo %HOMEPATH:~6,-11%
+Which is dumb because:
+
+You have to know the lengths ahead of time
+
+It varies system to system
+
+You might get nothing back or cut too deep
+
+💀 Why It Sucks for Payloads
+It’s unpredictable
+
+Too context-specific
+
+Takes longer to debug than it does to just spin up a Linux box and pwn from there
+
+So if you're building command injection payloads, just hope the back-end is Linux 😂
+If it’s Windows, yeah — you can try that weird PowerShell index magic:
+
+powershell
+Copy
+Edit
+$env:HOMEPATH[0]
+But even that’s clunky compared to Linux's IFS and substring slicing.
+
+✅ TL;DR
+💬 "Chat, should I learn Windows character shifting?"
+Nah.
+Just know it exists, maybe memorize $env:VAR[x] for PowerShell, and if CPTS throws you into a Windows CMD-only box with a locked-down input field... we riot.
+
+
+So yes — on the CPTS exam, if you sniff out that:
+
+It’s a Windows box
+
+It’s using PowerShell or CMD
+
+And your inputs are crazy restricted (slashes, semicolons, spaces blacklisted...)
+
+👉 Just move on or use a simpler trick.
+You might not even need full character bypasses — the exam doesn’t typically punish you with ultra-obscure edge cases like “guess the exact index of a slash in HOMEPATH” level weirdness.
+
+💡 Pro Move:
+If it gets that goofy, just ask yourself:
+
+“Would this be faster to escalate from Linux or through another vuln I haven’t checked yet?”
+
+Most of the time? Yup.
+
+So yeah: you’re allowed to hit the “nah” button and move the hell on. That’s strategy, not failure.
+
+You ready to keep swingin’?
+
