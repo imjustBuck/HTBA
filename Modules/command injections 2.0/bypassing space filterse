@@ -1,0 +1,117 @@
+🧠 Big Picture – What’s Going On?
+When a WAF or filter blocks space characters, it’s trying to kill payloads like:
+
+bash
+Copy
+Edit
+127.0.0.1; whoami
+Because whoami needs a space to be interpreted as a second command argument. So you gotta find sneaky ways to smuggle in that space without using the actual space (%20 or literal ).
+
+This section is basically a toolkit of stealthy payload spacing for bypasses.
+
+🔧 Methods to Bypass Space Filters (with breakdowns + when/why)
+1. ✅ Newline Character (\n, %0a)
+Used like:
+
+perl
+Copy
+Edit
+127.0.0.1%0awhoami
+➤ Why it works:
+The shell reads newline like a line break between commands, so it executes:
+
+bash
+Copy
+Edit
+ping -c 1 127.0.0.1
+whoami
+✔️ Usually not blacklisted
+✔️ Works across Linux & Windows
+⚠️ Some apps sanitize newline later in the flow
+
+2. ✅ Tab Character (\t, %09)
+Used like:
+
+perl
+Copy
+Edit
+127.0.0.1%0a%09whoami
+➤ Why it works:
+Shell treats tabs just like spaces. Most apps don’t think to blacklist tabs.
+
+✔️ Stealthy AF
+✔️ Reliable spacing alternative
+⚠️ Some filters block both space and tab — see next...
+
+3. ✅ $IFS — Internal Field Separator
+Used like:
+
+bash
+Copy
+Edit
+127.0.0.1%0awhoami${IFS}-a
+➤ Why it works:
+In Linux shells, $IFS is a built-in env var that defaults to whitespace (space, tab, newline).
+$IFS or ${IFS} will auto-expand to a space.
+
+📌 Use when you need literal space functionality but can’t use or %20.
+
+✔️ Super sneaky ✔️ Works even when tab is filtered ⚠️ Doesn’t work in every context — best for Linux, Bash-based systems
+
+4. ✅ Brace Expansion {}
+Used like:
+
+bash
+Copy
+Edit
+127.0.0.1%0a{ls,-la}
+➤ Why it works:
+Bash sees {ls,-la} as a list of args → auto-expands to:
+
+bash
+Copy
+Edit
+ls -la
+So:
+
+bash
+Copy
+Edit
+ping -c 1 127.0.0.1
+{ls,-la}
+✔️ Cleanest payload
+✔️ Works in Bash
+⚠️ Won’t work on restricted shells (e.g., dash, sh, etc.)
+
+🔥 TL;DR Cheatsheet (💥 use this as your ITTTT logic)
+Got This...	Do That
+Space is blacklisted	Try %09 (Tab)
+Tab is blocked too	Use ${IFS} or $IFS
+Still blocked?	Use {arg1,arg2} brace expansion
+Need clean split between commands	Use %0a (newline)
+All else fails	Chain ${IFS}, %0a, and brace tricks together
+🧠 Pro Tip:
+Test your payloads locally on a Linux terminal before sending them in Burp. You’ll know exactly how it expands.
+
+bash
+Copy
+Edit
+echo whoami${IFS}-a
+👀 → Will run as: whoami -a
+
+💡 So TL;DR on $IFS:
+✅ Use it on Linux web apps
+
+✅ Works great when:
+
+Space is blacklisted
+
+You need to separate commands or args (e.g. ls${IFS}-la)
+
+❌ Does NOT work on Windows (CMD or PowerShell don’t understand $IFS)
+
+🧠 Mental Model:
+Think of $IFS like a secret “space smuggler” 🕵️‍♂️
+
+When you can’t sneak a space through the front door (%20), $IFS just walks it in the side disguised as a shell variable.
+
