@@ -1,0 +1,39 @@
+🧠 AEN Blind Run Checklist (Final Prep)
+ ✅ Use only your notes and flowcharts
+
+ 🕵️ Prioritize recon > enumeration > access > pillage > privilege escalation > lateral
+
+ 📓 Keep track of evidence as you go (screens, payloads, hashes, etc.)
+
+ 🪵 Maintain a running timeline in your report — tell the story
+
+ 🔄 Use your "Got This, Do That" trees if stuck
+
+ 🧼 Report quality > speed (you're simulating the full 72h flow)
+
+ 🎯 Don’t tunnel vision — if something doesn’t work in 45min, move on, log it, come back later
+
+🎯 Judging Readiness (After the Run)
+After AEN + report, ask:
+
+Did I feel in control or constantly guessing?
+
+Could I map findings to known CPTS workflows?
+
+Was my report clear, reproducible, and actionable?
+
+Did I finish all major sections within the 72h window?
+
+Would I hire me based on this report?
+
+I’m standing by for:
+
+📝 Obsidian import of your report
+
+✅ QA checklist post-run
+
+💬 Feedback or any blockers you hit
+
+Let’s see how battle-ready you really are.
+
+Go be a damn menace in that AD forest.
