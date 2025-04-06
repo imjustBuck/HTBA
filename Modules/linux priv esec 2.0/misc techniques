@@ -1,0 +1,160 @@
+🧠 Section Summary: Miscellaneous Techniques (Passive Capture, NFS, Tmux Hijack)
+🎯 Passive Traffic Capture
+What It Is: If tcpdump (or similar tools) is installed and your user has access, you may be able to sniff network traffic, which can reveal sensitive info or hashes (Net-NTLMv2, SMBv2, Kerberos, etc).
+
+Target Info to Capture:
+
+Cleartext creds (HTTP, FTP, POP, IMAP, Telnet, SMTP)
+
+Net-NTLMv2 or Kerberos hashes for cracking
+
+Credit card numbers or API keys
+
+SMB traffic (can relay)
+
+Toolchain:
+
+tcpdump
+
+net-creds
+
+PCredz
+
+Quick Command Example:
+
+bash
+Copy
+Edit
+sudo tcpdump -i eth0 -w capture.pcap
+net-creds -f capture.pcap
+🧠 If This, Then That: Passive Traffic Capture
+Got tcpdump access? → Start capturing
+
+Captured something?
+
+Cleartext? → Use creds
+
+Hashes? → Crack offline
+
+Don’t have tcpdump? → Check for SUID or misconfigured sudo perms allowing it
+
+📂 Weak NFS Privileges
+What It Is: NFS allows file shares over the network. If NFS exports are world-accessible (no_root_squash), you can:
+
+Upload SUID binaries
+
+Execute as root via mount point
+
+Check for Exports:
+
+bash
+Copy
+Edit
+showmount -e <target IP>
+Red Flags:
+
+rw,no_root_squash in /etc/exports → 👀
+
+/tmp or /var/nfs/general mounted for * (anyone)
+
+Exploit Flow:
+
+Write local SUID binary (example: shell.c)
+
+Mount the share:
+
+bash
+Copy
+Edit
+sudo mount -t nfs 10.129.X.X:/tmp /mnt
+Copy shell binary over
+
+chmod u+s /mnt/shell
+
+Run it from target user shell
+
+🧠 If This, Then That: NFS
+Got mount access + no_root_squash?
+
+Upload a SUID shell → chmod +s it
+
+Run it as unprivileged user → get root
+
+Got read-only access? → Look for misconfig files / creds
+
+🔀 Tmux Session Hijacking
+What It Is: Tmux allows terminal multiplexing. If a root user runs a shared tmux session with weak perms (e.g. socket file writable by your group), you can attach to it.
+
+Detection:
+
+bash
+Copy
+Edit
+ps aux | grep tmux
+ls -la /<socket file>
+id
+Exploit Steps:
+
+Find tmux session socket (e.g. /shareds)
+
+Check if group matches yours
+
+Attach to it:
+
+bash
+Copy
+Edit
+tmux -S /shareds attach
+You now inherit root shell if the root user was in session
+
+🧠 If This, Then That: Tmux Hijack
+Found tmux session in ps aux?
+
+Socket exists + you’re in group? → Attach to it
+
+Already root user in tmux? → Profit
+
+No match? → Try other multiplexers (screen, nohup, etc.)
+
+✅ TL;DR - Misc Techniques Cheatsheet
+Technique	Signal It's Vulnerable	Key Command/Exploit
+Passive Sniffing	tcpdump binary accessible	tcpdump -i eth0 -w out.pcap → Parse with net-creds or Wireshark
+NFS SUID Upload	no_root_squash + mountable share	Upload shell.c, mount share, set +s, run from low-priv user
+Tmux Hijack	tmux socket owned by group you’re in	tmux -S /shareds attach
+
+
+
+Exactly, Buck — you nailed it. 🔥
+
+This "Miscellaneous Techniques" section is your ace in the hole when all the traditional paths come up empty. Think of it like the "last stand privilege escalation toolkit" — lower probability, but high reward if it hits. Here's how to position it mentally in your exam workflow:
+
+🧠 Where Misc Techniques Fit in Your Attack Chain
+☑️ You’ve already:
+
+Checked for misconfigured sudo access
+
+Explored SUID binaries
+
+Dug through capabilities
+
+Tried PATH hijacks / cron abuse
+
+Looked into containers (Docker, LXD)
+
+Reviewed kernel versions & found no easy exploits
+
+➡️ Now pivot to:
+
+🔍 "Weird but Worth It" Tactics:
+Technique	When to Try It	Example Win
+tcpdump sniffing	tcpdump binary is available + unpriv user has exec perms	Cleartext creds from HTTP/SMB
+Weak NFS	Found showmount -e listing writable shares with no_root_squash	SUID upload, run as root
+Hijack tmux/screen	Root has left a session + socket owned by group you’re in	Attach to root's session
+logrotate	You control a log file, logrotate is outdated, and runs as root	Exploit triggers root shell
+Passive hash capture	You see SMB/Net-NTLM traffic flying by (relay, crack, or replay attack)	Offline brute of hash
+🎯 Pro Tip Mindset:
+💡 Think of these like "environmental exploits" — they depend more on how lazy or inattentive the sysadmin was with default services and permissions rather than dev-specific misconfig.
+
+These won’t always show up in labs where you’re meant to go straight for the sudo misconfig or setcap — but on real-world boxes or in longer CPTS-style exams, these are how you land the final punch when everything else shrugs.
+
+Let me know if you want to build an "If all else fails…" fallback playbook just for these weird tricks 
