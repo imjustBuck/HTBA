@@ -9,3 +9,35 @@
 | Medium   | Disable directory listing or restrict access via .htaccess/web.config                              | Directory Listing Enabled                        | Medium Term |
 | Long     | Develop a baseline configuration/hardening standard and integrate into deployment pipeline         | Multiple Findings                                | Long Term   |
 | Long     | Implement continuous monitoring and alerting for internal suspicious behavior (EDR/SIEM tuning)     | Enhance Security Monitoring Capabilities         | Long Term   |
+
+
+
+Great question, Buck — in the context of the Summary of Recommendations table, the term refers to how long it will likely take to implement the fix, not how fast it could be exploited.
+
+🔍 Breakdown:
+Short Term →
+Quick wins.
+Easy config change, patch, or password update. Usually fixable in days to a week.
+
+Medium Term →
+Requires some planning or testing.
+Maybe a GPO rollout, privilege cleanup, or tighter share permissions. Fixable in 1–3 weeks.
+
+Long Term →
+Strategic changes or architectural shifts.
+Things like:
+
+Building a secure baseline/hardening template
+
+Deploying LAPS org-wide
+
+SDLC integrations for secure coding
+These take months or need leadership buy-in.
+
+🧠 Why this matters in reporting (esp. on CPTS exam):
+You're not just dumping findings — you're helping the client build a roadmap. It shows maturity, empathy for business ops, and solid consulting skills (aka: extra exam points).
+
+If you ever get stuck on this during the exam, just ask yourself:
+
+"If I were the client's IT lead reading this, would I know what to fix first and how soon I could realistically get it done?"
+
