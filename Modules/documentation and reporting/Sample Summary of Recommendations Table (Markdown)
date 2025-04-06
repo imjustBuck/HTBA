@@ -1,0 +1,11 @@
+# Summary of Recommendations
+
+| Priority | Recommendation                                                                                      | Finding Linked To                                | Term        |
+|----------|------------------------------------------------------------------------------------------------------|--------------------------------------------------|-------------|
+| High     | Disable LLMNR/NBT-NS across internal systems                                                        | LLMNR/NBT-NS Response Spoofing                   | Short Term  |
+| High     | Enforce unique local admin passwords per host (LAPS or custom solution)                            | Local Administrator Password Re-Use              | Short Term  |
+| High     | Rotate all cracked/compromised passwords and enforce stronger password policies                    | Weak AD Passwords, Kerberoasting, Tomcat Manager | Short Term  |
+| Medium   | Restrict access to file shares based on user roles and data sensitivity                            | Insecure File Shares                             | Medium Term |
+| Medium   | Disable directory listing or restrict access via .htaccess/web.config                              | Directory Listing Enabled                        | Medium Term |
+| Long     | Develop a baseline configuration/hardening standard and integrate into deployment pipeline         | Multiple Findings                                | Long Term   |
+| Long     | Implement continuous monitoring and alerting for internal suspicious behavior (EDR/SIEM tuning)     | Enhance Security Monitoring Capabilities         | Long Term   |
