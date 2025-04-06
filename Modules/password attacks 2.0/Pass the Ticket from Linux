@@ -1,0 +1,165 @@
+🔥 Pass-the-Ticket from Linux - Summary (CPTS Style)
+🧠 Core Concept:
+Linux machines can integrate with Active Directory using Kerberos.
+
+If Kerberos tickets are stored locally (ccache or keytab), you can steal/use them to impersonate users (PtT).
+
+These tickets may live on joined Linux machines, or even on non-joined ones used to interact with AD via Kerberos.
+
+Abuse is about finding, importing, and using those ticket files.
+
+🛠️ “Got This, Do That” - PtT from Linux Workflow
+✅ You’ve Gained Access to a Linux Host?
+Check if it’s AD-integrated:
+
+perl
+Copy
+Edit
+realm list
+ps -ef | grep -i "sssd\|winbind"
+✅ Want to Find Stored Kerberos Tickets?
+Look for keytab files:
+
+javascript
+Copy
+Edit
+find / -name *keytab* 2>/dev/null
+Look for ccache files (Kerberos session tickets):
+
+bash
+Copy
+Edit
+env | grep -i krb5
+ls -la /tmp | grep krb5cc
+📂 Found a .keytab file?
+Use klist -k -t path/to/file.keytab to list contents.
+
+Use kinit user@REALM -k -t path/to/file.keytab to impersonate.
+
+Run klist to verify you’ve taken over the session.
+
+Now, try lateral movement (e.g., smbclient, evil-winrm, impacket-wmiexec, etc.).
+
+📂 Found a .ccache file?
+Copy it and export it:
+
+bash
+Copy
+Edit
+export KRB5CCNAME=/path/to/krb5cc_xxx
+klist   # confirm ticket details
+Use the ticket directly in impacket-* tools or smbclient:
+
+bash
+Copy
+Edit
+smbclient //dc01/share -k -no-pass
+👨‍💻 Trying to Use the Ticket Externally from Your Kali/Parrot Box?
+Setup proxy access to the internal DC (Chisel, Proxychains, etc.).
+
+Modify /etc/hosts and /etc/proxychains.conf.
+
+Set KRB5CCNAME to ticket path.
+
+Then:
+
+nginx
+Copy
+Edit
+proxychains impacket-wmiexec dc01 -k -no-pass
+🔁 Decision Tree
+Got This	Do That
+Found .keytab	Use klist to ID user → use kinit to import → lateral movement
+Found .ccache	export KRB5CCNAME=... → klist to confirm → use Kerberos-aware tools
+Have root on host	Check /tmp for all user krb5cc_* files
+Ticket expired?	Cannot use, try to reinit with creds or extract password from keytab
+Want plaintext creds?	Use keytabextract.py on .keytab → Crack with hashcat or online repo
+Want to use ticket on Windows	Convert ccache → .kirbi using impacket-ticketConverter
+Want to use .kirbi in Windows	Rubeus.exe ptt /ticket:julio.kirbi
+🧩 Patterns & Hints
+KEYTABs = persistent Kerberos auth without user input (scripts, cronjobs).
+
+CCACHE = session ticket store; temporary but gold for lateral movement.
+
+klist is your friend to validate who you’re impersonating.
+
+Always check for group memberships (id user) → Domain Admins = game over.
+
+From Linux: smbclient, impacket-*, evil-winrm, all support -k for Kerberos.
+
+FILE: prefix in KRB5CCNAME may need to be stripped when using Impacket.
+
+🚩 Red Flags to Check
+Are you root? If yes, you can hijack anyone’s session (read ccache, keytab).
+
+Ticket expiration? klist tells you.
+
+No realm? Check ps -ef or config files (/etc/krb5.conf, /etc/sssd/, etc.).
+
+Cracked password from .keytab? Log in directly with ssh or su - username.
+
+🧠 Tools Recap
+kinit, klist, keytabextract.py → manipulate tickets.
+
+smbclient -k, proxychains impacket-* -k, evil-winrm -k → abuse access.
+
+chisel, proxychains, /etc/hosts → for off-host use.
+
+linikatz.sh → extract all tickets (Mimikatz for Linux).
+
+impacket-ticketConverter → cross-platform ticket use.
+
+🔍 When Would You PtT From Linux to an AD Device?
+Here’s when it really matters:
+
+✅ Scenario 1: You’re on a Linux machine joined to AD and escalate to root
+You check /tmp or KRB5CCNAME, find someone’s valid ticket (ccache).
+
+That user might be Domain Admin or have RDP, SMB, or other access to important boxes.
+
+You PtT with their ticket to move laterally to Windows assets (SMB, WinRM, etc.).
+
+Real-world version: Think a misconfigured Linux DevOps box, joined to AD with SSSD. An engineer logs in, does their thing, and leaves a valid ticket behind. You snatch it and bounce to DC01 or a share server.
+
+✅ Scenario 2: You’re attacking from your Kali box (non-joined) but gain a ticket
+You transferred .ccache or .kirbi from a compromised Linux host.
+
+You now want to use it against AD resources (but you’re not domain-joined).
+
+Use Chisel + Proxychains + Kerberos-aware tools (impacket-wmiexec, evil-winrm, etc.) to use the ticket via the -k flag.
+
+✅ Scenario 3: You crack a .keytab and want to impersonate the user
+Keytabs might be used by scripts or services.
+
+Once cracked (or even without cracking, if kinit works), you generate a ticket as them and proceed to laterally move using SMB, LDAP, etc.
+
+🎯 Is the Main Difference Just the Tools Used?
+Yes, main difference = tooling and a bit of setup:
+
+From Windows	From Linux
+Rubeus to import .kirbi	export KRB5CCNAME for .ccache
+klist (Win) for tickets	klist, kinit, keytabextract.py
+Rubeus or Mimikatz tooling	impacket-*, smbclient -k, linikatz
+Native ticket caching	File-based ticket caching
+But same core mechanics — Kerberos ticket = proof of identity. As long as it’s valid, the OS (and apps using Kerberos) trusts it.
+
+🕓 Is It Just Making Sure the Ticket Is Valid in klist?
+💯 That’s the critical checkpoint before using a ticket.
+
+When you klist, always confirm:
+
+✅ Valid starting time is not in the future (happens if clock skew).
+
+✅ Expires time hasn’t passed.
+
+✅ You see the krbtgt/REALM@REALM — means it’s a TGT.
+
+✅ It belongs to a juicy user (Domain Admin? File share access?).
+
+If all checks out → you can pass that ticket to pretty much anything Kerberos-aware:
+
+smbclient, impacket-wmiexec, evil-winrm, ldapsearch, etc.
+
+🧠 Bonus Situational Tip
+If you're mid-pivot and can't use NTLM because of firewalling or segmentation, Kerberos (PtT) over proxychains might be your only way in — since it’s port 88 + ticket-based auth.
+
