@@ -1,0 +1,132 @@
+🧠 Summary — Protected Files
+File encryption is becoming more common in orgs due to growing awareness and regulations (like GDPR), but the methods used (AES, key-based encryption, etc.) can still be cracked if weak keys or poor practices are in place. This section focuses on identifying and cracking password-protected or encrypted files like .docx, .pdf, .ssh, .keytab, etc., often found on compromised Linux boxes.
+
+🛠️ “Got This, Do That” Flow
+✅ Got This: A bunch of document/spreadsheet/sensitive-looking files (.xls, .docx, .odt, .pdf, etc.)
+Do That:
+
+find / -name *.<ext> (filter noise with grep -v)
+
+Look inside for encoded strings or content that might be base64/password-protected
+
+If encrypted, note the format → convert to hash using appropriate script:
+
+office2john.py <file> > hash.txt
+
+pdf2john.py <file> > hash.txt
+
+✅ Got This: Encrypted SSH private key
+Do That:
+
+Identify encryption with header: Proc-Type: 4,ENCRYPTED
+
+Use ssh2john.py keyfile > ssh.hash
+
+Crack with John: john --wordlist=rockyou.txt ssh.hash
+
+Use --show to retrieve the plaintext pass
+
+✅ Got This: Suspicious file extensions or key-like files
+Do That:
+
+Run: grep -rnw "PRIVATE KEY" / (look for .ssh, .key, .pem)
+
+Identify anything with BEGIN <KEY TYPE> or .keytab files
+
+Check for automation scripts or cronjobs referencing .keytab usage
+
+✅ Got This: Need to crack encrypted docs
+Do That:
+
+Use the right *2john tool:
+
+.doc/.docx → office2john.py
+
+.pdf → pdf2john.py
+
+.ssh → ssh2john.py
+
+Feed hash into john:
+john --wordlist=rockyou.txt file.hash
+
+After cracking:
+john file.hash --show
+
+🔐 Key Patterns to Remember
+File Type	Identifier	2john Script	Notes
+SSH Key	-----BEGIN RSA PRIVATE KEY----- + ENCRYPTED	ssh2john.py	Cracks the passphrase
+Office Docs	.docx, .xls, .ppt	office2john.py	Often fast to crack, weak encryption
+PDF	.pdf	pdf2john.py	Look for MD5/SHA2-based
+ZIP, 7z	.zip, .7z	zip2john, 7z2john.pl	Common for exfil or backup files
+🔎 Enumeration Tips
+find / -name *keytab* -ls 2>/dev/null — Look for keytab creds
+
+grep -rnw "PRIVATE KEY" / — Find SSH private keys
+
+ls -la /tmp — Check for active .ccache sessions (Kerberos ticket files)
+
+crontab -l — Find automated scripts pulling keys/tickets
+
+⚔️ Exam Mindset — How to Use This Offensively
+Cracked document passwords often lead to:
+
+Credentials reused elsewhere
+
+Sensitive instructions (SSH creds, service access)
+
+Internal domain names or paths
+
+Cracked SSH keys = direct login to other systems
+
+Cracked PDFs/docs = intel + initial access footholds
+
+🧨 Real-World/Exam Hints
+SSH keys and Office docs are common loot in Linux boxes
+
+If password cracking fails: search scripts for stored passwords
+
+If file is unreadable: run file <filename> to ID format
+
+Don’t skip .keytab and .ccache—they’re gold mines for Kerberos attacks
+
+🔎 Credential Hunting → Leads to Encrypted Files
+During initial post-compromise enumeration (whether Linux or Windows), you’ll often:
+
+Look for .ssh, .kdbx, .docx, .pdf, .zip, etc.
+
+Run grep, find, or locate to spot juicy files or PRIVATE KEY headers
+
+Stumble on keytab, ccache, or cron-referenced scripts
+
+At this point, it’s all part of the same treasure map — just following the scent of creds.
+
+🔁 Chain of Cracking
+🎯 Initial Loot:
+
+Find SSH.private or Protected.docx
+
+🧠 Recognize Format:
+
+Encrypted header? → Use correct *2john script
+
+🛠️ Convert & Crack:
+
+Generate hash → john --wordlist=rockyou.txt file.hash
+
+🗝️ New Credentials:
+
+SSH into another box
+
+Dump more files / escalate / pivot
+
+🔁 Repeat:
+
+Each cracked file might lead to more creds, more shares, more access.
+
+🧨 TL;DR Mental Model
+Encrypted files = just another cred stash, but locked.
+
+John the Ripper = your locksmith.
+
+Docs + Keys + Configs = often contain reused passwords, creds for RDP/SMB/SSH, or Kerberos material.
+
