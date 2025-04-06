@@ -121,3 +121,59 @@ IF user is in `lxd` group
         AND mount host root
         AND execute shell
         THEN access /mnt/root as root on host
+
+✅ Does Naming Matter? (Short Answer)
+No — the names (ubuntutemp, privesc) are arbitrary.
+They're just aliases/labels that make it easier to reference your image or container.
+
+📌 But Here's What Does Matter
+🔹 Image Alias
+bash
+Copy
+Edit
+lxc image import <imagefile> --alias <your_alias>
+You can name it whatever: ubuntutemp, myrootcontainer, lmao, etc.
+
+Just make sure you refer to that same alias later in the lxc init step.
+
+bash
+Copy
+Edit
+lxc init <your_alias> privesc -c security.privileged=true
+🔹 Container Name
+bash
+Copy
+Edit
+lxc init ubuntutemp <container_name> -c security.privileged=true
+Same deal — pick anything (privesc, devshell, rootescape)
+
+Must match later when you start, exec, or mount
+
+bash
+Copy
+Edit
+lxc start <container_name>
+lxc exec <container_name> /bin/bash
+lxc config device add <container_name> host-root ...
+If you named it lol, your commands would be:
+
+bash
+Copy
+Edit
+lxc start lol
+lxc exec lol /bin/bash
+🧠 Pro Tip:
+Stick to simple names that reflect purpose. Example:
+
+Alias	Purpose
+ubuntutemp	Imported image
+privesc	The container used for escalation
+escape_root	Makes intent crystal clear in notes
+✅ TL;DR Recap:
+Element	Customizable?	Must match later?	Notes
+Image Alias	✅	✅	Used during lxc init
+Container Name	✅	✅	Used in start, exec, etc.
+Mounted Path	✅	Nope (but /mnt/root is common)	Just pick a mount target inside container
+
+
+
