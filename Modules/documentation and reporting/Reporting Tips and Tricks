@@ -1,0 +1,149 @@
+🛠️ Reporting Tips and Tricks – CPTS Breakdown
+📋 1. General Strategy
+🎯 Core Idea:
+Reporting should start on Day 1 of your assessment — not at the end.
+
+✅ Workflow:
+Start filling out templated fields (client name, scope, contacts) while scans run.
+
+Document each finding as it occurs, not after.
+
+Track your attack chain in real time.
+
+Add evidence/screenshots immediately — don’t rely on memory later.
+
+Goal: Avoid QA redlines, missed evidence, or last-minute scramble.
+
+🧰 2. Templates
+🎯 Core Idea:
+Use dedicated templates per test type. Never copy/paste from an old client report.
+
+⚠️ Mistake to Avoid:
+Accidentally leaving another client’s name in a recycled report = amateur move.
+
+✅ Best Practice:
+Maintain .dotm files with macros/placeholders for:
+
+Client info
+
+Scope
+
+Test type
+
+Target environment
+
+💼 3. MS Word Tips (Windows only!)
+🛠️ Top Efficiency Tools:
+Feature	Use Case
+Font Styles	Global updates to formatting (headers, body)
+Table Styles	Consistent, clean formatting
+Captions	Auto-renumber when figures shift
+Page Numbers	Makes reviews/discussion easier
+ToC, List of Figures	Easy navigation
+Bookmarks	Link to custom sections/macros
+Custom Dictionary	Auto-fix typos or banned terms (e.g., "pubic" 🫠)
+Language Settings	Ignore grammar checks in code blocks
+Custom Bullets/Nums	Auto-number findings/appendices
+Quick Access Toolbar	Save time on repetitive tasks
+⌨️ 4. Useful Word Hotkeys
+Hotkey	Function
+F4	Repeat last action
+Ctrl + A, F9	Update ToC, List of Figures, etc.
+Ctrl + Alt + S	Split window to view multiple sections
+Shift + F5	Jump to last edit
+Ctrl + S	SAVE. OFTEN. 🔥💻
+⚙️ 5. Automation
+🧠 Macro Use-Cases:
+Pop-up form → auto-fill:
+
+Client name, test type, scope, etc.
+
+Remove entire sections based on bookmarks (e.g., mobile vs web testing)
+
+Automate common QA corrections
+
+📁 File type: .dotm
+Must be built in Windows Word (not Mac).
+
+📚 6. Reporting Tools / Findings Databases
+🛠️ Purpose:
+Avoid rewriting “default creds on Tomcat” 30 different ways.
+
+✅ Recommendation:
+Maintain a sanitized internal Findings DB or adopt a reporting tool:
+
+Free	Paid
+Ghostwriter	AttackForge
+Dradis	PlexTrac
+VECTR	Rootshell Prism
+WriteHat	—
+🧼 7. Reporting Hygiene Checklist
+🧠 “Tell a Story” in your reports:
+What happened, how it happened, why it matters.
+
+🧽 Clean Presentation:
+Annotate screenshots (arrows, red boxes)
+
+Redact:
+
+Hashes
+
+Cleartext creds
+
+Tool output (“Pwn3d!” → change CME config)
+
+Crude Hashcat guesses
+
+Professional terminal (no transparency, clean prompt)
+
+📎 Content Quality:
+Use raw terminal output where possible.
+
+Format: consistent fonts, spacing, sizes.
+
+Acronyms: define on first use.
+
+Use tools like Grammarly/LanguageTool (if privacy allows).
+
+🧠 QA Yourself First:
+Sleep on your report.
+
+Use Track Changes + QA checklist.
+
+💬 8. Client Communication (Start to Final)
+Phase	Action
+Start	Email client test dates, tester name, source IP, scope
+Daily	Optional end-of-day update (high-risk finding preview?)
+Critical Finding	Pause testing, notify client, let them decide next steps
+DA Achieved	Notify client + ask for limits on further testing
+Unexpected Alert/Down Host	Be transparent, not defensive
+🧠 Reminder:
+You’re not just testing — you’re a trusted advisor.
+
+📤 9. Final Delivery – QA Process
+Step	Description
+1️⃣	Draft report → Author QA (grammar, flow, accuracy)
+2️⃣	Internal QA → At least one other person reviews
+3️⃣	Draft to Client
+4️⃣	Client Review Call → Gather feedback, answer Qs
+5️⃣	Final Copy → Change “Draft” to “Final” if no edits
+📌 Best Practices:
+Use a QA checklist (spelling, evidence clarity, formatting).
+
+Don't modify command output unless it's for professionalism.
+
+Review Track Changes → learn from feedback.
+
+Use version control or centralized repo for QA flow (Jira, GSheet, etc.)
+
+🏁 10. Report Review Call
+Invite all stakeholders.
+
+Walk through high-risk findings and technical detail.
+
+Take notes on repeated client questions = fix those in future reports.
+
+✅ Wrap-Up Mentality
+“The report is the product.”
+
+You can root the entire domain, but if your report doesn’t make it clear, reproducible, and professional — it’s like it never happened.
