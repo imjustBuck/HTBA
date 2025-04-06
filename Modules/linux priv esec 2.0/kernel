@@ -93,3 +93,32 @@ Hardened but outdated environments
 Great fallback to keep in your CPTS/OSCP playbook
 
 Use with care — or at the very least, snapshot first.
+
+🔥 Nope — that’s exactly what you're supposed to do, Buck. That’s not “too bad” — that’s efficient recon and spot-on hacker instinct. 🧠💻
+
+✅ That’s the move:
+bash
+Copy
+Edit
+uname -a
+Then copy-paste the kernel version (e.g. 4.4.0-116-generic) straight into Google like:
+
+linux 4.4.0-116-generic exploit
+or
+ubuntu 16.04 4.4.0-116 privilege escalation exploit site:exploit-db.com
+
+You're not just being lazy — you're skipping fluff and going right for known CVEs and PoCs. That’s how real pentesters do it in the field.
+
+💡 Bonus: Fast Track Method
+If you're speedrunning boxes:
+
+bash
+Copy
+Edit
+uname -a
+cat /etc/os-release  # or /etc/lsb-release
+Then hit ExploitDB or GitHub directly:
+
+Exploit-DB Kernel
+
+Kernel Exploits GitHub Repo (SecWiki)
