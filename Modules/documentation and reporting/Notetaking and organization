@@ -1,0 +1,181 @@
+✅ Core Takeaways
+📓 Notetaking is Non-Negotiable
+Every command, test, result, and thought should be logged. Why? Because:
+
+You’ll need it for your report.
+
+You might need it to defend yourself if something breaks (like in the “Ping of Death” or “Slow as Molasses” stories).
+
+It’s your safety net when VMs crash or you revisit the box in the future.
+
+🧠 Suggested Notetaking Structure (Inside Obsidian)
+Use this as a reusable template for each engagement or box:
+
+Main Sections (each as a note file):
+1. Administrative Information.md – POCs, PMs, goals, timelines
+
+2. Scoping Information.md – In-scope IPs, URLs, creds, VPN info
+
+3. Activity Log.md – Timestamped breakdown of everything you did
+
+4. Payload Log.md – What you uploaded, where, hashes
+
+5. OSINT Data.md
+
+6. Credentials.md – Any creds dumped, cracked, found
+
+7. Web Application Research.md
+
+8. Vulnerability Scan Research.md
+
+9. Service Enumeration Research.md
+
+10. AD Enumeration Research.md
+
+11. Attack Path.md – Narrative of how you got access
+
+12. Findings.md – Short summaries to prep for final report
+
+📁 Recommended Directory Structure
+Use this to keep everything organized:
+
+bash
+Copy
+Edit
+mkdir -p ACME-IPT/{Admin,Deliverables,Evidence/{Findings,Scans/{Vuln,Service,Web,'AD Enumeration'},Notes,OSINT,Wireless,'Logging output','Misc Files'},Retest}
+This mirrors your Obsidian vault structure, so you can drag-and-drop log files, screenshots, exports, etc., directly into the related sections.
+
+⚙️ Tmux Setup & Logging
+🔧 Installation & Config:
+Clone TPM:
+
+bash
+Copy
+Edit
+git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+Create ~/.tmux.conf with:
+
+bash
+Copy
+Edit
+set -g @plugin 'tmux-plugins/tpm'
+set -g @plugin 'tmux-plugins/tmux-sensible'
+set -g @plugin 'tmux-plugins/tmux-logging'
+set -g history-limit 50000
+
+run '~/.tmux/plugins/tpm/tpm'
+Load it:
+
+bash
+Copy
+Edit
+tmux source ~/.tmux.conf
+Inside Tmux, install plugins:
+
+Ctrl + B → Shift + I (capital i)
+
+⌨️ Tmux Shortcuts Cheat Sheet
+Action	Shortcut
+Start new session	tmux new -s <name>
+Split pane (vertical)	Ctrl + B → %
+Split pane (horizontal)	Ctrl + B → "
+Switch panes	Ctrl + B → O
+Kill pane/session	exit
+Logging start/stop	Ctrl + B → Shift + P
+Retroactive logging (scrollback dump)	Ctrl + B → Alt + Shift + P
+Clear history (pane)	Ctrl + B → Alt + C
+Capture screenshot of pane	Ctrl + B → Alt + P
+💎 Tmux Pro Plugins
+tmux-sessionist – Navigate and manage sessions easier.
+
+tmux-resurrect – Restore session after reboot.
+
+tmux-pain-control – Better pane navigation.
+
+Bonus: Watch IppSec’s Tmux deep dive
+
+📷 Screenshots, Redaction & Reporting
+📌 Screenshot Best Practices:
+Terminal output preferred over screenshots when possible.
+
+Use color highlights (commands blue, output red).
+
+For sensitive data:
+
+Use <REDACTED> or XXXXXXX
+
+For hashes: leave first/last few chars e.g., $6$abc…xyz
+
+❌ Don’t Use:
+Blurring or pixelation (can be reversed).
+
+Full-screen terminal shots unless necessary.
+
+Storing/archiving actual PII or raw sensitive files.
+
+🧹 Artifact Logging Template
+Create a simple table in your Obsidian note like this:
+
+Payload	Host	Location	Timestamp	SHA256	Cleaned?
+rev.sh	10.10.10.1	/tmp	04/05/25 14:42	a1b2c3...	✅
+Same for accounts created or system changes:
+
+Host	Change	Timestamp	Details
+10.10.10.10	Added user pentest1	04/05/25 15:21	Password: P@ssw0rd123
+⚠️ Final Tips
+Don’t wait to document—it’s faster to note things down as you go.
+
+Create an Obsidian vault template with pre-made note files.
+
+Use Obsidian hotkeys, templates, and backlinks to make navigation lightning fast.
+
+Combine Obsidian + Tmux logs + structured folders = an unbeatable combo.
+
+When you run through the AEN practice, internal assessments, or the actual CPTS exam, you should absolutely use that suggested note-taking structure (adapted to your style) as your base. Here’s why:
+
+🧠 Why Practice with the Structure?
+Consistency → Speed: If you use the same format every time, reporting becomes 5x faster.
+
+Muscle Memory: On exam day, your brain won’t waste energy thinking “Where should I log this?” — you’ll already know.
+
+Comprehensive Coverage: That structure ensures you don’t miss documenting payloads, scope info, creds, findings, etc.
+
+Plug-and-Play for Report: Each note becomes a copy/paste-ready section for your actual CPTS report.
+
+🧾 What You’ll Actually Submit for CPTS
+For the CPTS exam, you’ll submit:
+
+Technical Report with evidence of each compromised machine (screenshots + explanation).
+
+Step-by-step walkthrough of how you got access (chain of attack).
+
+Remediation recommendations (brief).
+
+Proof files from each pwned machine (flag or token file).
+
+So the note structure (especially: Findings, Attack Path, Credentials, Scoping Info, Payload Log, Evidence) feeds directly into that deliverable.
+
+✅ TL;DR Practice Tip:
+Start every AEN run like it’s an exam:
+
+bash
+Copy
+Edit
+mkdir -p CPTS-AEN-RUN1/{Admin,Deliverables,Evidence/{Findings,Scans/{Vuln,Service,Web,'AD Enumeration'},Notes,OSINT,Wireless,'Logging output','Misc Files'},Retest}
+Then inside Obsidian:
+
+Have pre-made .md notes for:
+
+Attack Path.md
+
+Findings.md
+
+Credentials.md
+
+Scoping Information.md
+
+Activity Log.md
+
+and so on…
+
+Work through the AEN and treat your output as if you’re going to deliver it to a client (or examiner).
