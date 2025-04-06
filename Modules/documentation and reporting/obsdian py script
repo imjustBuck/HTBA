@@ -1,0 +1,142 @@
+import os
+import zipfile
+from pathlib import Path
+
+# Define the folder structure and markdown files
+base_folder = "/mnt/data/CPTS-Reporting-Template"
+notes = [
+    "1. Administrative Information.md",
+    "2. Scoping Information.md",
+    "3. Activity Log.md",
+    "4. Payload Log.md",
+    "5. OSINT Data.md",
+    "6. Credentials.md",
+    "7. Web Application Research.md",
+    "8. Vulnerability Scan Research.md",
+    "9. Service Enumeration Research.md",
+    "10. AD Enumeration Research.md",
+    "11. Attack Path.md",
+    "12. Findings.md"
+]
+
+structure = [
+    "Admin",
+    "Deliverables",
+    "Evidence/Findings",
+    "Evidence/Scans/Vuln",
+    "Evidence/Scans/Service",
+    "Evidence/Scans/Web",
+    "Evidence/Scans/AD Enumeration",
+    "Evidence/Notes",
+    "Evidence/OSINT",
+    "Evidence/Wireless",
+    "Evidence/Logging output",
+    "Evidence/Misc Files",
+    "Retest"
+]
+
+# Create the directory structure
+for folder in structure:
+    Path(os.path.join(base_folder, folder)).mkdir(parents=True, exist_ok=True)
+
+# Create empty markdown files in Notes directory
+notes_dir = os.path.join(base_folder, "Evidence/Notes")
+for note in notes:
+    with open(os.path.join(notes_dir, note), "w") as f:
+        f.write(f"# {note.replace('.md','')}\n\n<!-- Your notes here -->\n")
+
+# Zip the vault template
+zip_path = "/mnt/data/CPTS-Obsidian-Vault-Template.zip"
+with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+    for root, dirs, files in os.walk(base_folder):
+        for file in files:
+            file_path = os.path.join(root, file)
+            zipf.write(file_path, os.path.relpath(file_path, base_folder))
+
+zip_path
+
+🧠 How to Use It in Obsidian (Step-by-Step)
+Unzip it somewhere on your machine (e.g., ~/Documents/CPTS-Vault).
+
+Open Obsidian → Open folder as vault.
+
+Select that unzipped folder.
+
+You’re now inside a fully structured CPTS vault with all your base markdown files and folders prepped.
+
+✅ Already Included:
+Evidence/Findings/H1 - Kerberoasting.md (and others)
+
+Notes for enumeration categories
+
+Admin + Deliverables + Retest folders
+
+Markdown starter for each log and category
+
+
+import os
+from datetime import datetime
+
+# Base directory name (can be adjusted)
+base_dir = f"CPTS-Assessment-{datetime.now().strftime('%Y%m%d')}"
+
+# Directory structure as a dictionary
+structure = {
+    "Admin": [],
+    "Deliverables": [],
+    "Evidence": {
+        "Findings": [
+            "H1 - Kerberoasting.md",
+            "H2 - ASREPRoasting.md",
+            "H3 - LLMNR_NBT-NS Response Spoofing.md",
+            "H4 - Tomcat Manager Weak Credentials.md"
+        ],
+        "Logging output": [],
+        "Misc Files": [],
+        "Notes": [
+            "1. Administrative Information.md",
+            "2. Scoping Information.md",
+            "3. Activity Log.md",
+            "4. Payload Log.md",
+            "5. OSINT Data.md",
+            "6. Credentials.md",
+            "7. Web Application Research.md",
+            "8. Vulnerability Scan Research.md",
+            "9. Service Enumeration Research.md",
+            "10. AD Enumeration Research.md",
+            "11. Attack Path.md",
+            "12. Findings.md"
+        ],
+        "OSINT": [],
+        "Scans": {
+            "AD Enumeration": [],
+            "Service": [],
+            "Vuln": [],
+            "Web": []
+        },
+        "Wireless": []
+    },
+    "Retest": []
+}
+
+def create_structure(base, struct):
+    for key, value in struct.items():
+        path = os.path.join(base, key)
+        os.makedirs(path, exist_ok=True)
+        if isinstance(value, list):
+            for file in value:
+                with open(os.path.join(path, file), 'w') as f:
+                    f.write(f"# {file.replace('.md', '')}\n\n")
+        elif isinstance(value, dict):
+            create_structure(path, value)
+
+# Create the directory structure
+create_structure(base_dir, structure)
+
+# Zip the folder
+import shutil
+zip_path = shutil.make_archive(base_dir, 'zip', base_dir)
+
+zip_path
+
+
