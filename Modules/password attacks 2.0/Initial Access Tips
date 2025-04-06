@@ -1,0 +1,137 @@
+🧠 CPTS Initial Access + Pillaging Methodology (Obsidian-Ready)
+🎯 Goal: Get initial access fast, then immediately pivot into pillaging for escalation, lateral movement, or additional credentials — minimizing wasted time.
+
+🔍 1. Recon & Entry Point Scouting
+👣 [ ] Scan & Discover
+nmap -sC -sV -Pn -T4 <target> -oN full.txt
+
+nmap --script smb-enum-shares,smb-enum-users -p 139,445 <target>
+
+👀 [ ] Look for:
+Open RDP/WinRM/SMB/HTTP/LDAP/FTP/SSH
+
+HTTP login portals → CMS detection (whatweb, wappalyzer)
+
+LFI, SQLi, login brute-forceable services (Hydra, FFUF, etc.)
+
+🗝️ 2. Smart Spray + Wordlist Tuning
+🔓 [ ] If Creds Are Found (or guessed):
+Use them immediately with:
+
+crackmapexec smb <target> -u USER -p PASS
+
+evil-winrm, xfreerdp, wmiexec, smbclient -k
+
+🧠 Wordlist Optimization (Smart Spray):
+Use password policy info:
+
+From unauth’d recon (public-facing login, weak login feedback)
+
+From rpcclient, enum4linux, ldapsearch, or after shell with net accounts, Get-ADDefaultDomainPasswordPolicy
+
+Generate Smart List:
+
+bash
+Copy
+Edit
+inlanefreight01!
+Inlanefreight01!
+Inlanefreight02!
+Inlanefreight2024!
+Companyname@2024!
+Mark123!, Welcome01!, Summer2024!
+Use Hydra:
+
+bash
+Copy
+Edit
+hydra -L users.txt -P smart.txt smb://<target> -V
+💥 3. Initial Access Vectors
+🪵 [ ] Common Weak Logins
+RDP with default creds or company-mutated passwords
+
+SMB shares with guest or low-priv read access
+
+SSH exposed with easy passwords
+
+Jenkins/Tomcat/WordPress logins → weak creds / plugins
+
+🕳️ [ ] Exploitable Web Vectors
+Command Injection → reverse shell or file write
+
+SQLi → credential dump, auth bypass
+
+LFI + log poisoning
+
+🪓 [ ] Known CVEs
+EternalBlue, MS17-010 (if port 445 open)
+
+RCE in exposed apps
+
+Jenkins/WordPress plugin exploits
+
+Searchsploit based on app banner/version
+
+🔐 4. Post-Access Pillaging
+📁 [ ] File Looting
+dir /s /b *.txt *.doc* *.pdf *.xls* *.csv
+
+.kdbx, .zip, .7z, .rar, .vhd, .vmdk, .keytab, .ccache, .conf, .xml, web.config, wp-config.php
+
+🔎 [ ] Cracking Strategy
+File Type	Cracking Tool
+.zip	zip2john + john
+.pdf	pdf2john.py + john
+.docx	office2john.py + john
+.kdbx	keepass2john + john
+SSH keys	ssh2john.py + john
+.vhd	bitlocker2john + hashcat -m 22100
+🔥 Pro Tip:
+
+Found a .keytab? Use klist -k -t + kinit for PtT!
+
+Found .ccache? Use KRB5CCNAME to assume identity and spray from there!
+
+🔄 5. Internal Enumeration (Post Initial Access)
+🧍 [ ] Who Am I?
+whoami /priv, whoami /groups, net user, net localgroup administrators
+
+🗂️ [ ] Session and User Dumping
+quser, query user, tasklist /v
+
+Get-NetSession, net session
+
+🔑 [ ] Creds From Memory
+mimikatz, lsass, procdump, LaZagne, SharpChrome, Get-BrowserData
+
+🔁 6. Credential Reuse / Lateral Movement
+PtH / PtT if hash/ticket available
+
+secretsdump.py, psexec.py, wmiexec.py, smbexec.py
+
+Rubeus, klist, kinit, export KRB5CCNAME=...
+
+Password reuse with CME:
+
+cme smb <target> -u USER -p PASS
+
+🚨 7. Fast Recon Tips for Password Hints
+Check shares: net view, smbclient -L <ip>, crackmapexec smb <ip> --shares
+
+Look in:
+
+C:\Users\*\Desktop\*
+
+C:\ProgramData\*
+
+C:\IT, C:\Scripts, C:\Backups
+
+Common patterns: .bak, .old, .config, .xml, *.log
+
+🧠 Pillaging Cheatsheet
+Target File	Extraction Tool	Action
+*.kdbx	keepass2john	Crack for master key
+*.zip, *.rar	zip2john, rar2john	Crack contents
+*.docx, *.pdf	office2john, pdf2john	Crack for data dump
+*.keytab, *.ccache	kinit, klist	Kerberos impersonation
+*.vhd, *.bitlocker	bitlocker2john	Mount or decrypt
