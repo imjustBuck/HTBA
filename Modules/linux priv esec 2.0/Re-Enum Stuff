@@ -1,0 +1,33 @@
+🧭 “No Win? Re-Enum” Flowchart
+🔁 WHEN TO RE-ENUM
+Situation	Re-Enum Trigger
+🟥 You’ve hit a dead end	No priv esc vector is working, nothing seems obvious
+🟨 You’ve changed user	Got a shell as someone new? They might see more
+🟨 You’ve gained root	Time to enum everything again for lateral / domain ops
+🟩 You moved to a new box	New box = full fresh enumeration, from scratch
+🟧 A tool/script failed or returned junk	Manual re-enum often shows what the tool missed
+🟨 You found new credentials	Recheck sudo, SSH, file access, hidden dirs, and /home
+🟦 New network interface / IP seen	Could be a pivot target — enum net, ARP, DNS again
+🟩 Found a mounted drive or file system	Mount it, list it, grep it — and recheck everything it exposes
+🟥 You feel stuck	That’s your gut saying go back and look again
+🛠️ HOW TO RE-ENUM (Checklist Style)
+Area	What to Run Again
+✅ User Context	whoami, id, groups, sudo -l
+✅ OS + Kernel	uname -a, cat /etc/os-release, check kernel CVEs again
+✅ PATH + ENV	echo $PATH, env, see if anything changed
+✅ Filesystem	ls -la /, df -h, lsblk, mount, cat /etc/fstab
+✅ Network	ip a, route, netstat -rn, arp -a, check /etc/resolv.conf
+✅ Users & Groups	cat /etc/passwd, /etc/group, look for new ones
+✅ Sudo Privs	sudo -l — now that you're someone new, this might change
+✅ Hidden Files	find / -type f -name ".*", find / -type d -name ".*"
+✅ SSH Keys	find / -name "id_rsa", find / -name "*.pub"
+✅ Bash Histories	cat /home/*/.bash_history, ls -la /root/ (if root)
+✅ Low-Hanging Fruit	grep -i 'password|pass|key' / -r --exclude-dir={proc,sys} 2>/dev/null
+✅ Automation (if allowed)	Rerun linPEAS or pspy, compare outputs
+💥 Optional Bonus: Make this your alias
+bash
+Copy
+Edit
+alias reenum="whoami && id && sudo -l && uname -a && cat /etc/os-release && df -h && mount && ip a && arp -a && cat /etc/passwd && cat /etc/group"
+🧠 Golden Rule
+“When you’re stuck, go back to what you know — and re-enumerate the hell out of it.”
