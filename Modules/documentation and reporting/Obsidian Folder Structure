@@ -1,0 +1,15 @@
+CPTS_Reporting_Module/
+├── Summary_of_Recommendations/
+│   └── Summary_Table.md
+├── Executive_Summary/
+│   └── Executive_Summary_Builder.md
+├── Findings/
+│   └── Finding_Template.md
+├── Appendices/
+│   └── Appendix_Templates.md
+├── Draft_vs_Final/
+│   └── Notes_on_Versions.md
+├── Reporting_Workflows/
+│   └── Prioritization_&_AttackChain_Logic.md
+└── Metadata/
+    └── Notes_on_Report_Types.md
