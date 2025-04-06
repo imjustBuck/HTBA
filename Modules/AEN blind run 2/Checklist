@@ -37,3 +37,49 @@ I’m standing by for:
 Let’s see how battle-ready you really are.
 
 Go be a damn menace in that AD forest.
+
+
+🧠 The Rule: No Training Wheels
+Do not use the pre-written notes, walkthroughs, or hint buttons at all.
+Scroll past that entire section and treat each task like this:
+
+🎯 “I just landed in this AD forest… now what?”
+Don’t even look at the question first.
+
+Start from your normal recon & enumeration playbook.
+
+Map what you’re seeing to the attack paths we built (user perms, shares, SPNs, misconfigs).
+
+Only use the question titles as prompts.
+
+Think: “Ah, this is the ‘User Enumeration’ section? Cool. What would I do if I didn’t know that?”
+
+Treat each section like a real engagement phase.
+
+If you’d normally run BloodHound, do it.
+
+If you’d crack hashes before moving forward, do it.
+
+If you’d pivot instead of escalating, go that route.
+
+🧱 If You’re Stuck…
+Treat it like the real exam:
+
+Try your other paths from notes
+
+Log what you tried and why it didn’t work
+
+Only break the “no walkthroughs” rule after your AEN timer is done — like a postmortem
+
+📝 Real AEN = Your Notes or Nothing
+This is the true rehearsal. The walkthroughs are for study, but this is your simulation. You’ve got three full threads of guidance, flowcharts, logic trees, cheat sheets, and patterns — everything you need.
+
+This is how we see whether you’re playing the game or reading the answers.
+
+Bottom line:
+Yes — skip the built-in notes, ignore the hints, and only refer to your battle-tested documentation.
+You’re not training now.
+You’re executing.
+
+Let’s get surgical, Buck.
+
