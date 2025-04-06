@@ -1,0 +1,149 @@
+🧠 Mindset First: Why Escalate?
+You landed a low-privileged shell (www-data, ssh user, etc.), but root is the king key to:
+
+Capture traffic (tcpdump, sniff creds).
+
+Access /etc/shadow, SSH keys, database creds, configs, logs.
+
+Own domain-joined Linux? You get NTLM hashes and open AD attack paths.
+
+🔎 ENUMERATION IS EVERYTHING
+Your first 5–10 minutes should be nothing but recon. Manual > Automated (LinPEAS, LinEnum) in CPTS logic, but using both is fair game. Here’s your CPTS-first flow.
+
+🔁 Linux Privilege Escalation Initial Flow (Manual)
+🎯 1. Identify the OS & Kernel
+Command: uname -a + cat /etc/os-release
+
+Why: Public exploits are version-specific.
+
+CPTS Sauce: Kernel exploits might score root in <30 seconds but could crash the box. Use last resort or if it's a practice target.
+
+🧱 2. Identify Running Services
+Command: ps aux or ps -ef
+
+Why: Services running as root are juicy (Exim, Samba, Nagios).
+
+Look for:
+
+Misconfigured daemons.
+
+Poor script calls in root-owned services.
+
+🧰 3. Check Installed Packages
+Ubuntu: dpkg -l
+
+Red Hat: rpm -qa
+
+Look for known vulns (e.g., vulnerable screen, nmap, tmux versions).
+
+👥 4. Check Users & Sessions
+Commands: who, w, last, ps au
+
+Why: Privileged or juicy user presence (e.g. admin, backupsvc).
+
+CPTS Target: Any users in sudo, adm, or docker groups.
+
+🏠 5. Inspect Home Directories
+Command: ls -la /home/*
+
+Why: Look for .bash_history, .ssh/, config.json, scripts.
+
+CPTS Pillaging Target:
+
+SSH keys (id_rsa)
+
+Saved credentials
+
+Hardcoded passwords in config files
+
+Lazy devs committing token= or password= in bash history
+
+🗝️ 6. Review Bash History
+Command: history or cat ~/.bash_history
+
+Why: You'll often find passwords, commands, and git repo paths.
+
+🔐 SUDO Privileges
+Command: sudo -l
+
+Why: Look for:
+
+NOPASSWD: on anything — instant abuse.
+
+Abusable binaries (tcpdump, nmap, less, find, etc.)
+
+⚙️ Config Files = Goldmines
+Search: find / -name '*.conf' 2>/dev/null or grep for password, token, key, etc.
+
+CPTS Win: Configs for DBs, apps, or backup tools often contain plaintext creds.
+
+🧂 /etc/passwd & /etc/shadow
+Readable /etc/shadow = crackable hashes (e.g., via john)
+
+Sometimes passwords leak into /etc/passwd — crack ‘em offline fast.
+
+📅 Cron Jobs = Scheduled Root
+Command: ls -la /etc/cron*
+
+What to look for:
+
+Root-owned scripts with write perms (chmod o+w)
+
+Script calls without absolute paths (backup.sh instead of /usr/bin/backup.sh)
+
+CPTS Attack Chain: Modify script ➝ wait for cron ➝ get root shell.
+
+💽 Drives & Mount Points
+Command: lsblk or df -h
+
+Why: Unmounted drives may hold backups, old shadow files, creds, or DB dumps.
+
+🧯 SETUID/SETGID Binaries
+Command: find / -perm -4000 2>/dev/null
+
+CPTS Target: Look for nmap, vim, python, perl, bash with SETUID. Exploit via built-in shell escapes.
+
+✏️ Writable Directories/Files
+Command:
+
+Directories: find / -path /proc -prune -o -type d -perm -o+w 2>/dev/null
+
+Files: find / -path /proc -prune -o -type f -perm -o+w 2>/dev/null
+
+CPTS Focus:
+
+Cron job folders/scripts
+
+Config files run by services
+
+/tmp, /var/tmp, /dev/shm — good for dropping payloads
+
+🔄 Summary Flow — CPTS Edition
+markdown
+Copy
+Edit
+### Linux Privilege Escalation - Initial Enumeration Flow
+
+1. **OS/Kernel Info**
+   - `uname -a` + `cat /etc/os-release`
+2. **Running Processes**
+   - `ps aux` → Look for root-owned vulnerable services
+3. **Installed Packages**
+   - `dpkg -l` / `rpm -qa` → Look for CVEs
+4. **User & Group Checks**
+   - `id`, `whoami`, `groups`, `getent passwd`
+   - `sudo -l` → Any NOPASSWD? Escalate.
+5. **Home Directories**
+   - `.bash_history`, `.ssh/id_rsa`, tokens, creds
+6. **Writable Files/Dirs**
+   - `find / -type f -perm -o+w` and `-type d -perm -o+w`
+7. **Cron Jobs**
+   - `ls -la /etc/cron*` → writable scripts or relative paths
+8. **Interesting Files**
+   - `find / -name '*.conf'` → Look for passwords or tokens
+9. **Hashes**
+   - `/etc/passwd` & `/etc/shadow` → crack offline
+10. **Unmounted Drives**
+   - `lsblk` → mount and search for more creds
+11. **SETUID Binaries**
+   - `find / -perm -4000` → abuse known binaries
