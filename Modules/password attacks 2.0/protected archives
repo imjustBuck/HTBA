@@ -1,0 +1,160 @@
+🔐 Protected Archives - Breakdown
+🧠 What Are They?
+Archives = compressed file containers (e.g., .zip, .rar, .7z)
+
+Can store multiple files or even folders
+
+Frequently used to organize and transfer multiple documents at once
+
+Common in enterprise ops to bundle reports, creds, scripts, etc.
+
+🔐 Can They Be Encrypted?
+Yes, archives can be password-protected
+
+Some formats natively support it (.zip, .rar, .7z)
+
+Others use external tools (e.g., tar + openssl, gzip + gpg)
+
+Still others are full-disk/volume encryption formats (e.g., BitLocker .vhd)
+
+🧭 Recon/Enumeration Phase
+During recon or credential hunting, run broad extension sweeps:
+
+bash
+Copy
+Edit
+find / -name *.<ext> 2>/dev/null
+Or fetch extension lists dynamically:
+
+bash
+Copy
+Edit
+curl -s https://fileinfo.com/filetypes/compressed | html2text | awk '{print tolower($1)}' | grep "\." | tee -a compressed_ext.txt
+📦 Archive Type: .zip → Tool: zip2john + john
+🧪 Step-by-Step:
+🎯 Extract the hash from the zip:
+
+bash
+Copy
+Edit
+zip2john ZIP.zip > zip.hash
+🔍 Inspect contents:
+
+bash
+Copy
+Edit
+cat zip.hash
+🔓 Crack with a wordlist:
+
+bash
+Copy
+Edit
+john --wordlist=rockyou.txt zip.hash
+✅ View cracked password:
+
+bash
+Copy
+Edit
+john zip.hash --show
+📦 Archive Type: gzip + openssl → Tool: openssl brute loop
+🧪 Step-by-Step:
+🔍 Identify openssl-encrypted gzip:
+
+bash
+Copy
+Edit
+file GZIP.gzip
+# Output: openssl enc'd data with salted password
+🔓 Brute with a for-loop:
+
+bash
+Copy
+Edit
+for i in $(cat rockyou.txt); do
+  openssl enc -aes-256-cbc -d -in GZIP.gzip -k $i 2>/dev/null | tar xz
+done
+✅ Check if files were extracted:
+
+bash
+Copy
+Edit
+ls
+💽 Drive Type: BitLocker Encrypted VHD → Tool: bitlocker2john + hashcat
+🧪 Step-by-Step:
+🧪 Extract hashes:
+
+bash
+Copy
+Edit
+bitlocker2john -i Backup.vhd > backup.hashes
+grep "bitlocker\$0" backup.hashes > backup.hash
+🔓 Crack with hashcat:
+
+bash
+Copy
+Edit
+hashcat -m 22100 backup.hash rockyou.txt -o backup.cracked
+✅ Read cracked password:
+
+bash
+Copy
+Edit
+cat backup.cracked
+🧠 Pro tip: Once cracked, mount the VHD on Windows, enter the password, and boom — access granted to the full encrypted volume.
+
+🧬 Mindset for Protected Archives
+When	What to Do
+Found .zip, .rar, .gzip, .vhd, .7z	Assume it could be encrypted
+Archive opens but files inside are encrypted	Treat them individually with relevant *2john scripts
+Not sure if encrypted?	Use file, binwalk, or try to extract and see
+Can't open normally	Try hash extraction + cracking
+Already cracked an archive	✅ Look for more creds, configs, .kdbx, SSH keys, etc. inside
+⚔️ Attack Flow Mentality
+pgsql
+Copy
+Edit
+Recon → Find archive → Check if encrypted → Extract hash → Crack it → Loot → Reuse → Escalate
+
+🧭 When You’d Encounter These
+During credential hunting sweeps:
+
+find / -name *.zip, *.rar, *.vhd, etc.
+
+Grepping for passwords, SSH keys, private data, or even just scanning user folders
+
+Sometimes you find a .zip, .gzip, or .vhd and think:
+
+“Hmm… can’t open it... must be encrypted 👀”
+
+🔓 Next Move = Bring Out John (or Hashcat)
+Archive Type	Tool to Extract Hash	Tool to Crack
+.zip, .rar, .7z	zip2john, rar2john, 7z2john.pl	john
+.docx, .pdf, .xls	office2john.py, pdf2john.py	john
+SSH Private Key	ssh2john.py	john
+.vhd BitLocker Drive	bitlocker2john	hashcat
+Encrypted .gzip via openssl	No hash, use openssl loop	N/A
+🧠 So the workflow =
+vbnet
+Copy
+Edit
+Find archive while hunting → Check if it's locked → Use a *2john tool → Crack it with John or Hashcat → Mount/extract/view → Win
+🏴‍☠️ Once Cracked?
+Dump contents
+
+Search for:
+
+Passwords
+
+SSH keys
+
+More docs
+
+Scripts
+
+Config files
+
+Chain it → maybe use creds to SSH, WinRM, SMB, or impersonate someone else
+
+💡 Pro Tip
+A cracked .zip might have an encrypted .docx, and that might contain creds for a user with sudo rights — it's like peeling an onion of access.
+
