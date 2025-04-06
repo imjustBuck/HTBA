@@ -1,0 +1,122 @@
+🔐 Linux Hardening – "If This, Then That" Breakdown
+✅ IF YOU WANT TO PREVENT EASY PRIVESC VECTORS →
+THEN DO THIS: Regular Updates & Patching
+
+Why? Kernel exploits (like DirtyPipe or Netfilter) often target unpatched systems. Keeping the system current eliminates a lot of low-hanging fruit.
+
+Tool:
+
+Debian/Ubuntu: unattended-upgrades
+
+Red Hat: yum-cron
+
+If you find uname -r showing something ancient → potential exploit.
+
+✅ IF YOU’RE LOCKING DOWN FILES/BINARIES →
+THEN DO THIS: Config Management + SUID/Cron/Sudo Checks
+
+Checklist:
+
+find / -perm -4000 2>/dev/null → scan SUID binaries.
+
+ls -la /etc/cron* → check cron files for writable perms.
+
+sudo -l → ensure binaries use absolute paths (to prevent hijacks).
+
+grep -i password /etc/* → find plaintext creds.
+
+ls -la ~/.bash_history → avoid exposed command history.
+
+Best Practices:
+
+Remove unused packages/services.
+
+Ensure custom libraries are not world-writable.
+
+Use SELinux or AppArmor for extra policy enforcement.
+
+✅ IF YOU WANT TO TIGHTEN USER CONTROL →
+THEN DO THIS: User Management + Password Policy
+
+Checklist:
+
+Enforce password history w/ /etc/security/opasswd
+
+Rotate passwords + check with chage -l <user>
+
+Remove unused users from /etc/passwd
+
+Audit group membership: groups <user>
+
+Restrict sudo: visudo + use NOPASSWD sparingly.
+
+Tools:
+
+Config mgmt like Puppet, SaltStack, Ansible
+
+Slack/email integrations for live alerts on changes
+
+✅ IF YOU WANT TO VALIDATE SECURITY BASELINES →
+THEN DO THIS: Audit w/ Lynis
+
+Steps:
+
+Clone and run:
+
+bash
+Copy
+Edit
+git clone https://github.com/CISOfy/lynis.git
+cd lynis
+./lynis audit system
+Look for:
+
+🔺 Warnings (bad perms, missing sync, etc.)
+
+💡 Suggestions (e.g., "Set GRUB password", "Disable core dumps")
+
+Review the:
+
+lynis-report.dat (scan output)
+
+lynis.log (full detail)
+
+Bonus Tip: Run Lynis as root to unlock more checks.
+Non-priv mode is good, but full mode = beast mode.
+
+🔄 Recap Cheat Sheet:
+If You See	Then Consider
+Old kernel or sudo version	Public exploit like DirtyPipe or CVE-2021-3156
+Writable custom libs	LD_PRELOAD or .so hijack risk
+Unlocked cron or tmp dirs	Script injection or binary planting
+sudo -l shows env_keep+=LD_PRELOAD	Easy privesc if you can drop .so file
+User has access to /usr/lib/pythonX.X/	Python module hijack possible
+SUID binary calls a custom lib	Shared object hijack time
+/etc/passwd has no root password hash	DirtyPipe style root access
+pkexec is present on vulnerable Polkit	Run CVE-2021-4034 PoC
+/etc/sudoers lets you run specific commands	Try sudo -u#-1 <cmd> (CVE-2019-14287)
+💥 Real-World Insight for Reporting (Bonus Exam Gold):
+When reporting a privilege escalation path in the exam or a real engagement:
+
+State the misconfiguration or vulnerability
+e.g., “Sudo version 1.8.31 is vulnerable to CVE-2021-3156.”
+
+Prove impact (root shell, file access, etc.)
+Screenshot of id, whoami, or cat /etc/shadow
+
+Explain fix or mitigation clearly
+
+"Upgrade sudo to >= 1.9.5"
+
+"Remove world-writable permission from /usr/lib/python3.8"
+
+"Restrict access to cron job file at /etc/cron.d/backup"
+
+Bonus points if you tie it to Linux hardening best practices like:
+
+"Enforce least privilege in sudoers"
+
+"Audit custom library permissions"
+
+"Use tools like Lynis regularly"
+
