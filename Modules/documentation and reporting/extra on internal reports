@@ -1,0 +1,165 @@
+📌 Extra Insights for Scoring Bonus Points in Reporting (especially for CPTS exam):
+Here’s how you can squeeze out every point when it comes to your CPTS exam reporting:
+
+🧠 1. Be Methodical and Consistent
+Stick to the vault structure we just built.
+
+Your report should tell a story: Initial Access → Enumeration → Exploitation → Privilege Escalation → Domain Compromise.
+
+Use consistent terminology and heading structure throughout.
+
+📊 2. Executive Summary (Don't Skip It)
+Short but meaningful.
+
+Explain what was tested, what was found, and what risk it presents.
+
+Keep it non-technical and management-friendly.
+
+Bonus: If you found a Domain Admin path, summarize it cleanly here. This is your highlight reel.
+
+📁 3. Findings (This is where you shine)
+Each finding should contain:
+
+Title + Severity
+
+Affected Host/User
+
+Description
+
+Impact
+
+Evidence (Screenshots + CLI Output)
+
+Remediation Recommendations
+
+Replication Steps (if applicable)
+
+Pro Tip: Use Obsidian markdown tables or collapsible callouts for each finding to keep things clean.
+
+📚 4. Include a Narrative Section
+Include a dedicated Attack Path.md note that outlines how you chained the attack:
+
+"Started with SMB anonymous login on 10.10.10.5 → Got creds → Pivoted to user → Found misconfigured service → Rooted box."
+
+Bonus Points: Annotate BloodHound graphs or include a clean ASCII-style visual flow.
+
+🕵️ 5. Show Your Work
+In low-findings scenarios, explain:
+
+What you tried.
+
+What failed (and why).
+
+What tools or methods were ruled out.
+
+It proves thoroughness even if you didn’t get DA.
+
+🔐 6. Log Everything with Tmux
+Use Tmux logging per section: enum, exploit, post.
+
+Attach logs in Logging output/ and reference them in your notes.
+
+📦 7. Final Checklist Before Submission
+✅ Clean up formatting.
+
+✅ Redact creds in logs/screenshots.
+
+✅ Make sure Obsidian vault is navigable.
+
+✅ Add a summary timeline of actions.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+from pathlib import Path
+import zipfile
+import shutil
+import os
+
+# Set up folder structure for Obsidian Vault template for CPTS Internal Penetration Test report
+vault_name = "CPTS_Internal_PenTest_Report"
+base_path = Path("/mnt/data") / vault_name
+
+# Folder and markdown structure
+structure = {
+    "Admin": [],
+    "Deliverables": [],
+    "Evidence": {
+        "Findings": [
+            "H1 - Kerberoasting.md",
+            "H2 - ASREPRoasting.md",
+            "H3 - LLMNR&NBT-NS Response Spoofing.md",
+            "H4 - Tomcat Manager Weak Credentials.md"
+        ],
+        "Logging output": [],
+        "Misc Files": [],
+        "Notes": [
+            "1. Administrative Information.md",
+            "2. Scoping Information.md",
+            "3. Activity Log.md",
+            "4. Payload Log.md",
+            "5. OSINT Data.md",
+            "6. Credentials.md",
+            "7. Web Application Research.md",
+            "8. Vulnerability Scan Research.md",
+            "9. Service Enumeration Research.md",
+            "10. AD Enumeration Research.md",
+            "11. Attack Path.md",
+            "12. Drafting & Final Report Steps.md"
+        ],
+        "OSINT": [],
+        "Scans": {
+            "AD Enumeration": [],
+            "Service": [],
+            "Vuln": [],
+            "Web": []
+        },
+        "Wireless": []
+    },
+    "Retest": []
+}
+
+def create_structure(base, struct):
+    for key, val in struct.items():
+        dir_path = base / key
+        dir_path.mkdir(parents=True, exist_ok=True)
+        if isinstance(val, list):
+            for file in val:
+                (dir_path / file).write_text(f"# {file.split('.')[0]}")
+        elif isinstance(val, dict):
+            create_structure(dir_path, val)
+
+# Create folder structure
+create_structure(base_path, structure)
+
+# Create a README or home note for vault
+(base_path / "README.md").write_text("# CPTS Internal Penetration Test Report\n\nUse this vault to document and structure your AEN runs and CPTS exam notes in an organized, Obsidian-friendly format.")
+
+# Zip the folder structure for download
+zip_path = f"/mnt/data/{vault_name}.zip"
+shutil.make_archive(base_path, 'zip', base_path)
+
+zip_path
