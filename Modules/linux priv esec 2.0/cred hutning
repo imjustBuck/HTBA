@@ -1,0 +1,102 @@
+✅ Summary
+Credential hunting is one of the most exam-critical and real-world relevant skills in pentesting. We're looking for any trace of usernames, passwords, API keys, tokens, and SSH credentials scattered across the system — not just for privesc, but for lateral movement, pivoting, DB access, or re-entry.
+
+The real win here isn’t just finding creds — it’s chaining them into access.
+
+🔀 "If This, Then That" Workflow
+Got This	Then Do That
+Found cleartext credentials	Test them on sudo -l, su <user>, /etc/shadow cracking, or ssh
+Found SSH private key	Check perms → If usable: ssh -i key user@localhost
+Found .bash_history or command logs	Look for tools with --password, -p, or hardcoded secrets
+Found .conf, .config, .xml, .env, .json files	grep for passwords, usernames, API keys
+Found MySQL creds	Try mysql -u <user> -p, or mysql --socket if local DB
+Found .bak, .old, .swp, .save files	Open with less, cat, or strings — creds are often hidden here
+Found known_hosts entries	Use found private keys to attempt lateral ssh
+Found accessible mail/spool	grep -i pass /var/mail/* or open the messages manually
+Found user SSH directory	Check authorized_keys, id_rsa, and .bashrc for hardcoded SSH commands
+Found SUID binary or root-owned script	Grep the binary/script path for embedded creds or command injection
+🧠 Patterns / What to Look For
+Credentials = in files with:
+
+.conf, .config, .xml, .json, .env, .ini, .yaml
+
+Backup types: .bak, .old, .save, .1, .tar, .zip
+
+Shell scripts: .sh, .py, .pl, .rb
+
+Common variables or tags:
+
+password, passwd, pwd, secret, token, apikey, key, user, login, auth
+
+Locations:
+
+/var/www/html, /etc/, /home/*/.ssh/, /opt/, /mnt/, /root/
+
+/var/spool/, /var/mail/, /tmp/, /var/backups/, /media/
+
+SSH creds: id_rsa, id_dsa, known_hosts, authorized_keys, config
+
+Configs often abused:
+
+wp-config.php, .htpasswd, .env, settings.py, db.php, config.php
+
+🛠️ Tools & One-Liners
+🔍 Find credential files
+bash
+Copy
+Edit
+find / -type f \( -iname "*.conf" -o -iname "*.config" -o -iname "*.xml" -o -iname "*.ini" -o -iname "*.json" -o -iname "*.env" \) 2>/dev/null
+🔍 Grepping for sensitive terms
+bash
+Copy
+Edit
+grep -Ri 'password\|passwd\|pwd\|secret\|token\|key\|user' / 2>/dev/null
+🔍 Find backup or hidden versions of files
+bash
+Copy
+Edit
+find / -type f \( -iname "*.bak" -o -iname "*.old" -o -iname "*.save" -o -iname "*.swp" \) 2>/dev/null
+🔐 Find SSH private keys
+bash
+Copy
+Edit
+find / -type f -name "id_rsa" 2>/dev/null
+🧠 Check for interesting SSH activity
+bash
+Copy
+Edit
+cat ~/.ssh/known_hosts
+🧪 Inspect user histories
+bash
+Copy
+Edit
+find /home -name ".*history" -exec cat {} \; 2>/dev/null | grep -Ei 'ssh|pass|mysql|scp|curl|wget'
+📁 Check world-readable mail/spool
+bash
+Copy
+Edit
+ls -la /var/mail/ /var/spool/mail/
+💥 Hints / Gotchas / Exam Tips
+One valid password can give you access to:
+
+su <user>
+
+sudo -u <user> <cmd>
+
+ssh user@localhost
+
+Reuse on other machines if lateral movement is possible
+
+Watch for users echoing or assigning passwords in .bash_history
+
+Many web apps (especially WordPress, Drupal, Joomla) store creds in their config files — grep /var/www/ like a maniac
+
+Some config files store Base64-encoded secrets → decode and test
+
+If .ssh/id_rsa is found: check perms and use chmod 600 id_rsa && ssh -i id_rsa user@localhost
+
+Scan /etc/fstab, .git/config, .env, and .npmrc for hardcoded tokens
+
+Check /root/.ssh — if you have read access, it's usually GG
+
+CPTS may drop you a file with a key hidden in the middle of junk HTML, encoded blob, or binary dump — use strings, grep, base64 -d, or even xxd if needed
