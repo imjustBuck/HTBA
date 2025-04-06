@@ -1,0 +1,38 @@
+# Executive Summary Builder
+
+## 🧩 Structure
+
+1. **Engagement Overview**
+2. **Key Findings Breakdown**
+3. **Impact Summary**
+4. **Remediation Themes**
+5. **Visibility/Detection Gaps**
+6. **Closing Recommendations**
+
+---
+
+## ✍️ Template
+
+### 1. Engagement Overview
+> During the [assessment_type] conducted against [client_name], a total of **[X] findings** were identified. These findings were categorized as follows: **[Y High]**, **[Z Medium]**, **[A Low]**, and **[B Informational]**.
+
+### 2. Key Findings
+- Unauthenticated remote access via [vuln_name]
+- Credential reuse across multiple systems
+- Domain compromise via lateral movement from [X] to [Y]
+- Lack of detection during enumeration, exploitation, and lateral movement
+
+### 3. Impact Summary
+> The tester was able to gain **Domain Admin** privileges via chained exploitation of [X], [Y], and [Z]. This demonstrates the ability for an attacker to compromise core systems and access sensitive data, including HR, finance, and backup environments.
+
+### 4. Remediation Themes
+- Harden internal authentication processes
+- Segment and restrict excessive permissions
+- Improve patch and configuration management
+- Enhance detection visibility through SIEM tuning
+
+### 5. Visibility Gaps
+> No alerts or blocks were observed during critical phases of the test, suggesting that adversarial behavior may go undetected. This represents a significant risk of prolonged dwell time during a real-world attack.
+
+### 6. Final Recommendations
+> We recommend a phased remediation approach starting with [top 2-3], followed by medium-priority gaps, and culminating in long-term architectural and cultural changes (e.g., baseline hardening, password policies, and user training).
