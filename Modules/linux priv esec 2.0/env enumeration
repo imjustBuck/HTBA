@@ -1,0 +1,62 @@
+✅ Summary
+This section focuses on manual post-exploitation Linux enumeration, teaching you how to identify OS details, kernel version, users, services, and misconfigurations that can lead to privilege escalation. While tools like LinPEAS and LinEnum are helpful, understanding the why and how behind each check is essential for the CPTS exam and real-world red team ops.
+
+🔀 "If This, Then That" Workflow
+Got This	Then Do That
+✅ Shell Access	Run basic situational awareness commands: whoami, id, hostname, ip a, sudo -l
+Found OS Version	Look up known vulnerabilities for that distro + version
+Found Kernel Version	Check ExploitDB or searchsploit for kernel exploits (but beware of crashes in prod!)
+PATH misconfigured	Look for writable folders early in the path to exploit PATH hijacking
+Found services running as root (e.g., Samba, Nagios)	Look up known local privilege escalations
+Found /etc/passwd or group info	Identify interesting users (e.g., devs, admins, backups) and see if they reuse creds or have readable home dirs
+Found .bash_history, config files, or SSH keys	Extract them and look for plaintext creds or pivot/persistence ops
+sudo -l returns command(s)	Check GTFOBins or test running those commands to escalate to root
+/etc/fstab, /etc/mtab, df -h, or lsblk show interesting mounts	Look for creds, backup data, or sensitive files on mounted/unmounted partitions
+Found hidden dirs/files in /tmp, /var/tmp, /dev/shm	Check for leftover exploit files, creds, or running processes
+Found interesting entries in /etc/resolv.conf or route	Indicates domain environment – consider AD enumeration next
+LinPEAS output available	Correlate with manual checks; don’t rely on it blindly
+🧠 Patterns / What to Look For
+OS and kernel versions that are outdated = potential kernel LPE
+
+Services running as root = big attack surface (check CVEs)
+
+Users with Bash or SH shells = potential login accounts
+
+Environment variables leaking sensitive info (env)
+
+Weak sudo permissions (e.g., sudo less, sudo vi) = GTFOBins win
+
+Misconfigured PATH = command injection via path hijack
+
+Hidden .ssh, .git, .wget-hsts, .notes, .bash_history files
+
+Writable temp folders or mounted media = creds, scripts, sensitive data
+
+🛠️ Tools & Commands
+Purpose	Command
+Basic Identity	whoami, id, hostname
+OS Info	cat /etc/os-release, uname -a, cat /proc/version
+Kernel Info	uname -r, searchsploit linux kernel <version>
+Network Info	ip a, route, netstat -rn, arp -a
+PATH & Env Vars	echo $PATH, env
+Mounted Disks	df -h, mount, lsblk, cat /etc/fstab
+User Info	cat /etc/passwd, grep sh$ /etc/passwd, cat /etc/group, getent group sudo
+Hidden Files	find / -type f -name ".*", find / -type d -name ".*"
+Home Dirs	ls /home, ls -la /home/<user>
+Temporary Files	ls -l /tmp /var/tmp /dev/shm
+Automation (post-manual)	linpeas.sh, linenum.sh (store outputs)
+💥 Hints / Gotchas / Exam Tips
+Don’t skip manual checks just because LinPEAS exists. You’ll build better instincts by practicing enumeration manually.
+
+sudo -l is often the fastest way to escalate — always check it early.
+
+Pay attention to .bash_history and .ssh directories — gold mines.
+
+Don't sleep on the /etc/fstab, .conf, and temp directories — they hide secrets.
+
+In client reports, screenshot uname -a, whoami, sudo -l, etc. to prove RCE and environment details.
+
+Always assume you’ll have to adapt your commands per distro/version — test and verify outputs.
+
+If no easy win: go back and re-enumerate. You probably missed something.
+
