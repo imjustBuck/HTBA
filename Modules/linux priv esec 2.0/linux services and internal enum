@@ -1,0 +1,260 @@
+✅ Summary
+
+This section digs deeper into the internals of a Linux host once you've gained access. It focuses on system-level enumeration to uncover potential privilege escalation paths and lateral movement opportunities. Key goals include:
+
+Identifying installed services and tools
+
+Uncovering network details and interfaces
+
+Reading logs, history files, and cron jobs
+
+Spotting misconfigurations or patterns in usage
+
+Preparing for exploitation by understanding system behavior
+
+This step builds on your initial enum and moves into advanced discovery — a must-have mindset for the CPTS exam and any real-life post-exploitation phase.
+
+🔀 "If This, Then That" Workflow
+
+Got This
+
+Then Do That
+
+See multiple interfaces (ip a)
+
+Look for pivoting potential into other subnets
+
+See IPv6 config
+
+Consider IPv6 tunneling, sniffing, or misconfigs
+
+/etc/hosts has custom entries
+
+Look for internal DNS overrides, staging servers, AD clues
+
+lastlog or w shows active users
+
+Check their /home/* dirs, bash_history, .ssh, config files
+
+Found login IPs like 10.10.x.x or .local domains
+
+Enum for domain join status, AD attack prep
+
+history or cron logs show scripts
+
+Audit for credential usage, weak permissions, escalation paths
+
+cron.daily has writable scripts
+
+Consider cronjob hijacking
+
+Found installed packages
+
+Cross-check with known vulnerable versions (especially sudo)
+
+Found binaries listed in GTFOBins
+
+Check usage and setuid permissions for priv esc
+
+Found scripts in /init.d, /home, or /etc
+
+Inspect for logic bugs, writable perms, or unsafe commands
+
+Processes owned by root
+
+Check if you can interact or modify those binaries/scripts
+
+/proc info shows connections or binaries used
+
+Trace back for pivoting or creds in transit
+
+find *.conf, *.sh shows sensitive config/scripts
+
+Look for secrets, misconfigs, hardcoded creds
+
+Found strace output shows connections
+
+Trace plaintext secrets, suspicious behavior
+
+🧠 Patterns / What to Look For
+
+Hostnames, domain suffixes, or .local names in /etc/hosts
+
+Crontab or cron.daily scripts that run as root
+
+Frequent login times = high-value user, more activity = more misconfig
+
+Binaries from GTFOBins list (especially cp, awk, nano, less, etc.)
+
+.bash_history with passwords, SSH, git, custom scripts
+
+Hidden files like .notes, .wget-hsts, .config, etc.
+
+Root-owned services in ps aux with paths you can write to
+
+Sudo version vulnerable to known CVEs (e.g., Baron Samedit)
+
+Tools like nc, python, gcc, tcpdump = expand attack surface
+
+/proc showing connected remote hosts or env leaks
+
+🛠️ Tools & Commands
+
+Area
+
+Command
+
+Interfaces
+
+ip a, ifconfig (if present)
+
+Hosts
+
+cat /etc/hosts
+
+Users
+
+lastlog, w, who, users
+
+Bash history
+
+history, cat ~/.bash_history
+
+Cron
+
+ls -la /etc/cron.*, crontab -l, cat /etc/crontab
+
+Logs
+
+ls -l /var/log, grep -i pass /var/log/*
+
+Packages
+
+apt list --installed, dpkg -l, rpm -qa
+
+Sudo version
+
+sudo -V
+
+Configs
+
+find / -type f \( -name '*.conf' -o -name '*.config' \)
+
+Scripts
+
+find / -type f -name '*.sh'
+
+Running procs
+
+`ps aux
+
+grep root`
+
+Installed tools
+
+which nc, which python, which gcc, etc.
+
+Strace
+
+strace <binary>
+
+GTFOBins checker
+
+Custom curl-to-check one-liner
+
+Proc enum
+
+`find /proc -name cmdline -exec cat {} ; 2>/dev/null
+
+tr ' ' '\n'`
+
+💥 Hints / Gotchas / Exam Tips
+
+Crons are gold: Watch for writable scripts in /etc/cron.* or crontab -e
+
+User activity = breadcrumbs: History files, recent logins, SSH usage, script creation
+
+Don’t ignore quiet systems: Even if only one user logs in, it’s probably important
+
+Watch for legacy: Older systems = likely vulnerable sudo, old packages, or compiled binaries
+
+Scan for compiled scripts: Admins often drop *.sh in weird places — init.d, /opt, or custom paths
+
+Bash history can be everything — Git creds, curl tokens, passwords, missteps
+
+GTFOBins is cheat mode: If you see one installed, bookmark it to test later
+
+strace is slept on: Great for tracing creds or insecure behavior in binaries
+
+Tools = capability: Presence of python, nc, or gcc means you can build or transfer payloads easier
+
+Re-check /proc, /etc, and /var after privilege escalation — context changes access
+
+
+✅ Summary
+This section expands your situational awareness to system-level internals. You’re no longer just looking at where you are — you’re understanding how the system lives and breathes. We gather info on services, running users, cron jobs, login patterns, toolsets, packages, and more — giving you new attack vectors, hints at escalation paths, or even lateral movement ops. This is one of the deepest intel pulls before you start exploiting.
+
+🔀 "If This, Then That" Workflow
+Got This	Then Do That
+Found a service running as root	Check for misconfigs or known CVEs tied to that service
+Found cron.daily or other jobs	Check permissions, paths, or writeable scripts for hijack
+Found unusual .sh scripts	Review for creds, weak logic, or insecure execs
+Found other users logged in	Check /home/<user>, bash_history, .ssh, .git
+Found last login times	See if user activity aligns with writable files/scripts
+Found bash history	Look for creds, ssh commands, internal hostnames
+Saw connections to internal hosts	Pivot potential — note IPs, DNS names, domains
+Found domain mention in /etc/hosts or history	Prepare for AD-based attacks/enumeration next
+sudo -V shows old version	Check for known sudo exploits (Baron Samedit, etc.)
+Tools like python, nc, gcc found	Plan for shell upgrades, reverse shell crafting, binary compiling
+Found scripts in init.d or /etc/	Audit for hardcoded passwords or misconfigs
+Detected mounted USBs, external media	Look for backup files, password files, scripts
+Found services via ps aux or /proc	Map out what’s running and under whom
+Found GTFO-bin tools	Match to known escalation techniques (GTFObins or LOLBAS style)
+Found binary-only programs	Check if they’re writable or used by privileged services
+🧠 Patterns / What to Look For
+Long-running services as root → cron, backup, logging agents
+
+Users logged in recently or still active → hot targets
+
+/etc/hosts, /etc/fstab, /etc/shadow, /etc/passwd, /etc/sudoers → config goldmines
+
+.sh, .conf, .config → always grep for password, key, token, backup
+
+Sudo version is old? Check for CVE-2021-3156 (Baron Samedit) and others
+
+Tools like nc, python, perl, socat → upgrade/escape shells
+
+Unusual /home or /media mounts? Likely backup, exfil, or pivot points
+
+🛠️ Tools & Commands
+Purpose	Command
+🧠 User insight	w, who, lastlog, history, find / -name "*_history"
+🛠️ Installed packages	apt list --installed or rpm -qa
+🔄 Running services	ps aux, top, htop, netstat -tulnp
+⚙️ System info	ip a, route, cat /etc/hosts, cat /etc/resolv.conf
+🧨 Cron jobs	ls -la /etc/cron*, crontab -l, cat /etc/crontab
+📋 Configs	find / -type f \( -name "*.conf" -o -name "*.config" \)
+📜 Scripts	find / -type f -name "*.sh"
+📦 Sudo version	sudo -V
+🧬 Binaries	ls -l /bin /usr/bin /usr/sbin, check against GTFOBins
+🔭 Network	netstat -tulnp, lsof -i, ss -tulnp
+🧪 strace example	strace ping -c1 <IP>
+🔐 Domain info	Check /etc/resolv.conf, hostname -f, realm list, /etc/krb5.conf
+💥 Hints / Gotchas / Exam Tips
+💀 Don’t assume clean scripts — grep for password, secret, token in .sh and .conf files.
+
+🕵️ Watch the users who login a lot — their accounts usually have working cron jobs, passwords, or SSH access.
+
+🧠 If bash_history exists for multiple users, pull every one of them. This is where real creds hide.
+
+⚠️ GTFOBins is your friend — grep your installed binaries list against it and test escalation vectors manually.
+
+🧬 Packages are attack surface — especially ones like Exim, Samba, Nginx, Apache, and anything with a known CVE.
+
+📅 Don’t forget to check modification timestamps on config/scripts — can lead to job hijacks.
+
+🔐 If AD domain mentioned or resolv.conf shows internal DNS → start planning kerberoast, ASREP, SMB relay next.
+
+🧵 Save every weird IP, FQDN, or user path. String everything together later during priv esc or lateral moves.
+
+
