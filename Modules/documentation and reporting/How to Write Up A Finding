@@ -1,0 +1,107 @@
+🧩 SECTION: How to Write Up a Finding (CPTS Exam Prep Breakdown)
+🎯 Purpose:
+This section teaches you how to write clear, defensible, and actionable findings. It’s not just about what you found—it’s how you present it that earns points, proves your value, and makes the report usable by the client and their teams.
+
+🧱 STRUCTURE OF A WELL-WRITTEN FINDING
+Each finding should include:
+
+Component	What to Include	Pro Tip for Exam
+Title	Concise, clear vulnerability or issue name. E.g., Weak Kerberos Authentication (Kerberoasting)	Use standard terminology
+Description	Detailed explanation of what the issue is and what systems it affects	Teach the reader (assume they’ve never heard of it)
+Impact	What can happen if the issue remains unfixed (e.g., RCE, privilege escalation, data disclosure)	Describe impact in context of client’s environment
+Affected Systems/Assets	List or reference scope affected. Specific IPs, hosts, or systems.	Include FQDN/IPs or refer to appendix
+Remediation	Detailed, actionable steps. No vague “harden this” advice.	Call out risk of breaking things, offer safe rollout plan
+References	Reliable links (no blogs unless they’re gold-standard like HackTricks, GTFOBins, etc.)	Always reference vendor + one general source
+Reproduction Steps + Evidence	Screenshots, code blocks, packet captures, tools, and exact syntax used	Use figures and interleaved narratives
+🔁 "GOT THIS, DO THAT" WORKFLOW
+Got This...	Do That
+You found a vulnerability using a custom or niche tool	Show the config + command line + tool output. Explain in plain terms what the tool is doing.
+The output is long or messy	Use captions to explain only the relevant part. Add clarifying steps between screenshots.
+You redacted passwords or hashes in screenshots	Good. Mention that you did so intentionally for security and readability.
+Your finding was discovered with multiple tools	Mention alternatives (but don't show them all). Point to them as references.
+🧠 WRITING STRATEGY – RATIONALE MATTERS
+You are not just saying "there's a problem." You’re:
+
+Proving it exists
+
+Demonstrating the real-world impact
+
+Offering multiple paths to resolution
+
+Teaching the reader what it means
+
+✅ Good Remediation Examples:
+Weak Example	Strong Example
+“Harden registry settings”	“Update these registry keys: HKLM\...\... → set DWORD to 0. Test this change in staging first.”
+“Use EDR”	“Microsoft Defender ATP or open-source alternatives can monitor X. This may require additional licensing.”
+Always anticipate:
+
+Reader has no context
+
+Reader may not have deep admin experience
+
+Reader wants copy-pasteable, safe, justified instructions
+
+💡 DEFENSIBLE EVIDENCE = EXAM POINTS
+Tip	Why It Matters
+Include tool output with redacted secrets	Shows thoroughness, protects confidentiality
+Show IP addresses / hostnames	Proves it's not recycled from some other report or demo
+Describe every step like a story	Makes it easier for the reader (and graders) to follow your logic
+Show packet captures or browser console	Critical for proving cleartext transmission or client-side issues
+✍️ EXECUTION STRATEGY ON EXAM
+You’ll be judged not just by what you found, but how you presented it. If you say:
+
+“I didn’t waste time chasing a PoC that’s unstable or false positive—I triaged quickly and prioritized impact.”
+
+That shows maturity.
+
+If you’re unclear, generic, or vague about what the vuln is and how to fix it, that’s a red flag in your score.
+
+📌 QUICK TEMPLATE (Markdown-style):
+markdown
+Copy
+Edit
+### Finding Title: [Vulnerability Name]
+**Severity**: High  
+**Affected Hosts**: 10.10.10.1 (SQL01.inlanefreight.local)
+
+#### 📖 Description:
+[Explain what the issue is, how it works in general, and what it affects.]
+
+#### 🔥 Impact:
+[Explain what an attacker could do if this issue is left unresolved.]
+
+#### 🛠️ Reproduction Steps:
+1. Ran tool `Responder` on interface eth0
+2. Captured hash for user `bsmith`
+3. Cracked hash using Hashcat (-m 5600, wordlist: rockyou.txt)
+4. Logged in as user, confirmed access
+
+#### 📸 Evidence:
+- Screenshot 1: Responder capturing NTLMv2 hash
+- Screenshot 2: Hashcat cracking the hash
+
+#### 🧰 Tools Used:
+- Responder
+- Hashcat
+- BloodHound
+- CrackMapExec
+- Mimikatz
+- Rubeus
+
+#### 🧹 Remediation:
+- Disable LLMNR/NBT-NS via GPO
+- Enforce unique local admin passwords via LAPS
+- Rotate `srvadmin` credentials across systems
+- Use GPO hardening templates
+
+#### 📚 References:
+- [HackTricks - Kerberoasting](https://book.hacktricks.xyz)
+- [Microsoft Security Baseline](https://learn.microsoft.com/en-us/security/)
+
+🏁 Final Tips
+Each finding is a chance to educate, prove value, and win points.
+
+Think: Could a blue teamer reproduce this exact finding from my steps and fix it from my guidance?
+
+Think like a teacher + hacker = get those top-tier exam scores.
