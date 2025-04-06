@@ -1,0 +1,91 @@
+🔸 STANDARD FILE PERMISSIONS (User, Group, Others)
+Every file/directory in Linux has three permission groups:
+
+css
+Copy
+Edit
+[User] [Group] [Other]
+And each group has three possible permissions:
+
+Symbol	Meaning	Numeric	Purpose
+r	read	4	Can view contents
+w	write	2	Can modify file or dir contents
+x	execute	1	Can execute (or enter directory)
+-	no permission	0	Nothing
+Example:
+
+bash
+Copy
+Edit
+-rwxr-xr--
+rwx → user has read/write/execute
+
+r-x → group has read/execute
+
+r-- → others have read-only
+
+🔸 SPECIAL PERMISSION BITS (Elevated Access)
+Bit	Symbol	Numeric	Applies To	Purpose
+setuid	s	4 (4000)	User	Run file as owner (often root) even if user is unprivileged
+setgid	s	2 (2000)	Group	Run file as group; also affects group ownership on new files in dirs
+sticky	t	1 (1000)	Others	Only file owner/root can delete files in a directory (e.g. /tmp)
+🔹 How They Look in ls -l:
+Mode	Description
+-rwsr-xr-x	setuid set on user (runs as file owner)
+-rwxr-sr-x	setgid set on group (runs as group)
+drwxrwxrwt	sticky bit set on dir (like /tmp)
+🔹 With no execute bit:
+If x is missing but s/t is set:
+
+Symbol	What it shows
+S	setuid/setgid set, but no execute bit
+T	sticky set, no execute bit
+🔸 NUMERIC MODE (Octal Values)
+Each permission section is represented by a digit (0–7):
+
+r	w	x	Value
+✔	✔	✔	7
+✔	✔	✘	6
+✔	✘	✔	5
+✔	✘	✘	4
+✘	✔	✔	3
+✘	✔	✘	2
+✘	✘	✔	1
+✘	✘	✘	0
+Example:
+bash
+Copy
+Edit
+chmod 755 file.sh
+7 → rwx (owner)
+
+5 → r-x (group)
+
+5 → r-x (others)
+
+🔸 SPECIAL BITS IN OCTAL FORMAT
+Mode	Octal Prefix	Example
+setuid	4xxx	chmod 4755 /bin/bash
+setgid	2xxx	chmod 2755 /opt/script
+sticky	1xxx	chmod 1777 /tmp
+combo (e.g., setuid + setgid)	6xxx	chmod 6755 target
+🔸 DIRECTORY PERMISSION BEHAVIOR
+Bit	Meaning in Directories
+r	Can list files
+w	Can add/remove files
+x	Can enter directory
+🔸 Bonus: SUID/Special Lookup Shortcuts
+Action	Command
+Find all SUID binaries	find / -perm -4000 -type f 2>/dev/null
+Find all SGID binaries	find / -perm -2000 -type f 2>/dev/null
+Find all with Sticky	find / -type d -perm -1000 2>/dev/null
+All special bits	find / -type f -perm /6000 2>/dev/null
+🧠 TL;DR Reference Chart
+Symbol	What It Means
+s	setuid/setgid (with x)
+S	setuid/setgid (without x)
+t	sticky bit (with x)
+T	sticky bit (without x)
+rwx	read/write/execute
+---	no permissions
+drwxrwxrwt	world-writable dir with sticky bit (/tmp)
