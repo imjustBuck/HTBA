@@ -1,1 +1,173 @@
 
+🔐 Linux Password Management & Credential Files
+📌 Goal: Understand what files control Linux user auth, how to find creds, how to abuse them, and how to crack them.
+🔧 1. PAM (Pluggable Authentication Modules) — The Engine
+Think of PAM as the backend API that all login/auth commands go through: passwd, su, sudo, login, etc.
+
+The file /etc/pam.d/* controls which modules are loaded (e.g., pam_unix.so, pam_ldap.so, pam_krb5.so).
+
+The module pam_unix.so is the default for username + password-based logins and it interacts with:
+
+/etc/passwd (user metadata)
+
+/etc/shadow (actual password hashes)
+
+/etc/security/opasswd (old password hashes)
+
+🧾 2. /etc/passwd – The Public Metadata File
+✅ World-readable — no privilege needed
+Sample entry:
+
+bash
+Copy
+Edit
+cry0l1t3:x:1000:1000:cry0l1t3,,,:/home/cry0l1t3:/bin/bash
+Field	Purpose
+cry0l1t3	Username
+x	Password placeholder (actual hash is in /etc/shadow)
+1000	UID (User ID)
+1000	GID (Group ID)
+cry0l1t3,,,	GECOS (optional comments like real name)
+/home/cry0l1t3	Home directory
+/bin/bash	Login shell
+🚨 Misconfig Warning:
+If x is removed, and it looks like root::0:0:..., it means no password is required for root — dangerous misconfig.
+
+🔒 3. /etc/shadow – The Real Hashes
+🔐 Root-only readable
+Contains:
+
+Actual encrypted password hash
+
+Password aging info (days until expiration, warning period, etc.)
+
+Example entry:
+
+bash
+Copy
+Edit
+cry0l1t3:$6$wBRzy$...x9cDWUxW1:18937:0:99999:7:::
+📚 Shadow Format:
+Field	Meaning
+$6$	SHA-512
+$5$	SHA-256
+$1$	MD5
+! or *	Account is locked or no password
+:	Empty field = no password required
+🧠 4. /etc/security/opasswd – Old Password Archive
+🧨 Often Overlooked, But Goldmine
+Used by pam_unix.so to store old password hashes for password reuse prevention
+
+Format is similar to shadow
+
+Usually contains weaker hashes (e.g. MD5) = easier cracking
+
+🧨 5. Real Abuse Paths
+🔁 (A) Manual Unshadowing + Cracking
+bash
+Copy
+Edit
+# Backup files to not break anything
+sudo cp /etc/passwd /tmp/passwd.bak
+sudo cp /etc/shadow /tmp/shadow.bak
+
+# Combine both into crackable format
+unshadow /tmp/passwd.bak /tmp/shadow.bak > /tmp/unshadowed.hashes
+
+# Crack them with rockyou.txt and Hashcat
+hashcat -m 1800 -a 0 /tmp/unshadowed.hashes rockyou.txt -o cracked.txt
+💥 (B) Cracking MD5/Weaker Hashes from opasswd
+bash
+Copy
+Edit
+# Isolate MD5 hashes (or others)
+cat md5-hashes.list
+
+# Crack using Hashcat mode 500 (MD5 crypt)
+hashcat -m 500 -a 0 md5-hashes.list rockyou.txt
+🧠 Patterns You Should Be Aware Of:
+Location	When It's Useful	What You Can Do
+/etc/passwd	Always readable	Check for misconfig like root::
+/etc/shadow	Need root	Crack user passwords
+/etc/security/opasswd	Need root	Crack old passwords, spot patterns
+$x$ format	All hashed passwords	Know cracking mode (MD5 vs SHA-512)
+$1$...	MD5 hash	Easiest to crack with -m 500
+$6$...	SHA-512	Common, crackable with -m 1800
+🔥 TL;DR Strategy
+bash
+Copy
+Edit
+1. Check /etc/passwd → look for root:: or weird entries
+2. Try reading /etc/shadow → if root, copy for cracking
+3. Try /etc/security/opasswd → old, weak hashes
+4. Use unshadow + hashcat to crack
+5. Look for patterns in cracked passwords to guess others
+
+
+🤜 Credential Hunting vs 🤛 Passwd/Shadow/Opasswd Analysis
+Concept	Credential Hunting (General)	Passwd/Shadow/Opasswd (Focused)
+🎯 Goal	Find plaintext creds, API keys, SSH keys, browser-stored creds across the file system	Extract hashed passwords from core Linux auth files and crack them
+🗂️ Scope	Wide-net: grep through configs, scripts, notes, cronjobs, browser profiles, logs, history	Narrow-focus: look at PAM-managed auth system (how users log in to Linux)
+🔓 What you find	Plaintext passwords, sensitive tokens, browser-saved logins, hardcoded secrets	Hashed passwords (SHA512, MD5, Blowfish), old password history
+🔑 Access level needed	Many methods work as regular user	Usually need root or escalated privileges
+🛠️ Tools	grep, find, LaZagne, mimipenguin, firefox_decrypt	unshadow, hashcat, john, cat /etc/shadow, cat /etc/security/opasswd
+💥 What you do with it	Use creds to pivot, escalate, or hit other systems	Crack hashes to become root or impersonate users
+🧠 TL;DR:
+Credential Hunting = "Where can I find ANY kind of creds laying around?"
+Passwd/Shadow/Opasswd = "Let me crack THE system creds directly."
+
+In real-world ops or the exam:
+
+✅ First thing: Credential hunt (scripts, logs, history, LaZagne — low-hanging fruit)
+🔒 Once you escalate to root: Go for /etc/shadow, crack everything, try to lateral or pivot
+🧪 And if /etc/security/opasswd exists — you're getting bonus creds or password patterns that help crack more targets later
+
+🔍 Why Bother Cracking Hashes After You’re Root?
+✅ 1. Reporting (CPTS-style or Real World Engagements)
+Proves password hygiene is weak.
+
+Shows hash type used (e.g., MD5 or SHA-512 — MD5 is a huge red flag).
+
+Reveals reuse or predictable patterns (e.g., Password1!, reused across multiple users).
+
+Shows if they store old creds insecurely in opasswd.
+
+🧠 If you crack cry0l1t3: Password123, that’s a finding — especially if it’s reused elsewhere.
+
+✅ 2. Lateral Movement
+Even if you’re root on one host:
+
+You might find user or service creds that work on other boxes (lateral movement).
+
+Especially relevant in multi-user or multi-host scenarios (e.g., shared creds across dev, prod, or staging).
+
+Example:
+
+nginx
+Copy
+Edit
+You crack jsmith’s hash — he’s not root here, but maybe he’s root on another machine.
+✅ 3. Chaining Access
+Sometimes you escalate locally, but need creds to:
+
+RDP or SSH into another machine
+
+Access internal web apps, DBs, or APIs
+
+Abuse Sudo/SSH rights of other users once you crack their password
+
+✅ 4. Exam Strategy (CPTS/OSCP)
+Even if it’s “rooted,” you might need to prove you cracked hashes.
+
+Some challenges intentionally gate flags or lateral paths behind uncracked creds.
+
+✅ 5. Bonus: Password Reuse in Real Environments
+If you dump creds on a dev/test box and reuse exists, you might pivot into prod.
+
+This is especially juicy for MSSPs or real pentest reports.
+
+🧠 TL;DR:
+Getting root = Win.
+Cracking hashes = Extra credit + movement + report impact.
+
+
