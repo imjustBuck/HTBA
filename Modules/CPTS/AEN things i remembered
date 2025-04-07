@@ -1,1 +1,4 @@
-
+ok off rip, ffuf for all subdomains and or vHosts.. 
+add to etc/hosts and a text file
+run nmap on them all granted prolly gonna be the smae ports and protocols but for reporting its good
+if we want to be lil extra run ffuf off the sub domains 
