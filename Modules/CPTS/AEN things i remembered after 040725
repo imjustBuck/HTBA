@@ -34,5 +34,15 @@ The CPTS exam LOVES this because it’s fast, clean, and easy to chain with nc.e
 They want you to show you can exfil a shell (especially through webshells or limited cmd interfaces).
 
 
+xp_cmdshell or webshell
+→ whoami
+→ whoami /priv
+→ SeImpersonate? = PrintSpoofer
+→ Get nc.exe up there too
+→ SYSTEM shell
 
+
+we remembered the sudo su shells which helped us a ton on mental fatigue when commands didnt work lol. 
+
+maybe better reporting and writing..? but overall good work with everything going on. gg buck. 
 
