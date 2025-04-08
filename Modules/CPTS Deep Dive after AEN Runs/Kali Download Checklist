@@ -1,0 +1,172 @@
+🛠️ Rebuild a Fresh Kali VM from Scratch (Oracle VirtualBox Edition)
+🧠 Assumptions:
+You have a functioning host OS (Windows/macOS/Linux)
+
+You’re using Oracle VirtualBox
+
+You have access to the internet during setup (you do before the exam)
+
+You saved your tools/scripts/notes somewhere externally (e.g., GitHub or USB)
+
+✅ Phase 1: Get the Kali ISO
+1. Go to official Kali downloads
+
+📎 https://www.kali.org/get-kali/#kali-installer-images
+
+2. Download the ISO (Installer image, not Live version)
+
+Choose:
+✅ Kali Linux 64-Bit (Installer)
+⬇️ Usually around 3.5GB
+
+3. Verify hash (Optional but smart)
+
+bash
+Copy
+Edit
+sha256sum kali-linux-2024.X-amd64.iso
+✅ Phase 2: Set Up New VM in VirtualBox
+1. Open VirtualBox → New
+
+Name: CPTS-Kali
+
+Type: Linux
+
+Version: Debian (64-bit)
+
+2. Memory Size:
+
+Set at least 4GB RAM (8192 MB recommended for CPTS)
+
+If you got a beast laptop? Go higher (8–12GB)
+
+3. Create virtual hard disk
+
+VDI
+
+Dynamically allocated
+
+80–100 GB disk space
+
+✅ Phase 3: Mount ISO & Install Kali
+1. Start the VM → when prompted, select the downloaded ISO
+
+Hit "Start" and point it to your Kali ISO
+
+2. Choose “Graphical Install”
+
+Language: English
+
+Region: US
+
+Keyboard: US
+
+Hostname: kali
+
+Domain name: leave blank (or use local)
+
+3. User account
+
+Create non-root user (Kali now uses sudo model)
+
+Username: buck
+
+Password: strong or simple (you'll snapshot it)
+
+4. Disk Partitioning
+
+Use entire disk → All files in one partition → Yes to write changes
+
+5. Wait for install → allow GRUB to install
+
+✅ Phase 4: Post-Install Essentials
+Once booted into Kali:
+
+bash
+Copy
+Edit
+sudo apt update && sudo apt full-upgrade -y
+sudo apt install -y git curl wget unzip net-tools python3-pip python3-venv rlwrap proxychains4
+Optional but recommended:
+
+bash
+Copy
+Edit
+sudo apt install -y flameshot terminator seclists chromium
+✅ Phase 5: Snapshots (BEFORE You Touch Anything Else)
+1. Take a snapshot in VirtualBox
+Label: Fresh Install - Clean State
+
+2. Create a second snapshot after installing tools
+Label: Exam Ready - Tools Installed
+
+That way, if anything explodes, you can rollback instantly.
+
+✅ Phase 6: (Optional) VirtualBox Tuning for Stability
+1. Settings → System → Processor → Give 2+ CPUs
+2. Settings → Display → Video Memory: Max it out (128MB)
+3. Settings → Network → Bridged Adapter or NAT (NAT tends to be more stable for HTB)
+
+✅ Phase 7: Restore from Scratch (If Needed During Exam)
+If mid-exam Kali explodes, here’s your 0-to-working VM rebuild:
+
+bash
+Copy
+Edit
+# Get Kali ISO from kali.org
+# Rebuild VM (above)
+# Set username/password same as before (for script compatibility)
+# `sudo apt update && sudo apt full-upgrade -y`
+# `git clone` your tools + scripts
+# Import your Obsidian vault / GitHub notes
+# Reconnect VPN
+# Re-run tunneling scripts or re-establish SSH connections
+💡 Pro Tip: Keep a USB or GitHub repo with:
+
+Obsidian vault zipped
+
+SSH keys (for pivot)
+
+SharpHound, WinPEASx64.exe, etc.
+
+Ligolo-ng agent
+
+Chisel binary
+
+Scripts and payloads
+
+ffuf, feroxbuster wordlists
+
+Static binaries (netcat, socat, etc.)
+
+🧠 Optional: Harden the VM for Exam Use
+Disable screen sleep / power saving
+
+bash
+Copy
+Edit
+xfce4-power-manager-settings
+Boost performance
+
+Turn off unnecessary startup apps
+
+Allocate more memory/CPU in VirtualBox
+
+🎯 TL;DR Kali Rebuild Fast Checklist
+Step	Action
+1	Download ISO from kali.org
+2	Create new VirtualBox VM (64-bit Debian, 80GB disk, 4–8GB RAM)
+3	Install Kali via ISO
+4	apt update && full-upgrade
+5	Install essential tools
+6	Take snapshots
+7	Clone tools/scripts repo
+8	Connect VPN + resume where you left off
+🧠 Bonus: Consider a Base “Exam Ready” ISO Image
+After you build your clean, tooled-up Kali? Export the VM:
+
+File → Export Appliance → OVA
+
+Store on USB + cloud
+
+Then if anything ever explodes, you import in 2 mins, not 20.
