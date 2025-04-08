@@ -1,0 +1,151 @@
+🔁 1. Ligolo-ng (Pivoting Tool)
+✅ Yes – test it now in HTB/AEN labs.
+
+🔧 Install on HTB VM: You’ll need to build the relay and agent from source or grab prebuilt binaries from trusted GitHub releases.
+
+🎯 Practice in any multi-host HTB box (like AEN labs) with internal IPs.
+
+🛠️ Use-cases:
+
+After getting initial shell, run agent on victim
+
+Use the relay on HTB VM to create SOCKS5 tunnel
+
+Use proxychains or socksified tools to access internal stuff
+
+🧠 Practice Focus:
+
+Use it to access internal services that would normally be blocked.
+
+Practice autoroute feature (ligolo -add route 10.10.0.0/16).
+
+🧨 Watch out: Some rooms don’t support reverse connections from inside boxes — test only on ones where you get full shell (not limited web shells).
+
+⚔️ 2. NetExec (Lateral Movement)
+✅ Yes – try it now, especially in AD-style HTB rooms.
+
+🧱 NetExec is the active fork of CrackMapExec — faster and better maintained.
+
+🔗 https://github.com/Pennyw0rth/NetExec
+
+🛠️ Practice Tips:
+
+Enumerate shares: nxc smb 10.10.X.X -u USER -p PASS --shares
+
+Spray passwords: nxc smb 10.10.X.X -u USERLIST -p PASS
+
+Gain shell: --exec-method smbexec/wmiexec
+
+🔥 Test in HTB Academy AD boxes or rooms with real creds.
+
+🧠 3. Obsidian Workflows
+✅ Yes – clean up and restructure now.
+
+While you're testing tools, log it all live in Obsidian:
+
+📂 Suggested Folder Layout:
+
+pgsql
+Copy
+Edit
+/CPTS-Prep
+    /Initial Access
+    /Enumeration
+    /Lateral Movement
+    /Privilege Escalation
+    /Pivoting
+    /Tool Usage
+    /Scripts
+    /Methodologies
+📋 Templates:
+
+Add an “Exploit Template”:
+
+markdown
+Copy
+Edit
+## Exploit Name:
+## Prerequisites:
+## Detection:
+## Steps Taken:
+## Command Log:
+## Output:
+## Flags:
+## Remediation:
+🔗 Interlink: Link tools to techniques. e.g. [Ligolo-ng] inside a note about pivoting chains.
+
+🧪 4. Custom Scripting
+✅ Yes – start building + testing scripts now.
+
+💡 Examples to start:
+
+Subnet ping sweep
+
+bash
+Copy
+Edit
+for ip in $(seq 1 254); do ping -c1 10.10.10.$ip | grep "bytes from"; done
+SMB Share Grabber:
+
+bash
+Copy
+Edit
+#!/bin/bash
+# Usage: ./grab_shares.sh IP USER PASS
+smbclient -L //$1 -U $2%$3
+Quick Recon:
+
+bash
+Copy
+Edit
+#!/bin/bash
+host=$1
+nmap -sC -sV -Pn -oA recon_$host $host
+💾 Store them in /scripts in Obsidian, sync later to GitHub.
+
+📽️ 5. Terminal Recording Tools (Asciinema & script)
+✅ Yes – install and use now.
+
+🔧 Install:
+
+bash
+Copy
+Edit
+sudo apt install asciinema
+📹 Record:
+
+bash
+Copy
+Edit
+asciinema rec name_of_session.cast
+Or use:
+
+bash
+Copy
+Edit
+script my_session.log
+🧠 Practice Habit: Start recording as soon as you open a shell. Great for traceability and reports.
+
+💡 Pro Tip: Set alias:
+
+bash
+Copy
+Edit
+alias record='asciinema rec ~/recordings/$(date +%Y%m%d_%H%M).cast'
+⚠️ What to Hold Off Until Workhorse Arrives:
+Tool / Action	Wait or Now?	Why
+Ligolo on “personal” real targets	✅ Try now	But store configs for long-term later
+Obsidian full restructuring	Start now	Move Obsidian Vault to external repo/USB when done
+Big binary installations	Wait	Reduce clutter on shared HTB VM
+Exported snapshots/OVA	Wait	Do this on your permanent Kali only
+SysReptor (Reporting Tool)	Wait	Requires heavier setup & templates – better on main box
+🐾 Your Move Right Now:
+✅ Fire up HTB
+✅ Clone & test Ligolo-ng and NetExec
+✅ Build and log tiny scripts into Obsidian
+✅ Start Obsidian restructure
+✅ Record every lab session (asciinema or script)
+✅ Export your HTB Obsidian Vault and Scripts to GitHub/GitLab or USB
+
+When your new machine arrives, we’ll deploy everything cleanly and snapshot the “CPTS Master Setup.” 🔥
+
