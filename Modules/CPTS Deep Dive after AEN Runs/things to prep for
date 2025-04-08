@@ -1,0 +1,124 @@
+1. Tooling and Connectivity Issues
+Re-establishing Access After Connectivity Loss:
+
+Session Persistence: Implement mechanisms to maintain persistent access to compromised systems. This can include setting up scheduled tasks or services that re-establish your connection if it drops.​
+
+Automated Reconnaissance Scripts: Develop scripts that can quickly re-scan and enumerate the network to identify any changes or new opportunities for access.​
+
+Credential Management: Securely store any harvested credentials. Tools like KeePass can help manage and quickly retrieve credentials when needed.​
+LinkedIn
++1
+YouTube
++1
+
+Tool Compatibility with Proxychains:
+
+Testing Tools: Before the exam, test all tools you plan to use to ensure they function correctly with proxychains. Some tools may not route traffic through proxychains as expected.​
+
+Alternative Routing Tools: Familiarize yourself with other routing tools like socksify or tsocks that might be compatible with tools that don't work well with proxychains.​
+
+Manual Configuration: For tools that don't natively support proxychains, consider manual proxy configurations or SSH tunneling as alternatives.​
+
+2. HTB VM vs. Personal Kali Instances
+Advantages of Using Personal Kali Instances:
+
+Customization: Tailor your environment with specific tools, scripts, and configurations that suit your workflow.​
+
+Resource Allocation: Allocate system resources (CPU, RAM) based on your needs, ensuring optimal performance.​
+
+Persistence: Maintain a consistent environment across practice sessions and the exam, reducing the learning curve associated with different setups.​
+
+Considerations:
+
+HTB Pwnbox: While convenient, it may have limitations in terms of tool availability and customization. Evaluate if it meets your requirements or if a personal setup would be more beneficial.​
+
+3. Ligolo-ng for Pivoting
+Benefits:
+
+Ease of Use: Ligolo-ng offers a straightforward setup with minimal commands, making it efficient for establishing tunnels.​
+Medium
++1
+oscp-cpts-notes | OSCP-CPTS NOTES
++1
+
+Stability: Provides a stable connection, crucial for extended engagements like the CPTS exam.​
+
+Autoroute Feature: Automatically manages routes through new pivots, simplifying the process of network navigation.​
+
+Practice Recommendations:
+
+Lab Environments: Set up virtual lab environments to practice deploying Ligolo-ng in various scenarios.​
+
+Documentation: Refer to guides and tutorials to understand advanced configurations and use cases.​
+
+4. NetExec for Lateral Movement
+Advantages Over Other Tools:
+
+Efficiency: NetExec is designed to be faster and more reliable in executing commands across multiple systems.​
+
+Modern Features: Incorporates contemporary techniques and supports a wide range of protocols.​
+
+Preparation Tips:
+
+Hands-on Practice: Use NetExec in lab environments to familiarize yourself with its functionalities.​
+LinkedIn
++4
+StationX
++4
+LinkedIn
++4
+
+Stay Updated: Regularly check for updates or new features to ensure you're utilizing the tool effectively.​
+
+5. Scripting and Note-Taking Workflow
+Efficient Note-Taking with Obsidian:
+
+Structured Organization: Create a hierarchical structure with folders and subfolders to categorize information logically.​
+Data Engineering Blog
++3
+LinkedIn
++3
+Obsidian Forum
++3
+
+Templates: Develop templates for common tasks or methodologies to streamline documentation.​
+
+Interlinking Notes: Use Obsidian's linking feature to connect related notes, facilitating quick navigation.​
+Obsidian Forum
++1
+YouTube
++1
+
+Custom Scripts:
+
+Automation: Write scripts to automate repetitive tasks, such as scanning or enumeration, to save time during the exam.​
+
+Documentation: Maintain a repository of scripts with comments and usage instructions for quick reference.​
+
+6. Recording Terminal Sessions
+Benefits:
+
+Review and Analysis: Recorded sessions allow you to revisit and analyze your actions, aiding in learning and identifying mistakes.​
+
+Reporting: Facilitates accurate and detailed reporting by providing a verbatim record of commands and outputs.​
+
+Tools:
+
+Asciinema: A lightweight tool that records terminal sessions and allows for easy sharing and embedding.​
+YouTube
++5
+GitHub
++5
+Asciinema Docs
++5
+
+Script Command: A built-in Unix utility that records a transcript of your terminal session.​
+YouTube
+
+Usage Tips:
+
+Regular Recording: Make it a habit to record sessions, especially during complex tasks, to build a comprehensive archive.​
+
+Organized Storage: Save recordings with descriptive filenames and organize them systematically for easy retrieval.​
+
+By focusing on these areas and integrating the recommended practices into your preparation, you'll be better equipped to handle the challenges of the CPTS exam.
