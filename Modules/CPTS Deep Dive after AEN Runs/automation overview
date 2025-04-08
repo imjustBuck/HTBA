@@ -1,0 +1,323 @@
+CPTS Exam Prep – Automation, Advice, and Practice Labs
+Automation Scripts for CPTS & AEN Environments
+In a complex Attacking Enterprise Networks (AEN) or CPTS exam environment, smart automation can save time. Candidates often use scripts and tools to automate enumeration, pivoting, and privilege escalation tasks. Below are notable scripts/tools, their sources, purposes, usage timing, OPSEC considerations, and which CPTS phase they assist:
+Impacket Suite (Kerberos & NTLM Automation)
+Source: Impacket on GitHub (SecDev). e.g. GetUserSPNs.py, GetNPUsers.py, secretsdump.py​
+MEDIUM.COM
+.
+Purpose: Automates common Active Directory attacks – finding SPN accounts for Kerberoasting, AS-REP roasting accounts without pre-auth, dumping credentials (NTDS.dit or SAM) via DCSync, and executing commands with valid creds (psexec, wmiexec).
+When to Use: Internal Recon & Lateral Movement. After gaining a foothold, use GetUserSPNs.py to find Kerberos service accounts and get ticket hashes, or GetNPUsers.py to find users with Kerberos pre-auth disabled for offline cracking. Use secretsdump.py once you have admin creds on a DC (post-privilege escalation) to dump all hashes​
+MEDIUM.COM
+.
+OPSEC Caveats: Impacket tools can be noisy on a real network (e.g., triggering lots of Kerberos traffic). In a lab/exam with no active defenses this is fine, but in real engagements use with caution to avoid detection. Also ensure you target the correct host to avoid locking accounts.
+CPTS Phase: Internal Recon & Privilege Escalation. These scripts help enumerate privilege escalation paths (Kerberoast, AS-REP roast) and escalate to Domain Admin by dumping credential stores (if you obtain rights).
+BloodHound & SharpHound (Graphical AD Pathfinding)
+Source: BloodHound (GitHub; by @BloodHoundAD). SharpHound is the C# ingestor.
+Purpose: Automates AD enumeration by mapping trust relationships, user/group memberships, and access control in Active Directory into an attack graph​
+MEDIUM.COM
+. It helps identify complex privilege escalation chains (e.g. user with write privileges on another user or allowed to DCSync).
+When to Use: Internal Recon (Post-Initial Access). Once you have domain access (even as a low-priv user), run SharpHound to collect AD data and visualize potential paths to high privilege (e.g. Domain Admin). Use early to get a lay of the land for multi-hop attack chains​
+MEDIUM.COM
+.
+OPSEC Caveats: BloodHound ingestor can trigger antivirus or generate large LDAP traffic. In exam, likely safe; in real networks, consider stealthier use (spread out queries or use smaller collection sets). Always validate BloodHound’s results – it can sometimes list paths that are not actually exploitable until additional conditions are met​
+MEDIUM.COM
+. A great tip from past CPTS takers: “BloodHound lies sometimes. Always confirm edges with manual checks using PowerView or NetExec”​
+MEDIUM.COM
+.
+CPTS Phase: Internal Recon & Privilege Escalation. BloodHound is especially useful in Lateral Movement and Privilege Escalation phases to plan your next target. Candidates noted it’s invaluable for mapping multi-domain trust attacks​
+MEDIUM.COM
+.
+PowerView & AD Enumeration Scripts
+Source: PowerSploit’s PowerView.ps1 (GitHub; by PowerShellMafia). Also community tools like ldapsearch, WindapSearch, ldapdomaindump, ADRecon.ps1.
+Purpose: Provides real-time querying of AD from a compromised Windows machine. PowerView can enumerate users, groups, ACLs, sessions, trust relationships, etc., via LDAP/ADSI. Other scripts like WindapSearch and ldapdomaindump perform LDAP queries to dump AD objects to files for offline analysis​
+MEDIUM.COM
+​
+MEDIUM.COM
+.
+When to Use: Internal Recon (Post-Exploitation). Use PowerView after getting an initial foothold in the domain to enumerate sensitive info (e.g. find where certain users are logged in, list all machines a user is local admin on, search for exploitable ACLs). Use these before or in parallel with BloodHound to double-check any potential privilege escalation path (e.g. verifying that a user has the WriteDacl permission on an object)​
+MEDIUM.COM
+.
+OPSEC Caveats: Pure PowerShell enumeration can be stealthy if run in-memory, but in hardened real environments it may trigger script block logging. Stick to read-only queries. For ldapdomaindump (Python), ensure you have network connectivity to the DC and valid creds. The output may be large, so be mindful of exam data management.
+CPTS Phase: Internal Recon & Lateral Movement. These tools help enumerate what to attack next and identify misconfigurations for privilege escalation (for example, enumerating ACLs to find users with Replicating Directory Changes for DCSync attacks​
+MEDIUM.COM
+).
+Rubeus (Kerberos Attack Toolkit)
+Source: Rubeus (C# by GhostPack, on GitHub).
+Purpose: Automates advanced Kerberos attacks: ticket requests and manipulation. It can request Kerberos TGTs/TGSs (asktgt/asktgs), perform Kerberoasting, AS-REP roasting, pass-the-ticket, Golden/Silver ticket forging, etc. Basically a Swiss-army knife for abusing Kerberos after you have foothold or credentials​
+MEDIUM.COM
+.
+When to Use: Privilege Escalation. Use Rubeus when you need to extract tickets or abuse Kerberos once you have some credentials. For example, after finding a service account via GetUserSPNs.py, you could also use Rubeus kerberoast to request the service ticket. If you attain the krbtgt hash (Domain Admin), Rubeus can forge Golden Tickets to maintain access.
+OPSEC Caveats: Running Rubeus on a target could be flagged by host defenses in a real network. In lab/exam, likely not an issue. Always use it after initial recon confirms Kerberos-based escalation is needed. For CPTS, you might not need to actually forge tickets (depending on scope), but knowing how to quickly request and renew tickets (e.g., for extended lateral movement without reauthenticating) can save time.
+CPTS Phase: Privilege Escalation & Persistence. If the exam path involves Kerberos (which is likely in AD), Rubeus helps in extracting hashes (Kerberoasting) and maintaining higher-level access via ticket attacks​
+MEDIUM.COM
+.
+WinPEAS & LinPEAS (Privilege Escalation Scouts)
+Source: PEASS – Privilege Escalation Awesome Scripts Suite (by Carlos Polop)​
+GITHUB.COM
+.
+Purpose: Automates local privilege escalation enumeration. WinPEAS (Windows) and LinPEAS (Linux) quickly gather system info: OS config, installed apps, vulnerable services, misconfigured privileges, credential files, etc. They highlight possible priv-esc vectors (unquoted service paths, weak folder permissions, SUID binaries, etc.) with color-coded output​
+GITHUB.COM
+.
+When to Use: Post-Exploitation (Privilege Escalation). The moment you get a shell on a machine (whether a web server or an internal host), run the appropriate PEAS script to find potential escalation paths. For example, on a compromised Windows server, WinPEAS might reveal stored creds in registry or an exploitable service. It’s useful in the Privilege Escalation phase on any host you gain low-level access to.
+OPSEC Caveats: In a real engagement, these scripts can trip AV (they are well-known). In the CPTS exam, you’re likely allowed to run them (the exam environment presumably doesn’t have aggressive AV). Still, consider running the non-executable version (PowerShell or BAT for WinPEAS) to avoid binary detection. Also, be mindful of copying large scripts into restricted environments; host them on your attacker box and use one-liner download (Invoke-WebRequest or curl|bash).
+CPTS Phase: Privilege Escalation (Host). Almost every machine you compromise will require priv esc, so these help in Initial Access (if the first foothold is low-priv) and later Lateral Movement when you land on new servers with limited accounts.
+CrackMapExec & NetExec (Credential Sweeping & Lateral Move)
+Source: CrackMapExec (Python by @byt3bl33d3r) – widely known; NetExec (Rust, by CCMetrics team) – newer successor​
+MEDIUM.COM
+.
+Purpose: Automates lateral movement and credential reuse. CME/NetExec allow you to take a set of creds or hashes and spray them across many machines/services to see where you have access. They combine several functions: port scanning, SMB share enumeration, running commands on multiple machines, checking OS info, etc. For example, cme smb 10.0.0.0/24 -u user -p password will test that credential on every host’s SMB. NetExec serves similar roles with improved speed and stability​
+MEDIUM.COM
+.
+When to Use: Lateral Movement & Internal Recon. After dumping some credentials or cracking hashes, use CME/NetExec to quickly find where those creds are valid. Use it to enumerate open SMB shares across the network, find accessible WinRM, or execute a single command on all hosts to see which succeed (for instance, identifying where an account is local admin). This is invaluable once you’ve compromised one account and want to pivot through the network.
+OPSEC Caveats: These tools are quite noisy (they attempt logins on many systems which in a real environment triggers logs or lockouts if misused). In the exam, you can freely use them to map reachable systems. Note: NetExec, being newer, might not be covered in official modules – but one CPTS passer called it his “constant companion” for fast sweeping​
+MEDIUM.COM
+. Be cautious of account lockout policies if you guess wrong passwords; stick to known creds.
+CPTS Phase: Internal Recon & Lateral Movement. They blur the line between recon and exploitation – essentially post-initial access reconnaissance. Candidates used them to quickly identify low-hanging fruit (e.g., open shares, re-used passwords) once inside​
+MEDIUM.COM
+.
+Ligolo-ng & Chisel (Pivoting Tunnels)
+Source: Ligolo-ng (GitHub by @tnpitsecurity); Chisel (Go tool by @jpillora).
+Purpose: Automates pivoting and tunneling through compromised hosts. Both create SOCKS proxies and port forwards to reach internal networks. Ligolo-ng is an easy-to-use, fast SOCKS5 reverse tunnel with a one-line agent you run on a compromised host to form an encrypted tunnel back to your machine​
+MEDIUM.COM
+. It even has an autoroute feature to auto-add routes through new pivots​
+MEDIUM.COM
+. Chisel similarly can forward or proxy connections.
+When to Use: Pivoting (Lateral Movement). If the exam network has multiple subnets (very likely in CPTS), once you compromise one machine in a segregated subnet, deploy Ligolo or Chisel on it. This will let you scan and attack deeper internal network segments via your foothold. For example, run Ligolo agent on a DMZ webserver to reach an internal domain controller via SOCKS proxy and run internal tools through that tunnel.
+OPSEC Caveats: Both are relatively stealthy (they encrypt traffic). One caution: ensure you set up the tunnel correctly before relying on it; test that you can resolve DNS and reach targets through the proxy. A past CPTS review noted Ligolo-ng had essentially 3 commands to remember (ifcreate, route_add, tunnel_start) and an autoroute that “makes life easy” for pivoting​
+MEDIUM.COM
+. In the exam, stable pivoting is crucial given the extended time – Ligolo is favored for stability​
+MEDIUM.COM
+.
+CPTS Phase: Lateral Movement. These tools shine in the pivoting stage, allowing you to move from the initial foothold to other network zones. CPTS candidates reported that mastering a tool like Ligolo-ng (which wasn’t covered in the official module) was a big advantage​
+MEDIUM.COM
+.
+Responder & MITM Tools (Internal Network Credential Sniffing)
+Source: Responder (Python by Laurent Gaffié) on GitHub; also Inveigh (PowerShell) for Windows environments.
+Purpose: Automates capturing hashes/tokens via spoofing services. Responder listens on a network for LLMNR/NBNS broadcasts or SMB traffic and tricks machines into sending credentials (NetNTLM hashes) to the attacker. This can yield password hashes if misconfigured name resolution is in use.
+When to Use: Internal Recon (Post-Access). If you find yourself in a subnet with many Windows machines and suspect LLMNR is enabled (common in misconfigured networks), you can run Responder to passively catch machine or user credentials when they try to resolve names. It might help early in an engagement if no direct exploit is obvious. Only use if you have network visibility and nothing else is screaming for attention, since it’s passive (except for the poisoning).
+OPSEC Caveats: In a real corporate network, Responder is very noisy – it poisons name resolution, which can break things or trigger defensive alerts. Many enterprise networks now monitor or disable LLMNR. In the CPTS exam, it may or may not be useful depending on the scenario (the lab designers might not rely on you using it). Use it as a last resort if you’re stuck enumerating and want to capture some credentials.
+CPTS Phase: Initial Access & Lateral Movement. It could technically facilitate initial access (if run on one foothold to get another user’s creds elsewhere). But primarily it’s a recon/enumeration aid once you have a position inside the network.
+SysReptor (Reporting Automation)
+Source: SysReptor (HackTheBox’s reporting tool, on GitHub​
+MEDIUM.COM
+).
+Purpose: Automates report structuring and documentation. While not directly hacking, this script/tool helps generate professional penetration test reports (with predefined templates following industry standards). It can manage screenshots, finding details, and output a polished report. One CPTS graduate said they used SysReptor to structure their exam report, finding it “faster than Word, cleaner than Markdown, and far more scalable” for managing a long engagement​
+MEDIUM.COM
+.
+When to Use: Reporting (Throughout Engagement). In a 10-day CPTS exam, documenting as you go is critical. SysReptor can be used from day 1 to record findings and exploit steps in a clean format. It’s useful during Reporting phase, but really you’ll be writing notes the whole time – this just helps format and organize them into the final deliverable.
+OPSEC Caveats: None – this is offline/local. Just ensure you don’t waste too much time fiddling with the tool; have a template ready. Also, always double-check the output to ensure all critical findings are correctly captured (the exam graders are strict about report quality​
+MEDIUM.COM
+​
+MEDIUM.COM
+).
+CPTS Phase: Reporting. While not tied to a hacking phase, good reporting is part of the exam scope. Automating some of it reduces the chance of missing screenshots or command outputs. (Tip: some recommend using a script or asciinema to record your terminal during exploitation for easy reference later​
+MEDIUM.COM
+.)
+Aside: In general, write scripts for anything you can automate yourself. For example, candidates often wrote quick one-liners or scripts to log their steps (recording each command run, to avoid losing track)​
+MEDIUM.COM
+. Scripting repetitive tasks (like resolving hostnames or testing a list of ports across hosts) can shave hours off an engagement. Just be mindful of reliability – always have manual methods to fall back on if an automated script fails or gives ambiguous output.
+First-Hand Advice from Successful CPTS Candidates
+Those who passed the CPTS exam have shared valuable insights about challenges they faced and what they would do differently. Here are key takeaways from CPTS-certified individuals:
+Common Pain Points and Roadblocks
+Overwhelm and Rabbit Holes: The CPTS exam environment is much larger than a typical CTF – many hosts, networks, and possible paths. A common struggle is wasting time on rabbit holes or re-enumerating the same things. One person who failed the first attempt noted “the exam is quite large and I wasted a lot of time exploring rabbit holes and looking at the same things over and over”. They suggested setting a timer (e.g. 20-30 minutes) to investigate something, and if it yields nothing new, move on​
+MTTGIT19.GITHUB.IO
+. Conversely, if you find yourself repeatedly drawn back to the same area, it likely is important and deserves deeper analysis​
+MTTGIT19.GITHUB.IO
+.
+Tooling and Connectivity Issues: Working across a segmented network for days means dealing with tunnels, VPNs, and flaky shells. Candidates mention it’s critical to test your tools in proxy/pivot scenarios ahead of time – e.g., some tools don’t respect proxychains and will fail silently​
+MEDIUM.COM
+. Also, shells might time out or network routes might break if a pivoted machine goes down. Being prepared to re-establish access quickly is vital. In other words, practice setting up and tearing down your tunnels efficiently, and have backup methods for access (multiple shells or credentials), in case one path closes.
+Mental and Physical Fatigue: A 10-day exam sounds generous but can lead to burnout. One passer described going “150%” on the exam and burning out mid-way​
+MTTGIT19.GITHUB.IO
+. It’s easy to neglect breaks when immersed in the challenge. Multiple people strongly advise scheduling breaks and self-care: use the Pomodoro technique or alarms to remind you to eat, drink, stretch, and sleep on a healthy schedule​
+BRUNOROCHAMOURA.COM
+. You have the time – use it wisely by maintaining your energy. Exam tips include taking all the time off work you can, and not trying to work a day job simultaneously​
+BRUNOROCHAMOURA.COM
+.
+Reporting Pressure: Unlike CTFs where getting “root” is the end, here you must thoroughly document every step. Many found the report writing as challenging as the hacking. One person failed due to report quality and had to resubmit with improvements​
+MEDIUM.COM
+​
+MEDIUM.COM
+. The pain point was realizing after exploitation that you also need screenshots and notes for everything. The remedy is to write the report as you go – document each exploit step immediately and grab screenshots in the moment​
+BRUNOROCHAMOURA.COM
+. This avoids a last-minute scramble. Also, follow the provided report template exactly (format, sections, etc.)​
+MEDIUM.COM
+ – CPTS graders are strict on reporting requirements.
+Staying Calm When Stuck: It’s normal to hit walls for hours. A key mindset shared by passers: “be comfortable with being stuck”​
+BRUNOROCHAMOURA.COM
+. Frustration is the enemy – when nothing works, take a break or switch to another target for a while to clear your head. The exam tests persistence. One tip is to approach problems methodically and even “think dumber”​
+BRUNOROCHAMOURA.COM
+ – meaning if you’re overthinking, step back and try very basic or trivial attack vectors; the solution might be simpler than you assume.
+“What I Wish I Had Prepped More”
+A Rigid Methodology: Many realized after the fact that their methodology needed work. One successful student reflected: “One thing I wish I practiced more prior to the exam was my methodology. I was not very organized in my approach to finding vulnerabilities”​
+MTTGIT19.GITHUB.IO
+. The exam’s breadth means you can’t rely on ad-hoc thinking for 10 days. You should have a clear plan for each phase (recon, initial access, priv esc, etc.). This includes knowing your go-to tools and commands for each situation. Candidates recommend creating checklists (for web app testing, for internal host enum, for AD enumeration, etc.) and following them systematically so you don’t overlook something obvious​
+MEDIUM.COM
+.
+Active Directory Edge Cases (ACL Abuse & BloodHound Queries): Even though the HTB course covers AD attacks, exam-takers wished they had spent more time on custom AD attack scenarios. In particular, understanding Active Directory ACLs and how to abuse them. For example, if BloodHound shows a user can write to another user or has a certain uncommon right, do you know how to exploit that? It’s worth practicing tools like PowerView to manually enumerate ACLs on objects and using BloodHound’s custom queries to find less-obvious paths​
+MEDIUM.COM
+​
+MEDIUM.COM
+. One tip is to not just rely on the default BloodHound graphs – be ready to write Cypher queries (e.g., “Find all principals with GenericAll on any domain object”). Practice abusing ACLs (like GenericAll, WriteDACL, AddMember) in a lab AD environment so you won’t be perplexed if the exam throws one at you.
+Post-Domain Admin Pivoting: Achieving Domain Admin is often not the end in CPTS. The presence of multiple domains or forest trusts means you may need to pivot after getting DA. This was a surprise for some. For example, after owning one domain, how do you enumerate trusts to another domain? How do you use something like a Golden Ticket or trust tickets to move laterally into the next domain? Review cross-domain attacks if the course didn’t deeply cover them. At least one review mentioned multi-domain enumeration and credential chaining in the AEN lab​
+MEDIUM.COM
+ – so expect that in the exam. Practicing DCSync, silver tickets, pass-the-ticket across trusts, etc., would be valuable so you’re not learning it on the fly.
+Realistic Networking/Pivoting drills: Some wish they had spent more time in realistic lab environments (like the HTB Pro Labs or AEN) under exam-like conditions. Working under restraints like network segmentation, jump boxes, and limited subnets is different from typical CTF boxes. If possible, simulate a small AD network yourself or use a platform like Dante or Zephyr (HTB Pro Labs) to do a full attack chain with pivots. This helps highlight any weaknesses in your workflow (such as managing multiple shells, routing issues, or slower enumeration techniques) before you’re in the exam. As one blog noted, these environments introduce “noise, distractions, segmentation, and dead-ends” to break your workflow – exactly what the exam will do​
+MEDIUM.COM
+​
+MEDIUM.COM
+.
+Time Management and Endurance: Several people completed the exam but felt their time management was poor. They advise future takers to simulate the long exam in practice – e.g., do the AEN lab with a strict time limit (say 5 days)​
+MEDIUM.COM
+. This helps build endurance and teaches you how to distribute effort. Knowing when to move on from a stuck target or when to take a rest day is hard without practice. Additionally, plan how to use the second attempt: some wish they hadn’t treated the first attempt as “all or nothing.” If you run out of time or ideas, it’s okay – gather what you can, and use the second attempt (if needed) to fill gaps after regrouping, rather than panicking.
+Extra Tools & Workflows Outside the Official Modules
+The HTB CPTS modules cover a lot, but alumni pointed out a few additional tools/workflows that gave them an edge (these were not emphasized in the course material):
+Ligolo-ng for Pivoting: The CPTS course taught some pivoting, but did not include Ligolo-ng, which many now consider a go-to tool​
+MEDIUM.COM
+. Learning Ligolo-ng (and generally modern tunneling tools) is highly recommended. Its usage of an autoroute-like feature and stability over long connections made pivoting much easier for exam takers​
+MEDIUM.COM
+. If you only used Meterpreter or older tools in the course, consider adding Ligolo-ng to your arsenal.
+Newer Lateral Movement Tools (e.g. NetExec): The modules likely introduced CrackMapExec for automated lateral movement. However, some recommend using NetExec, a newer tool which they found more efficient and reliable​
+MEDIUM.COM
+. It wasn’t in the official path, but picking it up was beneficial. This underscores a general point: stay updated with tool developments. CPTS is “realistic”, so using real pentest toolsets (even if not explicitly taught) is fair game and often wise.
+Alternative AD Enumeration like PingCastle: A few students explored PingCastle (an AD security audit tool) on their own. While not needed to pass, using it on practice labs can quickly highlight misconfigurations. It gives a high-level report of AD weaknesses (legacy protocols, weak crypto, etc.). This kind of overview wasn’t part of CPTS coursework, but practicing with it can train you to spot issues quickly. Just be careful: PingCastle is heavy-handed and could be overkill for the exam; use it as a learning aid, not a crutch.
+Scripting and Note-Taking Workflow: Many top performers created personalized scripts or one-liners to speed up tasks. For example, a script to check all hosts in a subnet for a certain open port, or a script to automate collecting system info from a new shell (instead of typing whoami && hostname && ipconfig each time, have a prepared command). Additionally, they refined their note-taking system beyond what the course demanded. One used an “Obsidian vault with over 100 notes” covering every technique, complete with command syntax and even a log of past mistakes to avoid​
+MEDIUM.COM
+​
+MEDIUM.COM
+. This kind of self-made knowledge base wasn’t required by HTB Academy, but proved invaluable.
+Recording Everything: A neat workflow tip from a CPTS passer: use a terminal recording tool (like asciinema or script command) to record your shell sessions​
+MEDIUM.COM
+. This way, if your shell crashes or days later you forget how you did something, you have a playback. Even if you don’t submit those recordings, they help in report writing and double-checking steps. This level of diligence wasn’t explicitly taught, but those who did it were grateful later.
+In summary, don’t limit yourself only to the tools taught in the modules. The exam expects you to apply methodology to novel situations, so bringing in well-known external tools is not only allowed but often necessary. Just ensure you’re familiar with them before the exam (test them in a lab setting, especially under proxy/pivot conditions). The common theme from those who passed is that solid fundamentals and methodology trump any single tool – but having the right tool for the job can certainly make life easier in the moment.
+HTB and TryHackMe Rooms for Initial Access Practice
+For sharpening your Initial Access skills (especially web exploitation, which is often the entry point), targeted practice on Hack The Box and TryHackMe rooms can be very useful. While the CPTS course covers these topics, practicing them in standalone scenarios helps you recognize vulnerability patterns quickly. Below are recommended rooms and boxes focusing on the kinds of exploits that frequently serve as the initial foothold in enterprise scenarios (LFI, SSRF, SQLi, command injection, file upload bypasses, authentication bypasses, etc.). We also note any multi-step exploit chains that mimic the complexity of the exam, along with tools/shortcuts to speed up finding these vulns.
+LFI (Local File Inclusion) & Directory Traversal
+TryHackMe – File Inclusion: This guided room introduces Local and Remote File Inclusion and directory traversal vulnerabilities​
+MEDIUM.COM
+. It has a series of labs and challenges where you practice reading sensitive files via ?file= parameters, bypassing simple filters (null byte %00 termination, double encoding, etc.), and even achieving RCE through LFI. It’s great for building the intuition to spot LFI in URLs and parameters. After completing it, you’ll know common LFI indicators (like ?page=, ?file= in URLs) and techniques to exploit them.
+HTB Boxes with LFI: Jewel (HTB) is a good example – it features an LFI in a PHP application that you leverage to eventually get a shell. Another is Traverxec, which involves reading files via traversal to extract credentials. Practice identifying LFI by looking for file path patterns in web requests and test with a simple ../../etc/passwd payload. A shortcut is to use a tool like Kadimus (an LFI fuzzing tool) to automate trying common file inclusion paths​
+FORUM.HACKTHEBOX.COM
+. However, as one user noted, “don’t trust [tools] too much”​
+FORUM.HACKTHEBOX.COM
+ – always verify manually what a tool finds. Another tool, FDsploit, can fuzz and exploit file inclusion systematically​
+FORUM.HACKTHEBOX.COM
+. These can save time, but ensure you understand the underlying exploit without solely relying on them.
+SSRF (Server-Side Request Forgery)
+TryHackMe – SSRF: TryHackMe’s SSRF room is a dedicated lesson on Server-Side Request Forgery​
+MEDIUM.COM
+. It covers both basic SSRF (where responses are returned to you) and blind SSRF. This training is valuable because SSRF can be sneaky – you often have to poke at parameters that fetch URLs or images. The room teaches how an attacker can make the server fetch internal URLs or cloud metadata by manipulating inputs. Key things to practice: identifying parameters that might be URLs (like ?url=, ?dest=) and using techniques like file:// or http://localhost payloads. Also, learn to use Burp Collaborator or requestbin for blind SSRF detection (where you get no output).
+HTB “Sau” (Easy): Sau is an HTB machine where an SSRF in a web app is used to reach an internal service, which then leads to remote code execution​
+0XDF.GITLAB.IO
+. This box is great practice for chained exploits: you exploit SSRF to hit an admin-only API that is not directly exposed, then use that access to trigger a command injection. It mirrors an exam-style scenario where one vuln alone isn’t enough – you combine SSRF + another issue for the foothold. Another HTB box with SSRF is Forge, where an image upload function was abused to perform SSRF via an image tag, eventually granting access to an internal admin panel (a multi-step exploit)​
+WEARECOMMUNITY.IO
+.
+Tips/Tools: For SSRF, a useful tool is Gopherus (to craft gopher:// payloads for interacting with text-based protocols via SSRF). Also, Burp Suite’s Match and Replace or out-of-band collaboration features help in detecting blind SSRF. Practicing with these will make you faster at identifying SSRF in an exam scenario (which might be hidden in something like a PDF generation feature or webhooks).
+SQL Injection & Authentication Bypass
+SQLi Practice: TryHackMe has several SQLi-focused rooms (e.g. SQL Injection Lab, DVBied for blind SQLi). These will drill the fundamentals: identifying injectable parameters, using ' OR '1'='1 for bypass, union-select to extract data, and boolean/blind techniques. While CPTS initial access might not hinge on a classic SQLi, it’s still common in web apps (especially for older or internal apps).
+HTB “Cronos” (Easy/Medium): Cronos involves an SQL injection in a website that leads to retrieving credentials and eventually an RCE via a cron job. It’s a nice example of how SQLi can be the first step to get a foothold (by dumping a password or creating an admin user).
+HTB “Mango” (Medium): Mango is notable for a NoSQL injection (MongoDB) that bypasses login authentication​
+0XDF.GITLAB.IO
+. This reflects modern apps using NoSQL where the exploit isn’t the same syntax as classic SQLi. In Mango, you exploit a login form to dump user credentials from the database (NoSQL injection allows authentication bypass and data exfiltration). The box teaches the mindset of checking any login form or search functionality for injection, even if the tech stack isn’t obvious SQL. After practicing Mango, you’ll remember to test odd inputs like {$ne:null} or wildcard regex in NoSQL scenarios.
+Auth Bypass in General: Many HTB easy boxes (e.g. Shoppy) have simple auth bypass via default creds or basic SQLi. Always include credential stuffing and default password checks in your methodology – e.g., try admin:admin or vendor default logins where applicable. A surprising number of initial footholds (even in exams) can be from something as simple as default creds on an admin panel that’s overlooked.
+Shortcuts: Tools like sqlmap can automate SQL injection exploitation. In a time crunch, once you identify a likely SQLi, you can use sqlmap with appropriate options (like --dbs, --dump) to quickly retrieve what you need. However, use it carefully – it can be overkill and noisy. In an exam, you might instead just use manual UNION queries to grab what’s needed (e.g., an admin password hash). Writeups from 0xdf or IppSec videos on SQLi boxes show efficient manual exploitation which is worth emulating.
+Command Injection
+TryHackMe – Command Injection: There are modules or tasks in THM’s Junior Pentester path dealing with OS command injection (for example, altering parameters that get passed to system commands). Practice these in THM or OWASP Juice Shop (which has some injection flaws). Key indicators are parameters like ip or ping that might be used in a system call.
+HTB “Shocker” (Easy): Although Shocker is specifically about Shellshock (a known vuln), it is a form of command injection via HTTP headers. Understanding it can help you notice weird places where user input might hit a shell (like the User-Agent string in a CGI script).
+HTB “Photobomb” (Easy): Photobomb involves a command injection in an image processing utility. It’s a realistic scenario where a web app passes user input to a shell command (ImageMagick or similar) without proper sanitization. Recognizing this pattern (filenames or parameters being directly used) is important.
+Tips: For manual testing, remember common payloads like ; whoami or && ping -c 1 YOURIP &&. If a parameter is vulnerable, those may cause delays or external ping – look for response time changes or use a ping catcher (tcpdump on your listener). Commix is an automated tool for command injection that can find and exploit such bugs, saving time if you suspect an injection but can’t pin it down manually.
+File Upload Vulnerabilities
+TryHackMe – Upload Vulnerabilities: This room (on THM) systematically covers various file upload issues – from overwriting critical files, to uploading web shells, bypassing client-side filters (like JS restrictions), bypassing server-side filters (like extension whitelists or magic byte checks), and content-type validation tricks​
+GITHUB.COM
+. It’s extremely relevant, as many footholds in enterprise involve uploading a file somewhere (an image, a document) that turns out to be exploitable. By the end, you will know techniques such as: using double extensions (shell.php.jpg), capitalizing extensions, adding fake image headers (magic bytes) to fool file type checks, or exploiting path traversal in file uploads to drop files in unintended directories.
+HTB “Teacher” / “Photobomb”: There are HTB machines (Teacher, Photobomb, etc.) where you upload a seemingly innocent file that actually gets executed. Photobomb, for instance, required bypassing an extension check to upload a PHP shell. Another HTB box Magic was literally about magic bytes in image uploads. Practicing these will make you aware of where to look in an app for upload functionality (profile picture, support ticket attachments, etc.) and how to test it.
+Shortcut Tools: For fuzzing upload bypasses, you can script curl or Burp Intruder to try different filename variations. For example, if shell.php is blocked, test shell.php5, shell.pHp, shell.phar, etc., quickly. There are also wordlists for common bypass extensions. Knowing about web shells (like a simple one-liner <?php system($_GET['cmd']);?>) and how to embed them in allowed file formats (like a polyglot image) can be extremely handy for quick exploitation once you get an upload through.
+Multi-Step and Chained Exploits
+In the CPTS exam, it’s likely that initial access is not a single vulnerability in isolation, but a chain of weaknesses that lead to a foothold. To simulate that, practice on “multi-step” boxes:
+HTB “Forge” (Medium): Forge requires an image upload (with an SVG file containing malicious XML) to trigger an SSRF, which then hits an internal service that has an RCE vulnerability, giving a shell​
+WEARECOMMUNITY.IO
+. This chain (Upload -> SSRF -> RCE) is a perfect example of the kind of thinking needed for the exam: use one bug to pivot into reaching another. When doing Forge, take note of how the initial vulnerability alone didn’t immediately give a shell – it was a means to an end.
+HTB “Time” (Medium): Time involves both an SSRF and a separate RCE endpoint​
+INFOSECWRITEUPS.COM
+. Only by combining them can you compromise the box. It’s good for learning how to enumerate multiple web services on the same box and find relationships between them (for instance, one service might have credentials or tokens needed to exploit another).
+HTB “Cascade” (Medium/Hard): Although more of an internal AD box, Cascade’s initial part is getting credentials from an encrypted file and using them on another service – a chain of finding a file -> decryption -> reuse creds. This highlights that sometimes “exploitation” is not just a single smash-and-grab, but involves gathering info from one place to use in another.
+TryHackMe “AttackerKB” or “ColdBox” (if available): Some community rooms on THM chain web vulns. For example, a fictitious example: an LFI to get config that contains an API key, which you then use to access an admin panel and perform command injection. Look for those scenarios in walkthrough blogs or THM challenges.
+General Tip: In any complex scenario, break it down and enumerate thoroughly at each stage. For web apps, enumerate all endpoints (use Dirbuster/GoBuster to find hidden directories that might hold an admin interface or config files). Read error messages – they often hint at secondary services or file paths to exploit. Use a proxy (Burp) to observe all traffic; sometimes an initial action (like uploading a file or resetting a password) will generate a request to another URL that you can then target directly.
+Automation for Chained Vulns: There isn’t a single tool for chaining exploits, but being quick with a scripting language can help. For instance, if you discover a login bypass (SQLi) and that leads to an API key, write a small Python script to use that API key on the next endpoint if manual tools are cumbersome. In short, don’t shy away from writing a bit of code during the exam to glue steps together – candidates have done so to, say, iterate through possible tokens or to perform custom encoding/decoding. This can be more efficient than manually performing 100 iterations in Burp.
+By practicing the above scenarios, you’ll build a mental library of common vuln patterns. During the exam, when you encounter a login page or a file upload feature, you’ll instantly recall “Ah, I should test for X, Y, Z” because you’ve seen a similar HTB/THM challenge. The goal is to shorten the time from seeing a potential attack vector to successfully exploiting it, through recognition and experience. Keep notes on these practice rooms in your vault – e.g., have a page for “LFI tricks” with notes from the File Inclusion room, and one for “SSRF payloads” from the SSRF room, etc., so you can quickly reference them during the exam if needed.
+Organizing Your Research in an Obsidian Vault
+Finally, as you compile all this knowledge, it’s important to keep it well-organized for easy reference. Many CPTS takers swear by tools like Obsidian or other note-taking systems to manage their methodologies. Here are tips for setting up your Obsidian vault for CPTS prep:
+Structure by Phase or Topic: Consider creating a hierarchy of notes according to the penetration test phases or major topics. For example, you might have top-level notes or folders for Reconnaissance, Initial Access (Web Exploits), Internal Recon (AD Enumeration), Lateral Movement, Privilege Escalation (Windows/Linux), and Reporting. One successful strategy was: “Structured using Obsidian with over 100 nodes, organized by phase: Recon → Exploitation → Post-Exploitation → Pivoting → Reporting”​
+MEDIUM.COM
+. This way, when you’re in the exam and need to recall, say, “how to enumerate AD trust relationships,” you know to look under Post-Exploitation/AD Enum.
+Use Dedicated Pages for Tools/Scripts: Create a note for each major tool or script (e.g. a page for BloodHound, one for WinPEAS, one for Ligolo, etc.). On that page, document the key commands, use cases, and any exam-specific notes (like “Ligolo – use for pivot, remember to run ifconfig tun on target and connect on attacker” or “WinPEAS – run WinPEASx64.exe, focus on [*] outputs”). Link these tool pages to the phase pages. For instance, your “Lateral Movement” page can have a section listing tools (with internal links like [[CrackMapExec]]). This cross-linking in Obsidian helps in quickly jumping between methodology and tool specifics.
+Include Cheat-Sheets and Command Syntax: Under each technique or vulnerability type, record the exact syntax of commands. For example, on an “LFI” note, you might jot down common payload patterns (../../../../etc/passwd, URL encoding tricks, null byte %00). Under an “AD CS” technique, note down the exact Certipy or certutil commands needed. During the exam, you can copy-paste from your notes rather than Googling. Essentially build your personal cheat sheet repository. Many folks literally copy key command snippets from the HTB Academy modules or other cheat sheets into their Obsidian vault so everything is in one place.
+Log Your Mistakes and Edge Cases: This is a pro tip from one CPTS field guide – maintain a section for “What went wrong before and why”​
+MEDIUM.COM
+. Every time you practice and encounter a tricky scenario (like “BloodHound showed a path that didn’t actually work because of X”), note that down. It will remind you to verify things in the future. Also note edge cases: e.g., “WinRM might be filtered by Windows Firewall – if Evil-WinRM isn’t connecting, try SMB or WMI as alternative.” These kinds of notes prevent you from getting stuck on the same issue twice.
+Backlink Related Concepts: Obsidian allows backlinking, which you can use to your advantage. For instance, your “Initial Access” page might mention LFI, SSRF, etc. If you have separate detailed notes on those, link them. Similarly, if a script (like PowerView) is used in multiple phases, link it wherever relevant. This creates a web of knowledge. Later, you can use the graph view or search to find all references to a topic (say you want everything related to “Kerberos” – you’d find Rubeus, AS-REP, Kerberoast, etc. if they’re inter-linked or at least all tagged with “Kerberos”). Tags can help too (e.g., tag all Windows privesc notes with #WindowsPrivEsc).
+Maintain an Index or Dashboard: It can help to have one note that serves as an index or table of contents for your CPTS prep. This could simply list all main topics and link to the respective notes. Think of it as your “landing page” during the exam – from which you can navigate to whatever you need. Some people also keep a “Checklist” note – an outline of steps to take when faced with certain scenarios (like a flowchart in text form). For example: “Web app discovered → run gobuster → found upload feature → test file upload bypass → got web shell → post-exploitation: run winPEAS” etc., with links to relevant detailed notes at each arrow. This kind of high-level overview can keep you on track in the heat of the exam.
+Embed and organize screenshots or diagrams: Obsidian can embed images. If you come across a great diagram (like an AD attack path mindmap or a pivot network diagram) during study, embed it in your notes for quick visual reference. Just be sure to cite or label it so you remember what it illustrates. Visual cues can often jog your memory faster than text under pressure.
+Leverage Obsidian Plugins for Productivity: If you’re using Obsidian, consider plugins like Quick Switcher++ for fast note jumping, or Dataview to create tables (maybe a table of all tools with their location and purpose). Even a Tag Pane can help if you tag notes by category. Set up your vault environment beforehand so it’s comfortable – dark mode, font size, etc., since you’ll be likely staring at it for long hours.
+To illustrate, one candidate’s Obsidian “living methodology library” had each note containing sections for use cases, commands, variations, and theory​
+MEDIUM.COM
+. They even made checklists for different contexts (Web, Linux, Windows) and kept them updated as they practiced​
+MEDIUM.COM
+. Adopting a similar approach will make your vault a powerful companion during the exam. Essentially, your Obsidian vault becomes your second brain – when the stress of the exam makes you forget something simple, your indexed notes will save the day. Vault Organization Example:
+PenTest Methodology (Index)
+Recon
+Network Scanning (nmap syntax, AutoRecon usage)
+Web Enumeration (gobuster, what to look for)
+Initial Access – Web Exploits
+LFI (with link to detailed LFI note)
+SQLi (with link, etc.)
+Auth Bypass
+Common Web Credentials
+Internal Recon – AD
+AD Enumeration Basics (LDAP, PowerView)
+BloodHound (how to run, common queries)
+Credential Reuse (CrackMapExec/NetExec usage)
+Lateral Movement
+Pivoting (SSH tunnels, Ligolo setup steps)
+Pass-the-Hash / Pass-the-Ticket notes
+Remote Execution (WinRM, SMBexec, WMI)
+Privilege Escalation – Windows
+Windows PrivEsc Checklist (with items like “check local admin group, scheduled tasks, unquoted service paths…”)
+winPEAS findings interpretation
+Kernel exploits (if allowed)
+Privilege Escalation – Linux
+LinPEAS common finds, etc.
+Reporting
+Report Template pointers (what sections needed)
+Screenshot Checklist (which critical actions to screenshot)
+Each of the above would be a note linking to even more granular notes if needed. This may sound extensive, but having it will significantly cut down the time you spend searching for the right command or approach. As one CPTS passer put it: “Build your notes like your life depends on them. They kind of do.”​
+MEDIUM.COM
+. In an open-book exam, the quality of your notes can directly impact your performance. Organizing them efficiently in Obsidian means you can quickly retrieve the exact info or command syntax you need, allowing you to spend more time hacking and less time digging through resources.
+Sources:
+CPTS exam tips and tools from blog posts and reviews​
+MEDIUM.COM
+​
+MEDIUM.COM
+​
+MEDIUM.COM
+​
+MEDIUM.COM
+.
+First-hand experiences from CPTS passers on Reddit/Medium​
+MTTGIT19.GITHUB.IO
+​
+MTTGIT19.GITHUB.IO
+​
+MEDIUM.COM
+​
+MEDIUM.COM
+.
+HackTheBox and TryHackMe write-ups and rooms for web exploits​
+MEDIUM.COM
+​
+MEDIUM.COM
+​
+0XDF.GITLAB.IO
+​
+WEARECOMMUNITY.IO
+.
