@@ -1,0 +1,100 @@
+🧠 What We Know from All Yesterday’s Research (and Prior Runs):
+🎯 Initial CPTS Scope (Blind AEN Box)
+✅ External Scope:
+🧱 One External IP Address
+
+Usually hosting:
+
+A web app (primary target)
+
+MAYBE multiple virtual hosts or subdomains (via Host header)
+
+One direct route to internal — either by shell OR proxy/tunnel
+
+💡 Goal: Gain a shell on this external asset
+
+Often a Linux web server
+
+Sometimes a staging portal with misconfig or legacy flaw
+
+✅ Internal Scope (Discovered After Pivot):
+🔍 One or more internal subnets revealed post-initial access:
+
+Often 172.16.x.x, 10.10.x.x, 192.168.x.x
+
+Revealed via:
+
+ifconfig / ip a
+
+netstat / /etc/resolv.conf
+
+hardcoded config in source code (web.config, .env, etc.)
+
+captured creds from NFS, mount points, or tcpdump
+
+💡 Key Targets Inside:
+
+Windows dev boxes (dev01, etc.)
+
+NFS shares or internal web apps
+
+A Domain Controller (172.16.x.3 type of deal)
+
+Eventually DA, secretsdump, trust abuse
+
+🧰 Tools You Should Practice With in Simulated CPTS Environment:
+Phase	Tool(s) to Use
+Web Recon	ffuf, httpx, gau, nuclei, hakrawler
+Initial Exploit	Manual payloads, php-rev-shell, curl, burp, etc.
+Post-Access	ligolo-ng (preferred), chisel, proxychains
+Internal Recon	nmap -e tun0, smbclient, ldapsearch, rpcclient
+Windows Exploit	Evil-WinRM, CME, wmiexec.py, winPEAS.bat
+AD Attack Pathing	SharpHound, BloodHound, mimikatz, Rubeus
+Credential Replay	pth-winexe, secretsdump.py, impacket
+🧪 Initial Access Vectors We've Seen in CPTS:
+Vector	Description
+WordPress RCE	Plugin abuse or upload bypass → revshell
+SSRF to Local File Read	SSRF hits internal admin panel → leads to RCE or creds
+SQLi → RCE	Auth bypass → xp_cmdshell or PHP injection
+HTTP Verb Tampering	Bypass auth → admin panel → file upload
+Session Hijack via XSS	Reflective → cookie steal + panel takeover
+GitLab or Jenkins RCE	Internal dev portal exposed → default creds or RCE
+💥 So your practice lab should mimic:
+🔹 External Web Server (Linux):
+Vuln Web App (WP/Joomla/custom)
+
+Subdomains/vhosts
+
+At least one hidden route or file
+
+Goal: RCE or webshell
+
+🔹 Internal Network (Post-Pivot):
+Multiple hosts:
+
+1-2 Windows Dev Machines (win10 or 2016)
+
+1 NFS or file share box
+
+1 Domain Controller
+
+Possibly MGMT/Backup server
+
+Path to DA:
+
+Kerberoasting / ACL abuse / RBCD / DCSync
+
+🛠 How to Simulate This Locally (Practice Setup Idea)
+Set up one external Kali box w/ vulnerable web app (custom, DVWA, WP)
+
+Simulate subdomains via /etc/hosts + Apache vhosts
+
+Inside NAT, create:
+
+Win10 or Win Server 2019 as dev01
+
+Add 172.16.8.3 Domain Controller (AD setup)
+
+Add NFS share or Samba share from another Linux box
+
+Use Ligolo-ng or Chisel to simulate the tunnel between them
