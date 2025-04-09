@@ -1,0 +1,701 @@
+https://medium.com/@TheOniOne/cpts-tactics-survival-85fc219d9229#:~:text=,Rubeus%3A%20Ticket%20management%2C%20Kerberoasting
+
+Maintain persistence across hops
+Analyze trust relationships
+Understand how various machines interact together inside a network
+Abuse Active Directory like a professional adversary
+Juggle tunneling tools and chain recon flows
+Write a professional-grade report that would actually land on a client’s desk
+
+
+
+Organized by phase: Recon → Exploitation → Post-Exploitation → Pivoting → Reporting
+Each node contained:
+
+Use cases
+Syntax examples
+Command variations
+Real-world edge cases
+Mistake logs (what went wrong in past tests and why)
+Theory related to the technique
+
+https://www.youtube.com/watch?v=H9FcE_FMZio&list=PLidcsTyj9JXItWpbRtTg6aDEj10_F17x5
+
+For each video, I paused at every pivot and asked myself:
+
+“What would I do here?”
+“Is my recon too shallow to see this?”
+“Did I build my notes to cover this scenario?”
+
+Once I had the theory and tooling down, I turned to ProLabs — specifically Dante and Zephyr — to test my readiness.
+
+These environments aren’t designed to teach you new tricks. They’re meant to break your workflow — to introduce noise, distractions, segmentation, and dead-ends. And that’s exactly why they’re useful.
+
+🧠 Take AEN Completely Blind
+The Attacking Enterprise Networks (AEN) lab is probably the closest training experience to the actual CPTS exam. It teaches:
+
+Multi-domain enumeration
+Credential harvesting and chaining
+Tunnel configuration under realistic segmentation
+Multi-hop lateral movement
+Report writing for real-world attack chains
+
+One of the biggest mental traps is thinking,
+
+“This worked in AEN, so why isn’t it working here?”
+or
+“This box feels like that one from AEN — maybe it’s the same vector.”
+
+Don’t fall for it. Every flag in CPTS is custom-placed. Treat the exam as a fresh, unfamiliar engagement. The only thing you should bring from AEN is your workflow — not your assumptions.
+
+🧠 CPTS Tip: Organize your scans by purpose. Start with fast sweeps (nmap -T4 --top-ports 1000), then expand with full TCP/UDP scans per host based on significance. Don’t blindly run -A or -p- on everything — that’s how you get noisy and wasteful.
+
+Core Techniques:
+
+Banner Grabbing: Manual interaction with services using tools like nc, telnet, openssl, or nmap -sV to retrieve version info.
+Version Inference: Comparing exposed service behavior or headers to known fingerprint signatures.
+TCP/UDP Strategy: TCP and UDP are both in play. Don’t neglect UDP — SNMP or TFTP might be your starting point.
+Key Protocols & Services You’ll Likely Encounter:
+
+DNS
+FTP / TFTP
+LDAP
+WinRM
+WMI
+MySQL / MSSQL / Oracle TNS
+NFS
+SMB / NetBIOS
+POP3 / IMAP / SMTP
+RDP / SSH / IPMI
+Rsync / R-Service
+SNMP
+Kerberos
+
+🌐 Web Enumeration
+The CPTS exam is packed with web interfaces — some internal, some custom, many deceptive. Learning to approach them methodically and understand their logic is crucial.
+
+🔎 Active Web Recon
+These are the noisy techniques — but essential when used surgically.
+
+Directory and Page Fuzzing: Tools like ffuf, dirsearch, or feroxbuster with custom and general wordlists (SecLists, robots.txt leaks, known paths from CMSs)
+Parameter and Value Fuzzing: Great for discovering hidden GET/POST parameters, testing auth logic or finding vulnerable paths like debug=true.
+VHost Discovery: Using tools like ffuf -H "Host: FUZZ.target" with known DNS entries or certificate parsing
+Header Analysis: Look at cookies, server headers, CORS policies, cache behavior
+🛡️ Passive Web Recon
+Sometimes the best enumeration is silent. Use passive tools before active fuzzing, especially when assessing exposed services.
+
+Google Dorks: Leak detection, repo finds, forgotten staging apps
+Technology Stack Analysis: Tools like wappalyzer, whatweb, builtwith, or headers via Burp/HTTPx
+DNS and Certificate Recon: Using tools like crt.sh, amass, certspotter, or dnscan to fingerprint internal infra
+Tools You Should Know Well:
+
+FinalRecon: Swiss-army knife for passive recon
+Spiderfoot: Automated passive OSINT (note: requires tweaking to avoid noise)
+Recon-ng: Good for linked enumeration and correlating data
+theHarvester: Simple but great for emails and DNS records
+Eyewitness: Captures screenshots of web portals across subdomains — great for internal pivot recon
+OSINT Framework: Reference chart to explore passive enumeration targets
+
+🧱 Application Fingerprinting
+Throughout the CPTS exam, you’ll encounter real-world applications: enterprise tools, CMSs, ticketing systems, or internal dashboards. The key is recognizing them fast and checking for known attack surfaces — but also understanding that sometimes the flaws are logic-based, not CVE-based.
+
+Recognizable Apps You Should Be Able to Enumerate and Attack:
+
+CMSs: WordPress, Joomla, Drupal, DotNetNuke
+DevOps: Jenkins, GitLab
+Monitoring: PRTG Network Monitor, Nagios XI, Splunk
+Web Servers: Apache Tomcat, ColdFusion, WebSphere, WebLogic, Axis2
+Ticketing Systems: osTicket (especially common), internal CRMs or dashboards
+🧠 What you need is not just CVE knowledge, but the ability to recognize:
+
+Default credentials or misconfigurations
+Hidden admin portals (/admin, /manage, /super)
+Debug or backup endpoints (.bak, /debug, ?stage=)
+If you’re treating every web app like an FFUF target, you’re missing the bigger picture. You need to start walking the app manually and watching how it handles user state, access control, and misbehavior.
+
+🧠 Active Directory Enumeration (Initial Stages)
+When you land in a domain-joined machine, enumeration doesn’t start with BloodHound — it starts with understanding the domain.
+
+What You Should Enumerate First:
+
+Domain Structure: Name, FQDN, SID, Forest/Trust relationships
+Users & Groups: Especially low-priv users with domain-wide access
+Privileged Accounts: DAs, Backup Operators, Print Operators, etc.
+ACLs: Often the key to hidden privilege escalation paths
+Password Policies: Is password spraying viable? Is PASSWD_NOTREQD set?
+Security Controls: Defender, LAPS, GPO-enforced constraints
+Shares: SYSVOL, Netlogon, shared config repos
+Core Tools You Must Be Fluent With:
+
+BloodHound / SharpHound (collection, import, edge analysis)
+PowerView (manual edge validation, group enumeration, ACL analysis)
+NetExec (mass authentication testing, SMB/LDAP enumeration)
+ldapsearch, rpcclient, windapsearch, pingcastle, adidnsdump etc.
+🧠 CPTS Tip: Create AD Enumeration Trees per box. Track what commands have been run, what edge was found, and how you validated it.
+
+
+✅ Summary of What This Section Taught Me:
+Network Services: Banner grabbing, targeted scanning, protocol-specific recon
+Web Recon: Deep fuzzing, session logic analysis, passive fingerprinting
+App Enumeration: CMS behavior profiling, DevOps tool quirks, admin panel hunting
+AD Initial Recon: Manual + automated domain intelligence gathering
+In the CPTS exam, enumeration isn’t just the first step — it’s half the battle, and the part where many people fail simply because they don’t treat recon like a first-class citizen.
+
+⚙️ Pre-Exploitation — Weaponization & Gaining Initial Access
+Pre-exploitation is the often-overlooked bridge between reconnaissance and full exploitation. It’s where information becomes actionable. In the CPTS exam, this is where you’ll spend a good chunk of time validating assumptions, crafting payloads, testing footholds, and preparing the foundation for lateral movement.
+
+The exam doesn’t hand you vulnerable boxes with obvious paths. Instead, it expects you to assemble the pieces from recon and translate them into a valid, stable, and stealthy point of entry. This stage is also critical for payload delivery, shell handling, and execution strategies.
+
+Let’s break down the mechanics of this phase in the way the exam demands.
+
+💣 Shells: From Initial Access to Stable Control
+Before you escalate or move laterally, you need to first get a working shell — and then make sure it’s one you can actually use.
+
+🧱 Shell Types You’ll Work With:
+
+Web Shells
+Often your first access comes from an upload vulnerability (e.g., through a misconfigured WordPress plugin or a poorly validated LFI-to-RCE). These give you limited, often broken access, but they’re enough to plant something stronger.
+Reverse Shells
+The gold standard for initial access. Most often you’ll trigger these through command injection, file uploads, or manual execution paths. The key is not just getting the shell — it’s getting it back through potentially firewalled, segmented, or non-default ports.
+Interactive Shells
+Once you have a shell, stabilize it. Use tools like python -c 'import pty; pty.spawn("/bin/bash")', or PowerShell commands to get an interactive session with tab completion, environment awareness, and TTY access.
+🧠 CPTS Tip: Always stabilize the shell before moving forward. Broken shells = missed information = dead-end escalation paths.
+
+
+🧪 Payload Crafting & Delivery
+The exam expects you to be comfortable creating and tweaking your own payloads, not just downloading something from ExploitDB.
+
+🛠️ Tools You’ll Need:
+
+msfvenom
+Used to generate raw reverse shell payloads for various platforms.
+You should also know how to encode payloads using formats like base64, hex, or PowerShell-friendly forms to bypass filters.
+searchsploit
+While not always necessary, you might want to identify a CVE with a known exploit path. But don’t treat searchsploit as your crutch. More often than not, you’ll be chaining a simple misconfig or logic bug into your own crafted entry point.
+Manual Payloads
+CPTS shines when it throws you into custom web apps or legacy software where Metasploit is useless.
+🧠 CPTS Tip: You’re expected (for example) to know what “file upload vulnerability” actually means. It’s not about getting a web shell — it’s about understanding MIME types, extension filtering, directory traversal, file replacement, and execution context.
+
+
+📦 Payload Delivery Tactics
+Depending on the access vector, you’ll need to be fluent in one or more of these delivery methods:
+
+🔸 Web Uploads
+
+Upload a payload through a web interface (e.g., a CMS media manager)
+Bypass filters (e.g., extension checking, content-type validation)
+Abuse directory traversal (../../) to reach executable directories
+Drop webshell.php, cmd.jsp, or a one-liner reverse shell
+🔸 File Inclusion / RFI
+
+Use exposed LFI or RFI to pull your payload from an HTTP server you control
+Base64-encode payloads to pass filters, then decode on target
+🔸 SMB Fetch / UNC Paths
+
+On Windows, use UNC paths (\\attacker_ip\share\file.exe) to pull down binaries
+SMB servers via impacket-smbserver.py make this trivial
+🔸 PowerShell & Certutil
+
+Encode payloads as base64 and execute via PowerShell
+Use certutil -urlcache -split -f to download payloads from your controlled HTTP server
+🧠 CPTS Tip: You won’t always get GUI upload forms. Often, you’ll find obscure script paths, API endpoints, or internal logic that lets you write files — or include external ones.
+
+🔐 Setting the Stage for Exploitation
+Once you have access, stabilize and prep. This is where “post-pre-exploitation” begins:
+
+Create a working directory on the target (e.g., /tmp/.you/ or C:\Users\Public\)
+Use common recon scripts (e.g., whoami, hostname, ipconfig /all, netstat)
+Set up your tunnels and forward ports back to your attacker box
+Start logging everything — you may only get one chance before the target reboots
+🔁 Loop this process. Every new access point might require a different shell type or delivery technique. You will likely repeat this cycle multiple times as you move deeper into the network.
+
+✅ Summary of What This Section Taught Me:
+Shells: Stabilization, reverse shell crafting, pty upgrades
+Payloads: Manual crafting, encoding, chaining execution paths
+Delivery: Upload bypasses, RFI/LFI abuse, Linux & Windows file transfer
+Tools:msfvenom, nc, socat, impacket, PowerShell loaders
+This phase taught me that pre-exploitation isn’t a speed bump — it’s a strategic moment. The tools you use here will either enable the next ten days of progress… or guarantee ten days of pain.
+
+
+💥 Exploitation — Turning Access Into Leverage
+If pre-exploitation is the part where you collect the map and gather your tools, then exploitation is where you begin redrawing the battlefield itself. This phase isn’t about “getting in” — you’re already in. Now, it’s about expanding control, weaponizing misconfigurations, abusing integrations, and dismantling trust structures. It’s the phase where knowledge, intuition, and precision collide.
+
+In CPTS, exploitation is not a monolithic step. It spans several parallel domains — Active Directory, application layers, exposed services, web interfaces, and even binaries left behind by careless admins. Each domain offers its own set of footholds and escalation vectors, and your job is to methodically chain them into full compromise.
+
+Let’s break it down and walk through the terrain you’ll master.
+
+🏢 Active Directory Exploitation — Where Real Engagements Begin
+In the CPTS exam, Active Directory is not a beginner’s playground. You’re placed inside a live, enterprise-like domain where misconfigurations are layered, trusts are complex, and privilege paths are anything but linear. You’re not expected to “pwn AD” in one shot — you’re expected to navigate it intelligently, respecting its architecture while bending it to your advantage.
+
+🔍 Enumeration Lays the Groundwork
+Before you try to abuse anything, you need to understand the structure of what you’re attacking. Enumeration isn’t optional — it’s foundational.
+
+Use tools like:
+
+BloodHound + SharpHound: Not just for visuals — use targeted queries and custom filters.
+PowerView: To interrogate AD in real-time. Validate permissions, list GPOs, enumerate ACLs.
+NetExec: Your go-to for credential spraying, remote command execution, and quick access validation across the domain.
+ldapsearch / windapsearch / rpcclient: For low-noise, targeted extraction of domain information — especially helpful when you don’t want to run large collectors.
+🧠 CPTS Tip: BloodHound lies sometimes. Always confirm edges with manual checks using PowerView or NetExec. CPTS loves throwing you paths that only “almost work.”
+
+🎯 High-Impact AD Attacks You’ll Use
+Here are the core techniques that actually make the difference in CPTS — these aren’t optional fluff.
+
+GPP Passwords: Crawl \\domain\SYSVOL for Groups.xml, then use gpp-decrypt. Great early foothold vector.
+Kerberoasting / ASREPRoasting:
+Use GetUserSPNs.py or Rubeus to extract service tickets.
+Crack with hashcat or john.
+Know when it’s worth it: long, complex passwords = skip and save time.
+SYSVOL Pillaging:
+Never skip this.
+Look for scripts, creds, hidden base64, or unattended install configs.
+DCSync Attacks:
+If a user has Replicate Directory Changes, dump the domain with secretsdump.py or mimikatz.
+ACL Abuse:
+Enumerate users with GenericAll, WriteOwner, or similar rights over other principals.
+Use PowerView to confirm and abuse (e.g., Add-DomainObjectAcl).
+Trust Abuse (Interdomain / Cross Forest):
+noPac: Abuse Resource-Based Constrained Delegation misconfigs.
+PetitPotam + Relay: Trigger machine authentication to a relay server, capture hashes, and escalate.
+PrinterBug: Still a valid attack path when paired with NTLM relay techniques.
+🧠 CPTS Tip: Expect to chain multiple “small” weaknesses. Rarely is one attack enough. For example: password reuse → low-priv domain user → ACL abuse → DCSync.
+
+🧪 Application Exploitation — Chaining Real-World Mistakes
+CPTS will challenge your ability to spot and exploit realistic application misconfigurations. These aren’t “fire and forget” CVEs. You’ll face apps where the missteps are subtle: exposed consoles, default creds, token reuse, insecure deployment pipelines.
+
+It’s often less about finding a classic vuln and more about abusing business logic or admin laziness.
+
+🧱 Applications to Expect (or Variants of Them)
+The following is a overview of common vulnerabilities which can be present in these applications, but remember that there are many others:
+
+GitLab: Secret infos in repos, information disclosure
+Jenkins: Script console access, misconfigured jobs
+PRTG / Nagios / Splunk: LFI, default creds, unauthenticated RCE
+osTicket: File upload handling, LFI, information disclosure, or weak auth
+WordPress / Joomla / Drupal: Plugin-based RCE, XML-RPC abuse
+Tomcat / Axis2 / WebLogic: Deployable war files, default creds
+ColdFusion / DotNetNuke: Forgotten panels, insecure authentication logic
+🧠 CPTS Tip: Test as anonymous, default user, and compromised user. Many bugs live behind login.
+
+🧱 Services Exploitation — Don’t Skip the “Old School” Stuff
+So many candidates skip service-level attacks. Don’t.
+
+In CPTS, classic services like SMB, FTP, MySQL, and WinRM are deliberate entry points or pivot opportunities.
+
+SMB / NFS / FTP: Null sessions, public shares, writable paths
+MySQL / MSSQL / Oracle TNS: Unpatched auth, UDFs, weak user creds
+WinRM / WMI / SSH: Remote command execution with harvested creds
+TFTP / Rsync: Upload/download anything unauthenticated
+POP3 / IMAP / SMTP: Banner leaks, relay abuse, user/password brute-force
+🧠 CPTS Tip: Try every known password on every exposed service. Don’t assume service A creds won’t work on service B.
+
+
+🌐 Web Exploitation — Manual Inspection > Automated Scanners
+While Burp Suite and ZAP are excellent, CPTS expects you to go beyond vulnerability scanning. You’ll be faced with authentication flows, session mismanagement, and subtle parameter manipulation.
+
+Core Techniques:
+
+Auth flow dissection: Understand how sessions are created and maintained.
+Parameter fuzzing: ffuf, intruder, and Burp extensions.
+Privilege escalation: IDOR, role tampering, cookie manipulation.
+Upload abuse: File validation bypass → RCE via extensions or paths.
+Classic bugs: SQLi, XSS, LFI/RFI, XXE, mass assignment, command injection.
+Tooling You’ll Rely On:
+
+Burp Suite: Manual testing, extensions like Logger++, Turbo Intruder.
+ffuf: For directories, vhosts, parameters. Pair with custom wordlists.
+Hydra: Brute force common login portals.
+cewl / username-anarchy / cupp: Smart wordlists for target-specific fuzzing.
+🧠 CPTS Tip: Don’t just check for 200 OK. Analyze redirect behavior, error codes, and timing discrepancies — the real vuln may be in what the app tries to hide.
+
+🔬 Binary & DLL Analysis (Minimal, But Tactical)
+You likely won’t face full-on reverse engineering in CPTS, but you will encounter suspicious binaries — often as part of pillaging or misconfigured services.
+
+Key activities:
+
+Extracting hardcoded secrets
+Detecting insecure file paths (DLL hijacking)
+Uncovering credential files or encoded API keys
+Helpful tools:
+
+strings, exiftool, PE-bear, dnSpy, pestudio, IDA Free
+🧠 CPTS Tip: Only dig into binaries when you have a reason — don’t burn hours analyzing dead ends.
+
+✅ Summary of What This Section Taught Me:
+Active Directory: How to validate privilege chains and build custom escalation paths
+Apps: Identify overlooked flaws beyond CVEs — real attacker behavior
+Services: Every protocol has a purpose — and a risk
+Web: Hands-on, logic-based attacks beat automated scans
+Tools: Don’t master every tool — master the right ones
+
+
+CPTS exploitation is not about spraying exploits and hoping one hits. It’s about linking weak signals into strong chains. It’s about being persistent, methodical, and creative under pressure.
+
+When all those pieces snap into place — and a previously unreachable system becomes your playground — that moment is unforgettable.
+
+🔍 Post-Exploitation — Dominating the Host
+If exploitation is where you break in, post-exploitation is where you settle in, map the valuables, and quietly take control. CPTS places a strong emphasis on the quality and completeness of your post-exploitation activities — because in real-life engagements, that’s where the real value lies for clients (and real risk lies for organizations).
+
+It’s not enough to pop SYSTEM or root and walk away. You need to:
+
+Escalate your privileges
+Extract meaningful data (creds, tokens, secrets)
+Understand what the machine can reach
+Prepare for lateral movement, reporting, or persistence
+
+🔎 Pillaging and Recon
+Your first job: figure out where you are and what you have.
+
+Always check:
+
+/etc/hosts, /etc/passwd, /etc/group, /etc/shadow (if accessible)
+Bash history: ~/.bash_history, /root/.bash_history, .zsh_history
+Config files: /var/www/html/config.php, .env, database configs, Apache/Nginx settings
+Crontabs: crontab -l, /etc/crontab, /etc/cron.d/, /etc/cron.daily/
+Docker & container clues: .dockerenv, cat /proc/1/cgroup, docker ps
+Secrets: Look in /home/*/, /opt/, mounted NFS dirs, .ssh/, .git/, .vscode/, .kube/
+🧠 CPTS Tip: grep and find and your best friends
+
+📦 File Transfer Methods (Low OPSEC)
+Getting tools in/out of a Linux host is a daily requirement. Here are the techniques that worked reliably under segmented environments:
+
+Python HTTP Server + curl/wget
+scp (if SSH is available)
+base64 encoding → copy/paste: Encode on attacker, paste to victim
+SMB shares using impacket’s smbserver.py
+
+🧱 Privilege Escalation Techniques
+These are some of the actual techniques I successfully used during CPTS — or saw viable during enumeration.
+
+Sudo Abuse
+SUID/SGID
+Capabilities
+Docker Group
+Cron Jobs
+PATH Abuse
+Kernel Exploits
+Python Library Hijacking
+Logrotate / Config Misuse
+Living Off The Land (GTFOBins)
+NFS no_root_squash
+Writable Shared Objects
+Tmux Hijack
+Screen Escalation
+🛠️ Tools used:
+
+linpeas.sh (always validate manually after)
+pspy for runtime job discovery
+Custom privesc checklist (keep it host-agnostic and repeatable)
+
+🪟 Windows Post-Exploitation
+Windows is a whole different beast. You’re often dealing with:
+
+Defender
+UAC
+Group Policy controls
+Legacy software
+And a ton of volatile session data
+Once you have low-priv access, your goals are similar: escalate, pillage, pivot.
+
+🔎 Pillaging & Recon
+Targets:
+
+C:\Users\<user>\AppData\Roaming\: Look for saved creds, config files, session tokens
+mRemoteNG, FileZilla, WinSCP: Stored credentials in config XMLs
+C:\ProgramData\: Often contains unattended install files or auto-start configs
+Registry: Autoruns, scheduled tasks, user info
+Browser creds: Chromium-derived browsers save tokens or cookies you can decrypt with DPAPI
+KeePass files: *.kdbx, look for KeePass.config.xml
+Outlook or RDP configs: .rdp, default.rdp, cached user profiles
+Use Seatbelt, WinPEAS, and JAWS — but don’t rely blindly. Manual exploration + targeted registry searches often work better.
+
+🧱 Privilege Escalation Techniques
+
+UAC Bypass
+AlwaysInstallElevated
+DLL Hijacking
+Unquoted Service Paths
+Weak Service Permissions
+Modifiable Registry Autoruns
+Citrix Breakouts
+Clipboard Attacks
+SAM / LSA Secrets
+LSASS Dumping
+Named Pipe Abuse
+Restic Backup Config
+Legacy OS Exploits
+🛠️ Tools used:
+
+Seatbelt
+WinPEAS for wide collection
+PowerUp for automated checks
+SessionGopher for session secrets
+Watson, Windows-Exploit-Suggester for known vuln scanning
+Sysinternals suite (especially Autoruns, Procmon, PsExec)
+Lazagne for credentials hunting
+🧠 CPTS Tip: Create a privesc template. Log each finding, tool used, test attempted, and result. Repeatable methodology is key.
+
+🧰 Cross-Platform Considerations
+Living off the land is king: CPTS heavily rewards native tool usage. If you’re dropping random binaries, expect friction.
+File Transfer Techniques should work both ways — exfiltrate configs, logs, screenshots.
+Pillaging is not optional: Every host should be fully scraped. Most lateral or escalation paths depend on data from the host.
+🗃️ Organizing Loot
+Every machine should have its own loot directory with:
+
+/loot
+  /host1
+    creds.txt
+    screenshots/
+    shell_history.txt
+    tokens.txt
+  /host2
+    ...
+Structure and documentation is just as important as the hacks themselves. It’ll save you in the report phase.
+
+
+✅ Summary of What This Section Taught Me:
+Don’t run WinPEAS / linPEAS first: Do it manually first. You’ll find more and learn more.
+Credentials = Keys: Every secret you find can unlock the next door. Chain them.
+Privilege Escalation ≠ The End: It’s just the beginning of pillaging and lateral movement
+File Transfer ≠ Afterthought: Master it early — it’s essential for efficiency
+Log Everything: Commands, paths, screenshots, hashes — everything might matter later
+Post-exploitation in CPTS is a discipline.
+It’s about control, not chaos. Precision, not panic. This is the point in the engagement where you stop feeling like a CTF player and start thinking like an attacker with objectives.
+
+🔁 Lateral Movement & Pivoting — Expanding Control Across the Network
+Once you’ve gained an initial foothold and escalated privileges on a box, you’re not done — you’re barely getting started. In CPTS, true mastery comes when you can treat each host not as an endpoint, but as a jumping-off point. The target network is segmented. Resources are isolated. And if you want those 12+ flags, you will have to move — often silently, and strategically.
+
+This section covers everything I learned about pivoting techniques, tunneling tools, lateral movement through protocols, and navigating segmented AD environments. It’s one of the most technically demanding but deeply satisfying parts of the CPTS experience.
+
+🕸️ The Two Sides of Movement
+There are two categories of movement in CPTS:
+
+Lateral Movement: Transitioning from one system to another using valid credentials, tokens, trusts, or abuse of protocol features.
+Pivoting: Creating network-level access paths (tunnels) to reach otherwise inaccessible hosts or services through compromised assets.
+You need to excel at both. Let’s tackle them one by one.
+
+🧬 Lateral Movement — AD & Beyond
+Lateral movement in an Active Directory environment is about abusing trust, not exploits. You’re chaining together:
+
+Permissions (admin access or RCE)
+Protocols (SMB, WinRM, MSSQL, RDP)
+Authentication (Kerberos tickets, NTLM hashes, plaintext creds)
+Here’s what CPTS forced me to master:
+
+🪟 Windows Lateral Movement
+Pass-the-Hash (PTH): Use NTLM hashes to authenticate to SMB, WinRM, etc.
+🛠️ Tools: impacket, netexec
+Pass-the-Ticket (PTT): Inject Kerberos TGT or TGS to move laterally as a user.
+🛠️ Tools: Rubeus, mimikatz
+Token Impersonation: Abuse SeImpersonatePrivilege (e.g. via Juicy Potato, PrintSpoofer) to impersonate tokens
+RDP Reuse / Credential Session Reuse: Connect via RDP if credentials are known (or mstsc /restrictedadmin)
+WinRM Execution: Silent, scriptable, and powerful once creds are in
+🛠️ Tools: Evil-WinRM, NetExec, PowerShell Remoting
+Named Pipe Impersonation: Local privilege escalation that can lead to lateral access when chained
+MSSQL Trusted ConnectionIf xp_cmdshell is enabled and the SQL user has privileges, use it to move
+🧠 CPTS Tip: CPTS loves WinRM — get extremely comfortable with it. Learn how to run commands, drop files, invoke PowerShell, and tunnel through it.
+
+🐧 Linux Lateral Movement
+Less common in CPTS but still relevant in mixed environments.
+
+SSH with stolen keys or known passwords: Look for .ssh/id_rsa, .bash_history, hardcoded keys
+Kerberos Pass-the-Ticket: If integrated with AD and you have TGT/TGS (from Rubeus or mimikatz)
+CPTS occasionally gives you these hybrid paths. Don’t overlook Linux footholds as dead ends — check their reach.
+
+🛰️ Pivoting — Routing Through Firewalls and Segments
+Once you land on a host, you’ll find much of the network is not directly accessible. This is where pivoting shines.
+
+Pivoting Techniques
+
+Local Port Forwarding: Forward local port to remote service (e.g., access internal web UI)
+Remote Port Forwarding: Make a remote service accessible to your attacking machine
+Dynamic Port Forwarding (SOCKS proxy): Route all tool traffic through SOCKS tunnel
+Reverse Port Forwarding: Useful when you're behind NAT or no inbound allowed
+Proxychains + SOCKS: Chain tools through SOCKS proxy
+🧠CPTS Tip: Not all tools respect proxychains natively (like netexec with WinRM), and alsoNmap output sometimes can be influenced.
+
+🔧 Pivoting Tools I Used (And Loved)
+
+Ligolo-ng ✅ My Favorite: Lightweight, encrypted, SOCKS5 tunneling. Better than Chisel. No need for proxychains. Easy MTLS setup.
+Chisel: Still solid for TCP pivoting. Needs manual stability babysitting.
+Proxifier (Windows): GUI-based routing of traffic through SOCKS
+Ptunnel-ng: ICMP tunnel when TCP is blocked. Situational.
+Plink / Putty: Quick SSH tunnels with saved config
+rpivot / SocksOverRDP: For when you need pivoting inside RDP sessions
+sshuttle: For low-friction network-wide tunnel setups
+proxychains + tools: Only works with tools that respect DNS/SOCKS resolutions
+netsh: For Windows port forwarding and firewall rules manipulation
+meterpreter / reverse_tcp: Only for quick PoC or fallback — not ideal for stealthy ops
+🧠 CPTS Tip: Ligolo-ng became my default tunneling stack by Day 3. Stable, fast, encrypted, and less prone to dying when pivot boxes rebooted.
+Recommendation: Use Ligolo-ng from the start. Learn how to automate the setup, run as service, and keep credentials embedded for stealth relaunches.
+
+🔁 Recon After Pivot
+This cannot be overstated: every time you pivot, redo your entire recon process.
+
+Checklist:
+
+nmap scans from the new vantage point
+Check for internal-only HTTP/S, MSSQL, WinRM, etc.
+Fuzz internal web apps
+Run BloodHound collectors if domain-joined
+SMB/LDAP/WinRM scans for newly visible hosts
+Check routing table to confirm reachability
+Your world has changed — so should your map.
+
+✅ Summary of What This Section Taught Me:
+Every host is a gateway: Think of each box as a transit point, not a destination.
+Tunnels fail — plan for resilience: I had to rebuild Ligolo tunnels 3–4x. Automate scripts and take notes.
+DNS resolution is key: Use /etc/hosts, resolv.conf, or custom DNS settings inside tunnels.
+Proxychains ≠ magic: Test your tools under proxy first. Some ignore SOCKS.
+Segmented networks are a feature: CPTS wants to test your operational logic. Accept the complexity.
+Re-enumeration beats blind testing: With each new segment, there are hidden services just waiting to be seen.
+Lateral movement and pivoting are not “advanced topics” in CPTS.
+They’re essential. Without mastering both, you cannot pass.
+
+📝 Reporting & Documentation — Your Real Deliverable
+Let’s be brutally honest: in the real world, your report is what clients see, not your shells. It doesn’t matter if you compromised domain admin, established multi-hop tunnels, or pulled secrets from 15 systems — if you can’t explain it clearly, professionally, and impactfully, it didn’t happen.
+
+Hack The Box understands this. That’s why the CPTS exam doesn’t end when you capture the twelfth flag. It ends when you submit a structured, professional, client-grade report. The report is manually reviewed, and a poor one — even with all the flags — will result in failure.
+
+This section covers everything I learned about building, structuring, and writing a real-world penetration test report under pressure. I’ll break down the structure I used, the methodology behind documentation during the exam, the tooling that made life easier, and the strategies that helped ensure I didn’t panic-write the report on Day 10.
+
+📋 Understand the Expectations
+HTB expects your report to simulate a real-world deliverable, meaning it must:
+
+Be clear, concise, and easy to follow
+Include business impact and remediation, not just tech jargon
+Be written in a formal tone appropriate for stakeholders
+Stand on its own — no follow-up explanations allowed
+Be fully supported by evidence (screenshots, commands, proof)
+Use structured formatting, not a chaotic walkthrough
+Write in third person (eg. “the tester did this”), never in first
+In other words, this isn’t a write-up, it’s a penetration testing engagement report.
+
+📐 Recommended Structure
+Here’s the high-level structure I followed and suggest:
+
+Executive Summary
+- Brief description of objectives, timeline, scope
+- General findings: types of vulnerabilities, lateral movement paths
+- Risk rating overview
+Methodology
+- Overview of how the test was conducted
+- Tools used (with justification if non-standard)
+- Approach: reconnaissance, exploitation, privilege escalation, lateral movement, post-exploitation
+Internal Network Compromise Walkthrough
+- Detailed walktrough of the entire kill chain
+- Needs to be technical and have to contains screenshots, commands and techniques used
+Remediation Summary
+- Overview of remediation plan for ech findings + some general reccomendations
+- Needs to contain short / medium / long term remediation
+Findings (One per Compromise or Vector)
+- Title: Clear and short (e.g., “SMB Share with Reused Domain Admin Creds”)
+- Affected Component(s): IP, hostname user or application
+- Severity: Critical/High/Medium/Low/Info
+- Description: What it is, why it matters, how it works
+- Impact: What an attacker could achieve through it (tied to business logic if possible)
+- Reproduction Steps: Step-by-step, command-by-command guide to replicate
+- Evidence: Screenshots with alt-text, tool outputs
+- Remediation: Practical advice, not “just patch it”
+- CWE
+- CVSS
+Appendices
+- Hashes of found flags
+- Changes/Host cleanup
+- Compromised users
+- Exploited hosts
+- Discovered subdomains
+- Discovered hosts and services
+You can follow the example report provided during the exam.
+
+🧠 Write the Report as You Go — Not After
+This is non-negotiable.
+If you wait until Day 10 to start writing, you will:
+
+Forget key steps
+Misplace screenshots
+Panic over syntax or incomplete evidence
+Risk missing required remediation sections
+Instead, I used a trigger-based workflow.
+Every time I:
+
+Gained a foothold
+Escalated privileges
+Pivoted to a new host
+Captured a flag
+Found a misconfig worth writing up
+Compromised a user
+…I wrote the corresponding report section immediately. Screenshots were dropped into named folders, commands logged, and notes copied into a markdown structure.
+This turned Day 10 into a polishing session, not a writing marathon.
+
+🖥️ Screenshot Hygiene and Command Logging
+This might sound like overkill, but here’s how I maintained evidence discipline:
+📸 Screenshots
+
+Saved into folders named by IP/hostname (e.g., 192.168.15.23 or DC01)
+Named numerically with short labels: 01-login.png, 02-foothold-shell.png, 03-hash-dump.png
+Used alt-text in the report to describe what’s being shown
+Ensured every command or exploit had a corresponding screenshot
+📜 Commands
+
+Logged every step in a plain text file for each host
+The exact command
+The context (user, host, privilege level)
+Notes on what the output meant
+Color-coded key outputs in report (with monospace font for clarity)
+🧠 CPTS Tip: Use script or asciinema to record terminal sessions. Even if you don’t use them directly, they help you backtrack.
+
+.
+
+🛠️ Tooling: SysReptor (Massive Help)
+I used SysReptor to structure my report. It’s a free, report-builder that follows professional layouts (Pentest Standard, NIST-like structures, etc.).
+Why it helped:
+
+CPTS exam templates with consistent headings
+Easy drag-and-drop screenshots with alt-text
+Multiple export formats (PDF, Word, Markdown)
+“Finding” templates to re-use sections with consistent wording
+Risk matrix automation
+Don’t need to build all report’s structure
+You don’t have to use it, but I strongly recommend it over building from scratch or wrestling with Word at midnight.
+
+🧠 CPTS Tip: You can build a basic “boilerplate” report before the exam begins, with empty sections pre-labeled by host and scenario.
+
+🔍 Writing Style Tips
+Use plain English for clarity. Even technical readers appreciate clean writing.
+Write for the least technical stakeholder — not the red teamer next to you.
+Every finding should answer:
+What happened?
+Why is it bad?
+How can it be fixed?
+Don’t assume the reader has terminal access — explain every step
+
+
+🧠 Avoid:
+“I ran linPEAS and saw something interesting”
+“I used BloodHound and found DA path”
+“The hash was cracked and I got in”
+
+Instead:
+A misconfigured GPO allowed low-priv users to write to the startup folder of a domain controller. By dropping a scheduled task script, the tester achieved SYSTEM access and pivoted into the core domain segment.
+
+🚨 Don’t Chase Flags 13 and 14 Until Your Report Is Rock-Solid
+Once you hit 12 flags — pause. Reassess your report:
+
+Are all findings fully documented?
+Are there screenshots for every step?
+Are you confident a reviewer could follow and verify everything?
+Are there missing remediations?
+Have you proofread for clarity, structure, and grammar?
+Only once you’ve locked that down should you even consider going for flags 13 and 14.
+🏁 There’s no extra credit for getting all flags if your report is weak.
+
+✅ Summary of What This Section Taught Me:
+Write as you hack: Avoids the Day 10 panic
+Screenshots aren’t optional: They’re how you prove things happened
+Add commands for easy copy-paste other than screenshots: Reviewers appreciate it
+Alt-text and labeling = professionalism: Reviewers appreciate clarity
+Remediation isn’t just “update X”: Provide client-viable solutions
+SysReptor saves time and sanity: Structured workflow pays off big
+Report is 50% of the grade: Many people fail here, even with flags
+
