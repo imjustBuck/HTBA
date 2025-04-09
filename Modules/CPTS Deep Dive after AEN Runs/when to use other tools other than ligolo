@@ -1,0 +1,17 @@
+Tool	When You'll Know You Need It	What You Should Try First	How to Confirm It's Needed
+🕸️ Rpivot (Web Server Pivoting)	Target box can only make outbound HTTP/HTTPS (80/443) requests	Ligolo fails, Chisel fails, curl/wget works to HTTP/S	Use curl or wget on target → if you can reach external web servers, but SOCKS5 fails, you need a web-based tunnel
+🪟 Netsh (Windows Port Forwarding)	You're on a Windows box and can't drop Ligolo or any binaries	Manual forwarding via built-in Windows tools	Run netsh interface portproxy show all → if you need to access internal services but can't use external tunnelers
+🧬 dnscat2 (DNS Tunneling)	Box only allows outbound DNS (extreme egress filtering)	Ligolo, SSH, Chisel all blocked	Try nslookup, dig, or ping → if DNS works but HTTP/S and TCP are blocked, DNS tunneling may be your only option
+
+### Got This: Ligolo doesn't work at all
+- Try: Chisel, SSH Dynamic Forwarding, Evil-WinRM, etc.
+- Still no dice? Move down ⬇️
+
+### Got This: Target can only do HTTP/HTTPS (curl/wget works)
+- Do That: Try Rpivot — wraps tunnels over HTTP(S)
+
+### Got This: You’re on a Windows target, and can’t run binaries
+- Do That: Use `netsh interface portproxy` to forward traffic from one port to another
+
+### Got This: DNS lookups work, but nothing else gets out (even HTTP)
+- Do That: Use dnscat2 to tunnel commands/data via DNS queries (low bandwidth, but stealthy)
