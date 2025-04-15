@@ -2,10 +2,10 @@
 Skills Assessment
 You are given access to a web application with basic protection mechanisms. Use the skills learned in this module to find the SQLi vulnerability with SQLMap and exploit it accordingly. To complete this module, find the flag and submit it here.
 
-CHALLENGE: 94.237.63.90:49172
+CHALLENGE: 94.237.55.234:58349
 
 Question 1 - What's the contents of table final_flag? 
-1) go to web page at -> http://94.237.63.90:49172/ 
+1) go to web page at -> http://94.237.55.234:58349/ 
 2) click all buttons while having the Network tab of the Web Developer tools open, searching for a POST request that can be abused.
 3)  The only button that sends a POST request is under Catalog -> Shop, specifically, the ADD TO CART + button on an item
 4) there will be a pop up like XSS and say item added!!! 
