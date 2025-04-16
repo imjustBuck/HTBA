@@ -12,6 +12,10 @@ wget https://github.com/nicocha30/ligolo-ng/releases/download/v0.7.5/ligolo-ng_p
 wget https://github.com/nicocha30/ligolo-ng/releases/download/v0.7.5/ligolo-ng_agent_0.7.5_linux_amd64.tar.gz
 
 
+sudo gunzip ligolo-ng_proxy_0.7.5_linux_amd64.tar.gz
+
+sudo gunzip ligolo-ng_agent_0.7.5_linux_amd64.tar.gz 
+
 then 
 
 tar -xvf ligolo-ng_proxy_0.7.5_linux_amd64.tar
