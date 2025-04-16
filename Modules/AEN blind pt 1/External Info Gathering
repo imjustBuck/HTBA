@@ -5,7 +5,7 @@ so agian this is blind im skipping the notes they show us and going straight for
 vHosts needed for these questions:
 * inlanefreight.local
 
-
+04/16/25 10.129.229.147
 
 Question 1 - Perform a banner grab of the services listening on the target host and find a non-standard service banner. Submit the name as your answer (format: word_word_word) - 1337_HTB_DNS
 1. sudo nano /etc/hosts -> add -> 10.129.191.30   inlanefreight.local
