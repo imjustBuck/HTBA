@@ -320,7 +320,7 @@ autologon creds in registry: reg query "HKLM\SOFTWARE\Microsoft\Windows NT\Curre
 
 
 so the syntax for the local portforwarding in order for us to xfreerdp into hporter would be -> 
-ssh -i rootkey -L 13389:172.16.8.20:3389 root@10.129.114.147
+ssh -i rootkey -L 13389:172.16.8.20:3389 root@10.129.229.147
 
 Breaking it Down Step by Step
 ssh -i rootkey → Use the rootkey private key for authentication (you already got this part).
