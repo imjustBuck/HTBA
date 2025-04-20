@@ -23,12 +23,12 @@ sudo ./proxy -laddr 0.0.0.0:11601 -selfcert -v
 
 1. **SSH into Webadmin Box**
    ```bash
-   ssh -i webadmin.key webadmin@10.129.229.129
+   ssh -i webadminkey webadmin@10.129.145.85
    ```
 
 2. **Transfer Ligolo-ng Agent**
    ```bash
-   scp -i webadmin.key ./ligolo-agent webadmin@10.129.229.129:/tmp/agent
+   scp -i webadminkey ./agent webadmin@10.129.145.85:/tmp/agent
    ```
 
 3. **On Attacker Machine: Start Ligolo Proxy**
